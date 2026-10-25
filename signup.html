@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BR Dental Clinic - Sign Up</title>
+  <meta name="description" content="Official website and management portal for BR Dental Clinic in Dasmari&ntilde;as City, Cavite. Managed by Dr. Ma. Elena B. Retuerna.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="auth-screen" class="auth-wrapper">
+    <section class="auth-visual" aria-label="BR Dental Clinic patient portal">
+      <div class="auth-visual-inner">
+        <div class="auth-brand-lockup">
+          <img class="auth-brand-mark" src="brand-icon.png" alt="">
+          <span>BR Dental Clinic</span>
+        </div>
+        <div class="auth-visual-copy">
+          <p class="auth-eyebrow">PATIENT PORTAL</p>
+          <h2>Your dental care, in one place.</h2>
+          <p>Sign in to manage appointments and dental records, or create an account to get started.</p>
+        </div>
+        <p class="auth-location">73 Nyugan Road · Dasmariñas City, Cavite</p>
+      </div>
+    </section>
+
+    <section class="auth-card" aria-labelledby="auth-title">
+      <header class="auth-header">
+        <p id="auth-kicker" class="auth-kicker">Patient Registration</p>
+        <h1 id="auth-title" class="auth-heading">Create your account</h1>
+        <p id="auth-subtitle" class="auth-subtext">Only patient accounts can be created through public registration.</p>
+      </header>
+
+      <div id="auth-alert" class="alert hidden" role="alert" aria-live="polite"></div>
+      <form id="signup-form" class="auth-form" novalidate>
+        <div class="form-group">
+          <label for="signup-fullname">Full Name <span class="req">*</span></label>
+          <input type="text" id="signup-fullname" name="fullname" required placeholder="Enter your full name">
+          <span class="field-error" id="signup-fullname-error"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="signup-email">Email Address <span class="req">*</span></label>
+          <input type="email" id="signup-email" name="email" autocomplete="email" required placeholder="name@example.com">
+          <span class="field-error" id="signup-email-error"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="signup-password">Create Password <span class="req">*</span></label>
+          <div class="password-input-group">
+            <input type="password" id="signup-password" name="password" autocomplete="new-password" required placeholder="Minimum 8 characters">
+            <button type="button" class="btn-toggle-pass" data-target="signup-password" aria-label="Show password">Show</button>
+          </div>
+          <span class="field-error" id="signup-password-error"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="signup-confirm-password">Confirm Password <span class="req">*</span></label>
+          <div class="password-input-group">
+            <input type="password" id="signup-confirm-password" name="confirm-password" autocomplete="new-password" required placeholder="Re-enter password">
+            <button type="button" class="btn-toggle-pass" data-target="signup-confirm-password" aria-label="Show password">Show</button>
+          </div>
+          <span class="field-error" id="signup-confirm-password-error"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Create Patient Account</button>
+
+        <p class="auth-switch-text">
+          Already have an account? <a class="btn-link" href="index.html">Sign In</a>
+        </p>
+      </form>
+    </section>
+  </main>
+  <script type="module" src="scripts/signup-page.js"></script>
+</body>
+</html>

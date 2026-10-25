@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BR Dental Clinic - Master Admin Portal</title>
+  <meta name="description" content="BR Dental Clinic master admin portal.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app-shell" class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="main-wrapper">
+      <div id="navbar-slot"></div>
+      <div id="toast-container" class="toast-container" aria-live="polite"></div>
+      <div id="views-viewport" class="views-viewport">
+<!-- ADMIN: MY PROFILE -->
+<section id="view-admin-profile" class="page-view">
+  <div class="page-header">
+    <h1>My Profile</h1>
+    <p>Your master admin account details.</p>
+  </div>
+  <div class="card form-card-narrow">
+    <div class="form-group">
+      <label for="admin-profile-name">Full Name</label>
+      <input type="text" id="admin-profile-name" readonly class="input-readonly">
+    </div>
+    <div class="form-group">
+      <label for="admin-profile-role">Role</label>
+      <input type="text" id="admin-profile-role" readonly class="input-readonly">
+    </div>
+  </div>
+</section>
+        
+        <!-- ADMIN: DASHBOARD -->
+        <section id="view-admin-dashboard" class="page-view active">
+          <div class="page-header">
+            <h1>Master Admin Dashboard</h1>
+            <p>Clinic overview and today's appointment schedule.</p>
+          </div>
+
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <span class="kpi-label">Total Patients</span>
+              <span id="kpi-total-patients" class="kpi-num">0</span>
+              <span class="kpi-sub">Loaded from backend API</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">Appointments Today</span>
+              <span id="kpi-today-appointments" class="kpi-num">0</span>
+              <span class="kpi-sub">Scheduled for today</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">Active Dentists</span>
+              <span id="kpi-active-dentists" class="kpi-num">1</span>
+              <span class="kpi-sub">Dr. Ma. Elena B. Retuerna</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">Pending Requests</span>
+              <span id="kpi-pending-requests" class="kpi-num">0</span>
+              <span class="kpi-sub">Requires admin action</span>
+            </div>
+          </div>
+
+          <div class="card mt-4">
+            <h2>Today's Appointments Schedule</h2>
+            <div class="table-scroll">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Time Slot</th>
+                    <th>Patient Name</th>
+                    <th>Selected Service</th>
+                    <th>Doctor</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-today-tbody">
+                  <!-- Dynamic content or empty state -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ADMIN: APPOINTMENTS -->
+        <section id="view-admin-appointments" class="page-view">
+          <div class="page-header flex-between">
+            <div>
+              <h1>Appointments Management</h1>
+              <p>Approve, reschedule, or cancel patient booking requests.</p>
+            </div>
+            <div>
+              <select id="admin-apt-filter" class="form-control-sm">
+                <option value="ALL">All Statuses</option>
+                <option value="Pending">Pending</option>
+                <option value="Approved">Approved</option>
+                <option value="Rescheduled">Rescheduled</option>
+                <option value="Cancelled">Cancelled</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="table-scroll">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Date & Time</th>
+                    <th>Patient Name</th>
+                    <th>Service</th>
+                    <th>Assigned Doctor</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-appointments-tbody">
+                  <!-- Dynamic content or empty state -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ADMIN: PATIENTS -->
+        <section id="view-admin-patients" class="page-view">
+          <div class="page-header">
+            <h1>Patients Directory</h1>
+            <p>Search and view patient records and profiles.</p>
+          </div>
+          <div class="card">
+            <div class="search-wrap mb-3">
+              <input type="search" id="admin-patient-search" placeholder="Search patient by name or email...">
+            </div>
+            <div class="table-scroll">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Patient ID</th>
+                    <th>Full Name</th>
+                    <th>Email Address</th>
+                    <th>Contact Phone</th>
+                    <th>Registration Date</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-patients-tbody">
+                  <!-- Dynamic content or empty state -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ADMIN: DENTISTS -->
+        <section id="view-admin-dentists" class="page-view">
+          <div class="page-header">
+            <h1>Dentist Management</h1>
+            <p>Manage practitioner details and schedules.</p>
+          </div>
+          <div class="card">
+            <h2>Listed Clinic Practitioner</h2>
+            <div class="dentist-row-item mt-3">
+              <div class="dentist-avatar">DR</div>
+              <div>
+                <h3>Dr. Ma. Elena B. Retuerna</h3>
+                <p><strong>Role:</strong> Lead Practitioner / General Dentist</p>
+                <p><strong>Status:</strong> Active Practitioner</p>
+                <p class="text-sub mt-2">Note: Dr. Ma. Elena B. Retuerna is the sole dentist at BR Dental Clinic. Additional dentist creation is disabled as per clinic configuration.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ADMIN: DENTAL RECORDS -->
+        <section id="view-admin-records" class="page-view">
+          <div class="page-header flex-between">
+            <div>
+              <h1>Dental Records & Notes</h1>
+              <p>Log treatment histories and clinical progress notes.</p>
+            </div>
+            <button type="button" class="btn btn-primary" id="btn-modal-record">Add Clinical Record</button>
+          </div>
+          <div class="card">
+            <div class="table-scroll">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Patient Name</th>
+                    <th>Treatment Provided</th>
+                    <th>Clinical Notes</th>
+                    <th>Attending Doctor</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-records-tbody">
+                  <!-- Dynamic content or empty state -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ADMIN: SERVICES -->
+        <section id="view-admin-services" class="page-view">
+          <div class="page-header flex-between">
+            <div>
+              <h1>Services & Pricing Management</h1>
+              <p>Manage treatment options, descriptions, and displayed prices.</p>
+            </div>
+            <button type="button" class="btn btn-primary" id="btn-modal-service">Add New Service</button>
+          </div>
+          <div class="card">
+            <div class="table-scroll">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Service Name</th>
+                    <th>Description</th>
+                    <th>Display Price</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-services-tbody">
+                  <!-- Dynamic content -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ADMIN: SCHEDULES -->
+        <section id="view-admin-schedules" class="page-view">
+          <div class="page-header">
+            <h1>Clinic Hours & Availability</h1>
+            <p>Configure default working hours and time slot limits.</p>
+          </div>
+          <div class="card form-card-narrow">
+            <form id="schedule-settings-form">
+              <div class="form-group">
+                <label for="sched-days">Operating Days</label>
+                <input type="text" id="sched-days" value="Monday to Saturday">
+              </div>
+              <div class="form-group">
+                <label for="sched-hours">Operating Hours</label>
+                <input type="text" id="sched-hours" value="8:00 AM - 5:00 PM">
+              </div>
+              <button type="submit" class="btn btn-primary">Save Schedule Settings</button>
+            </form>
+          </div>
+        </section>
+
+        <!-- ADMIN: REPORTS -->
+        <section id="view-admin-reports" class="page-view">
+          <div class="page-header flex-between">
+            <div>
+              <h1>Reports & Analytics</h1>
+              <p>Export or print appointment summaries and clinic logs.</p>
+            </div>
+            <button type="button" class="btn btn-outline" id="btn-print-report">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              Print Report
+            </button>
+          </div>
+
+          <div class="card mb-3">
+            <div class="report-filters">
+              <div class="form-group">
+                <label for="report-from">From Date</label>
+                <input type="date" id="report-from">
+              </div>
+              <div class="form-group">
+                <label for="report-to">To Date</label>
+                <input type="date" id="report-to">
+              </div>
+              <div class="form-group">
+                <label for="report-type">Report Type</label>
+                <select id="report-type">
+                  <option value="appointments">Appointments Log</option>
+                  <option value="patients">Patient Registrations</option>
+                </select>
+              </div>
+              <button type="button" class="btn btn-secondary btn-align-bottom" id="btn-run-report">Filter Report</button>
+            </div>
+          </div>
+
+          <div id="printable-report" class="card">
+            <div class="report-print-header">
+              <h2>BR Dental Clinic — Official Summary Report</h2>
+              <p>73 Nyugan Road, Paliparan 1, Dasmariñas City, Cavite | Phone: 09066636112</p>
+              <hr class="divider">
+            </div>
+            <div id="report-results-body">
+              <p class="text-sub text-center">Select filters above and click 'Filter Report' to generate data.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ADMIN: SETTINGS -->
+        <section id="view-admin-settings" class="page-view">
+          <div class="page-header">
+            <h1>Admin Settings</h1>
+            <p>Update administrative details and clinic parameters.</p>
+          </div>
+          <div class="card form-card-narrow">
+            <h2>Clinic Details</h2>
+            <form id="admin-clinic-info-form" class="mb-4">
+              <div class="form-group">
+                <label for="admin-setting-name">Clinic Name</label>
+                <input type="text" id="admin-setting-name" value="BR Dental Clinic" readonly class="input-readonly">
+              </div>
+              <div class="form-group">
+                <label for="admin-setting-phone">Phone Number</label>
+                <input type="text" id="admin-setting-phone" value="09066636112">
+              </div>
+              <div class="form-group">
+                <label for="admin-setting-address">Address</label>
+                <input type="text" id="admin-setting-address" value="73 Nyugan Road, Paliparan 1, Dasmarinas City, Cavite">
+              </div>
+              <button type="submit" class="btn btn-primary">Update Clinic Info</button>
+            </form>
+
+            <hr class="divider">
+
+            <h2 class="mt-4">Change Admin Account Password</h2>
+            <form id="admin-pass-change-form">
+              <div class="form-group">
+                <label for="admin-curr-pass">Current Admin Password</label>
+                <input type="password" id="admin-curr-pass" required placeholder="Enter current password">
+              </div>
+              <div class="form-group">
+                <label for="admin-new-pass">New Admin Password</label>
+                <input type="password" id="admin-new-pass" required placeholder="Minimum 8 characters">
+              </div>
+              <button type="submit" class="btn btn-primary">Save New Password</button>
+            </form>
+          </div>
+        </section>
+
+        <!-- ADMIN: USER ROLES AND PERMISSIONS -->
+        <section id="view-admin-users" class="page-view">
+          <div class="page-header flex-between">
+            <div>
+              <p class="section-kicker">ACCESS MANAGEMENT</p>
+              <h1>Users &amp; Roles</h1>
+              <p>Review user and master admin responsibilities and create master admin accounts.</p>
+            </div>
+            <button type="button" class="btn btn-primary" id="btn-create-user">Create account</button>
+          </div>
+
+          <section class="role-flow-card card" aria-labelledby="account-flow-title">
+            <div class="role-flow-heading">
+              <div>
+                <p class="section-kicker">ACCOUNT SETUP</p>
+                <h2 id="account-flow-title">Who creates each account</h2>
+              </div>
+              <p class="flow-note">User accounts are created through public sign-up.</p>
+            </div>
+            <ol class="account-flow-list">
+              <li>
+                <span class="flow-step-number">01</span>
+                <div><h3>Master Admin</h3><p>Creates and manages other master admin accounts.</p></div>
+              </li>
+              <li>
+                <span class="flow-step-number">02</span>
+                <div><h3>User</h3><p>Registers and manages their own account.</p></div>
+              </li>
+            </ol>
+            <p class="account-setup-note">Master admin account entries are kept in this browser session only. Connect a secure identity service to create real logins and send invitations.</p>
+          </section>
+
+          <section class="role-permissions-section" aria-labelledby="role-permissions-title">
+            <div class="home-section-heading">
+              <div>
+                <p class="section-kicker">ROLE GUIDE</p>
+                <h2 id="role-permissions-title">Roles and permissions</h2>
+              </div>
+            </div>
+            <div id="role-permission-list" class="role-permission-list"></div>
+          </section>
+
+          <section class="card staff-user-panel" aria-labelledby="master-admin-users-title">
+            <div class="staff-user-heading">
+              <div>
+                <h2 id="master-admin-users-title">Master Admin accounts</h2>
+                <p class="text-sub">New accounts appear here during this session.</p>
+              </div>
+            </div>
+            <div class="table-scroll">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email address</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Created by</th>
+                  </tr>
+                </thead>
+                <tbody id="staff-users-tbody">
+                  <tr><td colspan="5" class="empty-cell">No master admin accounts have been added in this session.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+      </div>
+    </div>
+    <div id="modal-slot"></div>
+  </div>
+  <script type="module" src="scripts/admin-page.js"></script>
+</body>
+</html>

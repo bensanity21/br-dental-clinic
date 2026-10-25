@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BR Dental Clinic - User Portal</title>
+  <meta name="description" content="BR Dental Clinic user portal.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  
+  <div id="app-shell" class="app-shell">
+    <div id="sidebar-slot"></div>
+    <div class="main-wrapper">
+      <div id="navbar-slot"></div>
+      <div id="toast-container" class="toast-container" aria-live="polite"></div>
+      <div id="views-viewport" class="views-viewport">
+
+<!-- PATIENT: HOME -->
+        <section id="view-patient-home" class="page-view active">
+          <div class="welcome-banner">
+            <div class="welcome-copy">
+              <p class="section-kicker">YOUR CARE SPACE</p>
+              <h1>Welcome to BR Dental Clinic</h1>
+              <p>Appointments, clinic information, and dental services in one place.</p>
+              <div class="welcome-actions">
+                <button type="button" class="btn btn-primary" data-navigate="patient-book">Book an appointment</button>
+                <button type="button" class="btn btn-soft" data-navigate="patient-services">Explore services</button>
+              </div>
+            </div>
+            <div class="welcome-clinic-note">
+              <img src="brand-icon.png" alt="" width="40" height="40">
+              <div>
+                <strong>BR Dental Clinic</strong>
+                <span>Paliparan 1, Dasmariñas City</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="home-section-heading">
+            <div>
+              <p class="section-kicker">CLINIC AT A GLANCE</p>
+              <h2>Plan your visit</h2>
+            </div>
+          </div>
+          <div class="cards-grid-3 home-info-grid">
+            <article class="card">
+              <p class="card-eyebrow">FIND US</p>
+              <h3>Clinic location</h3>
+              <p>73 Nyugan Road, Paliparan 1<br>Dasmariñas City, Cavite</p>
+            </article>
+            <article class="card">
+              <p class="card-eyebrow">GET IN TOUCH</p>
+              <h3>Call the clinic</h3>
+              <p><a href="tel:09066636112">09066636112</a></p>
+              <p class="text-sub">Please call to confirm opening hours and availability.</p>
+            </article>
+            <article class="card">
+              <p class="card-eyebrow">YOUR DENTIST</p>
+              <h3>Dr. Ma. Elena B. Retuerna</h3>
+              <p class="text-sub">The clinic’s listed dentist.</p>
+            </article>
+          </div>
+
+          <div class="clinic-note-banner mt-4">
+            <div>
+              <h2>Need help with your visit?</h2>
+              <p>Contact the clinic to confirm hours or ask about appointment availability.</p>
+            </div>
+            <button type="button" class="btn btn-soft" data-navigate="patient-contact">Contact us</button>
+          </div>
+        </section>
+
+        <!-- PATIENT: ABOUT US -->
+        <section id="view-patient-about" class="page-view">
+          <div class="page-header">
+            <h1>About BR Dental Clinic</h1>
+            <p>Gentle and thorough dental care for you and your family.</p>
+          </div>
+          <div class="card max-w-prose">
+            <h2>Clinic Background & Mission</h2>
+            <p>BR Dental Clinic operates in Dasmariñas City, Cavite, maintaining a clean and welcoming facility designed to ensure patient comfort during dental checkups and treatments.</p>
+            <p class="mt-2">Our mission is to support long-term oral health through careful examinations, patient education, and straightforward dental care.</p>
+          </div>
+        </section>
+
+        <!-- PATIENT: SERVICES -->
+        <section id="view-patient-services" class="page-view">
+          <div class="page-header">
+            <h1>Our Dental Services</h1>
+            <p>Review treatments and services offered at the clinic.</p>
+          </div>
+          <div id="patient-services-grid" class="cards-grid-auto">
+            <!-- Rendered dynamically -->
+          </div>
+        </section>
+
+        <!-- PATIENT: OUR DENTISTS -->
+        <section id="view-patient-dentists" class="page-view">
+          <div class="page-header">
+            <h1>Our Dentist</h1>
+            <p>Meet our verified clinic practitioner.</p>
+          </div>
+          <div class="card profile-card-large">
+            <div class="dentist-avatar">DR</div>
+            <div class="dentist-info">
+              <h2>Dr. Ma. Elena B. Retuerna</h2>
+              <p class="dentist-role">Lead Dentist — BR Dental Clinic</p>
+              <hr class="divider">
+              <p><strong>Verified Qualifications:</strong> <span class="text-sub">Verified Practitioner</span></p>
+              <p><strong>Clinical Schedule:</strong> <span class="text-sub">Not provided (Schedules are loaded upon backend API synchronization).</span></p>
+            </div>
+          </div>
+        </section>
+
+        <!-- PATIENT: CONTACT US -->
+        <section id="view-patient-contact" class="page-view">
+          <div class="page-header">
+            <h1>Contact Us</h1>
+            <p>Get in touch or locate our clinic.</p>
+          </div>
+          <div class="grid-2col">
+            <div class="card">
+              <h2>Clinic Information</h2>
+              <ul class="contact-info-list">
+                <li><strong>Clinic Name:</strong> BR Dental Clinic</li>
+                <li><strong>Phone Number:</strong> 09066636112</li>
+                <li><strong>Address:</strong> 73 Nyugan Road, Paliparan 1, Dasmariñas City, Cavite</li>
+                <li><strong>Opening Hours:</strong> <span class="text-sub">Not provided (Please call the clinic directly to verify daily hours).</span></li>
+              </ul>
+            </div>
+            <div class="card">
+              <h2>Location Map</h2>
+              <div class="map-container">
+                <p><strong>BR Dental Clinic</strong></p>
+                <p class="text-sub">73 Nyugan Road, Paliparan 1, Dasmariñas City, Cavite</p>
+                <a href="https://maps.google.com/?q=73+Nyugan+Road+Paliparan+1+Dasmarinas+City+Cavite" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm mt-3">View on Google Maps</a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PATIENT: BOOK APPOINTMENT -->
+        <section id="view-patient-book" class="page-view">
+          <div class="page-header">
+            <h1>Book an Appointment</h1>
+            <p>Submit a visit request with your preferred service and date.</p>
+          </div>
+          <div class="card form-card-narrow">
+            <form id="booking-form" novalidate>
+              <div class="form-group">
+                <label for="book-service">Select Service <span class="req">*</span></label>
+                <select id="book-service" required>
+                  <option value="">-- Choose a Service --</option>
+                </select>
+                <span class="field-error" id="book-service-error"></span>
+              </div>
+
+              <div class="form-group">
+                <label for="book-dentist">Attending Dentist</label>
+                <input type="text" id="book-dentist" value="Dr. Ma. Elena B. Retuerna" readonly class="input-readonly">
+              </div>
+
+              <div class="grid-2col">
+                <div class="form-group">
+                  <label for="book-date">Preferred Date <span class="req">*</span></label>
+                  <input type="date" id="book-date" required>
+                  <span class="field-error" id="book-date-error"></span>
+                </div>
+                <div class="form-group">
+                  <label for="book-time">Preferred Time Slot <span class="req">*</span></label>
+                  <select id="book-time" required>
+                    <option value="">-- Choose Time --</option>
+                    <option value="09:00 AM">09:00 AM</option>
+                    <option value="10:30 AM">10:30 AM</option>
+                    <option value="01:30 PM">01:30 PM</option>
+                    <option value="03:00 PM">03:00 PM</option>
+                  </select>
+                  <span class="field-error" id="book-time-error"></span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="book-notes">Additional Notes / Symptoms (Optional)</label>
+                <textarea id="book-notes" rows="3" placeholder="Describe any dental pain or notes for the clinic..."></textarea>
+              </div>
+
+              <button type="submit" class="btn btn-primary">Submit Booking Request</button>
+            </form>
+          </div>
+        </section>
+
+        <!-- PATIENT: MY PROFILE -->
+        <section id="view-patient-profile" class="page-view">
+          <div class="page-header">
+            <h1>My Profile</h1>
+            <p>View and update your personal information.</p>
+          </div>
+          <div class="card form-card-narrow">
+            <form id="patient-profile-form">
+              <div class="form-group">
+                <label for="profile-fullname">Full Name</label>
+                <input type="text" id="profile-fullname" required>
+              </div>
+              <div class="form-group">
+                <label for="profile-email">Email Address</label>
+                <input type="email" id="profile-email" readonly class="input-readonly">
+                <span class="field-hint">Email updates must be validated through the backend server.</span>
+              </div>
+              <div class="form-group">
+                <label for="profile-phone">Contact Phone Number</label>
+                <input type="tel" id="profile-phone" placeholder="09XXXXXXXXX">
+              </div>
+              <button type="submit" class="btn btn-primary">Save Profile</button>
+            </form>
+          </div>
+        </section>
+
+        <!-- PATIENT: MY APPOINTMENTS -->
+        <section id="view-patient-appointments" class="page-view">
+          <div class="page-header">
+            <h1>My Appointments</h1>
+            <p>Track your scheduled, pending, and past clinic visits.</p>
+          </div>
+          <div class="card">
+            <div class="table-scroll">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Date & Time</th>
+                    <th>Service Requested</th>
+                    <th>Dentist</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="patient-appointments-tbody">
+                  <!-- Dynamic content or empty state -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- PATIENT: DENTAL RECORDS -->
+        <section id="view-patient-records" class="page-view">
+          <div class="page-header">
+            <h1>Dental Records</h1>
+            <p>View official clinical notes and treatment history recorded by your doctor.</p>
+          </div>
+          <div class="card">
+            <div class="table-scroll">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Treatment / Procedure</th>
+                    <th>Clinical Notes</th>
+                    <th>Attending Dentist</th>
+                  </tr>
+                </thead>
+                <tbody id="patient-records-tbody">
+                  <!-- Dynamic content or empty state -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- PATIENT / GENERAL: ACCOUNT SETTINGS -->
+        <section id="view-patient-settings" class="page-view">
+          <div class="page-header">
+            <h1>Account Settings</h1>
+            <p>Manage security and preferences.</p>
+          </div>
+          <div class="card form-card-narrow">
+            <h2>Change Password</h2>
+            <form id="change-password-form">
+              <div class="form-group">
+                <label for="curr-password">Current Password</label>
+                <input type="password" id="curr-password" required placeholder="Enter current password">
+              </div>
+              <div class="form-group">
+                <label for="new-password">New Password</label>
+                <input type="password" id="new-password" required placeholder="Minimum 8 characters">
+              </div>
+              <button type="submit" class="btn btn-primary">Update Password</button>
+            </form>
+          </div>
+        </section>
+      </div>
+    </div>
+    <div id="modal-slot"></div>
+  </div>
+  <script type="module" src="scripts/user-page.js"></script>
+</body>
+</html>

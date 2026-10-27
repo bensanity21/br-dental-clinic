@@ -1,16 +1,16 @@
-import { authenticateSession, getAuthenticatedSession, redirectForRole } from "./auth.js";
-import { bindPasswordToggles, clearFieldErrors, showFieldError, validateEmail, setAuthAlert } from "./helpers.js";
+// scripts/signup-page.js - Registration using the new API client (forces patient role)
+import { bindPasswordToggles, clearFieldErrors, setAuthAlert, showFieldError, validateEmail } from "./helpers.js";
+import { api } from "./api.js";
+import { showToast } from "./toast.js";
 
 bindPasswordToggles();
 
-const session = getAuthenticatedSession();
-if (session) redirectForRole(session.role);
-
-document.getElementById("signup-form").addEventListener("submit", async event => {
+const form = document.getElementById("signup-form");
+if (form) {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
-
-    const form = event.currentTarget;
     clearFieldErrors(form);
+    setAuthAlert("Creating your account...", "info");
 
     const fullname = document.getElementById("signup-fullname").value.trim();
     const email = document.getElementById("signup-email").value.trim();
@@ -22,35 +22,31 @@ document.getElementById("signup-form").addEventListener("submit", async event =>
     if (!validateEmail(email)) { showFieldError("signup-email", "Valid email address is required."); valid = false; }
     if (password.length < 8) { showFieldError("signup-password", "Minimum 8 characters required."); valid = false; }
     if (password !== confirmPassword) { showFieldError("signup-confirm-password", "Passwords do not match."); valid = false; }
-
-    if (!valid) return;
-
-    setAuthAlert("Creating your account...", "info");
+    if (!valid) { setAuthAlert("Please fix the highlighted fields.", "danger"); return; }
 
     try {
-        const response = await fetch("api/signup.php", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                fullName: fullname,
-                email: email,
-                password: password
-            })
-        });
+      const res = await api.post("signup.php", { fullName: fullname, email, password });
 
-        const result = await response.json();
-
-        if (result.status === "success") {
-            // Backend created the account; authenticateSession saves state and redirects to the user page.
-            authenticateSession("patient", {
-                name: fullname,
-                email: email
-            });
-        } else {
-            showFieldError("signup-email", result.message);
-        }
+      if (res.success) {
+        showToast("Account created! You can now sign in.");
+        form.reset();
+        window.location.assign("/draft for clinic/index.html");
+      } else {
+        setAuthAlert(res.message || "Failed to create account.", "danger");
+      }
     } catch (err) {
-        console.error("Signup error:", err);
-        showFieldError("signup-email", "Failed to connect to backend server.");
+      console.error("Signup error:", err);
+      setAuthAlert("Failed to connect to the backend server.", "danger");
     }
+  });
+}
+
+document.getElementById("btn-oauth-google")?.addEventListener("click", () => {
+  setAuthAlert("Google Auth requires backend configuration.", "danger");
+});
+document.getElementById("btn-oauth-facebook")?.addEventListener("click", () => {
+  setAuthAlert("Facebook Auth requires backend OAuth setup.", "danger");
+});
+document.getElementById("btn-forgot-password")?.addEventListener("click", () => {
+  setAuthAlert("Password recovery emails require an SMTP backend.", "danger");
 });

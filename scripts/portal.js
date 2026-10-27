@@ -51,14 +51,23 @@ const el = {
 };
 
 async function initApp() {
-  const ok = await loadSession();
-  if (!ok) return;
-  bindEvents();
-  renderRoleBasedNav();
-  await renderNotifications();
-  await renderDashboardIfRoleAdminOrDoctor();
-  const activeView = document.querySelector('.page-view.active');
-  if (activeView) await switchView(activeView.id.replace('view-', ''));
+  try {
+    const ok = await loadSession();
+    if (!ok) {
+      // Session invalid or expired -> redirect to login
+      window.location.assign('/draft for clinic/index.html');
+      return;
+    }
+    bindEvents();
+    renderRoleBasedNav();
+    await renderNotifications();
+    await renderDashboardIfRoleAdminOrDoctor();
+    const activeView = document.querySelector('.page-view.active');
+    if (activeView) await switchView(activeView.id.replace('view-', ''));
+  } catch (err) {
+    console.error('Init error:', err);
+    showToast('Application failed to load. Please refresh and try again.', 'error');
+  }
 }
 
 function renderRoleBasedNav() {
@@ -400,26 +409,36 @@ async function renderAdminDentists() {
 if (el.patientProfileForm) {
   el.patientProfileForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const fullName = document.getElementById('profile-fullname').value.trim();
-    const phone = document.getElementById('profile-phone').value.trim();
-    const confirmed = await confirmModal({ title: 'Update Profile', message: 'Save profile changes?' });
-    if (!confirmed) return;
-    const res = await api.patch('auth/profile.php', { full_name: fullName, phone_number: phone });
-    if (res.success) { showToast('Profile updated.'); currentUser.full_name = fullName; }
-    else { showToast(res.message || 'Update failed.', 'error'); }
+    try {
+      const fullName = document.getElementById('profile-fullname').value.trim();
+      const phone = document.getElementById('profile-phone').value.trim();
+      const confirmed = await confirmModal({ title: 'Update Profile', message: 'Save profile changes?' });
+      if (!confirmed) return;
+      const res = await api.patch('auth/profile.php', { full_name: fullName, phone_number: phone });
+      if (res.success) { showToast('Profile updated.'); currentUser.full_name = fullName; }
+      else { showToast(res.message || 'Update failed.', 'error'); }
+    } catch (err) {
+      console.error('Profile update error:', err);
+      showToast('Profile update failed. Please try again.', 'error');
+    }
   });
 }
 
 if (document.getElementById('change-password-form')) {
   document.getElementById('change-password-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const curr = document.getElementById('curr-password').value;
-    const newPass = document.getElementById('new-password').value;
-    const confirmed = await confirmModal({ title: 'Change Password', message: 'Change your account password?' });
-    if (!confirmed) return;
-    const res = await api.post('auth/password.php', { current_password: curr, new_password: newPass });
-    if (res.success) { showToast('Password changed.'); document.getElementById('change-password-form').reset(); }
-    else { showToast(res.message || 'Password change failed.', 'error'); }
+    try {
+      const curr = document.getElementById('curr-password').value;
+      const newPass = document.getElementById('new-password').value;
+      const confirmed = await confirmModal({ title: 'Change Password', message: 'Change your account password?' });
+      if (!confirmed) return;
+      const res = await api.post('auth/password.php', { current_password: curr, new_password: newPass });
+      if (res.success) { showToast('Password changed.'); document.getElementById('change-password-form').reset(); }
+      else { showToast(res.message || 'Password change failed.', 'error'); }
+    } catch (err) {
+      console.error('Password change error:', err);
+      showToast('Password change failed. Please try again.', 'error');
+    }
   });
 }
 
@@ -472,5 +491,15 @@ function bindEvents() {
 }
 function closeDropdowns() { if (el.profileDropdownPanel) el.profileDropdownPanel.classList.add('hidden'); if (el.notifDropdownPanel) el.notifDropdownPanel.classList.add('hidden'); }
 function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text ?? ''; return div.innerHTML; }
+
+// Global error handlers — prevent crashes from breaking the page
+window.addEventListener('error', (e) => {
+  console.error('Global JS error:', e.message, e.filename, e.lineno);
+  showToast('An error occurred: ' + e.message, 'error');
+});
+window.addEventListener('unhandledrejection', (e) => {
+  console.error('Unhandled rejection:', e.reason);
+  showToast('An error occurred: ' + String(e.reason), 'error');
+});
 
 initApp();

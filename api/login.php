@@ -2,6 +2,7 @@
 // api/login.php
 header("Content-Type: application/json");
 session_start();
+session_regenerate_id(true); // New session ID on login — prevents session fixation
 require_once "../connectdb.php";
 
 $data = json_decode(file_get_contents("php://input"), true);

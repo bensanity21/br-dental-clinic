@@ -22,8 +22,9 @@ export function openModal(title, bodyHTML, actions = []) {
       if (act.danger) btn.className += ' btn-danger';
       btn.textContent = act.text;
       btn.addEventListener('click', () => {
+        const result = typeof act.value === 'function' ? act.value() : act.value;
         closeModal();
-        resolve(act.value);
+        resolve(result);
       });
       modalFooter.appendChild(btn);
     });
@@ -43,7 +44,7 @@ export function closeModal() {
 export function confirmModal({ title = 'Confirm action', message = 'Are you sure?', danger = false } = {}) {
   return openModal(title, `<p style="margin:0 0 1rem 0">${message}</p>`, [
     { text: 'Cancel', class: 'btn-outline', value: false },
-    { text: danger ? 'Delete' : 'Confirm', class: 'btn-primary', value: true, danger },
+    { text: 'Confirm', class: 'btn-primary', value: true, danger },
   ]);
 }
 

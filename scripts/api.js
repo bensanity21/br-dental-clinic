@@ -1,9 +1,9 @@
 // scripts/api.js - Shared API client (fetch wrapper) for all backend calls
-// Base path: /draft for clinic/api/<feature>/<endpoint>.php
+// Resolve endpoints relative to the current page so the app works from any folder name.
 // Consistent JSON: { success, message, data }
 // Auto-redirects to login on session expiry (401)
 
-const API_BASE = '/draft for clinic/api';
+const API_BASE = new URL('./api/', document.baseURI).href.replace(/\/$/, '');
 
 async function apiRequest(path, options = {}) {
   const url = `${API_BASE}/${path}`;
@@ -28,7 +28,7 @@ async function apiRequest(path, options = {}) {
     // Session expired -> redirect to login
     if (res.status === 401) {
       sessionStorage.removeItem('br-dental-clinic-session');
-      window.location.assign('/draft for clinic/index.html');
+      window.location.assign(new URL('./index.html', document.baseURI).href);
       return { success: false, message: 'Session expired', data: null };
     }
 

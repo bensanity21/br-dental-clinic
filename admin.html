@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BR Dental Clinic - Master Admin Portal</title>
   <meta name="description" content="BR Dental Clinic master admin portal.">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
   <div id="app-shell" class="app-shell">
@@ -29,6 +29,20 @@
       <label for="admin-profile-role">Role</label>
       <input type="text" id="admin-profile-role" readonly class="input-readonly">
     </div>
+  </div>
+  <div class="card form-card-narrow mt-4">
+    <h2>Change Password</h2>
+    <form id="admin-pass-change-form" class="mt-3">
+      <div class="form-group">
+        <label for="admin-curr-pass">Current Password</label>
+        <input type="password" id="admin-curr-pass" required autocomplete="current-password" placeholder="Enter current password">
+      </div>
+      <div class="form-group">
+        <label for="admin-new-pass">New Password</label>
+        <input type="password" id="admin-new-pass" required minlength="8" autocomplete="new-password" placeholder="Minimum 8 characters">
+      </div>
+      <button type="submit" class="btn btn-primary">Update Password</button>
+    </form>
   </div>
 </section>
         
@@ -116,6 +130,26 @@
                 </thead>
                 <tbody id="admin-appointments-tbody">
                   <!-- Dynamic content or empty state -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ADMIN: ARCHIVE -->
+        <section id="view-admin-archives" class="page-view">
+          <div class="page-header">
+            <h1>Archive</h1>
+            <p>Restore archived records or permanently delete them.</p>
+          </div>
+          <div class="card">
+            <div class="table-scroll">
+              <table class="data-table">
+                <thead>
+                  <tr><th>Record Type</th><th>Record</th><th>Archived At</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="admin-archives-tbody">
+                  <tr><td colspan="4" class="empty-cell">Loading archive...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -319,20 +353,6 @@
               <button type="submit" class="btn btn-primary">Update Clinic Info</button>
             </form>
 
-            <hr class="divider">
-
-            <h2 class="mt-4">Change Admin Account Password</h2>
-            <form id="admin-pass-change-form">
-              <div class="form-group">
-                <label for="admin-curr-pass">Current Admin Password</label>
-                <input type="password" id="admin-curr-pass" required placeholder="Enter current password">
-              </div>
-              <div class="form-group">
-                <label for="admin-new-pass">New Admin Password</label>
-                <input type="password" id="admin-new-pass" required placeholder="Minimum 8 characters">
-              </div>
-              <button type="submit" class="btn btn-primary">Save New Password</button>
-            </form>
           </div>
         </section>
 
@@ -405,11 +425,22 @@
         </section>
       </div>
     </div>
-    <div id="modal-slot"></div>
+    <div id="modal-slot">
+      <div id="modal-backdrop" class="modal-backdrop hidden" aria-hidden="true">
+        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+          <header class="modal-header">
+            <h2 id="modal-title">Dialog Title</h2>
+            <button type="button" class="btn-icon btn-modal-close" aria-label="Close dialog">&times;</button>
+          </header>
+          <div id="modal-body" class="modal-body"></div>
+          <footer id="modal-footer" class="modal-footer"></footer>
+        </div>
+      </div>
+    </div>
   </div>
-  <script type="module" src="scripts/api.js?v=5"></script>
-  <script type="module" src="scripts/modal.js?v=5"></script>
+  <script type="module" src="scripts/api.js?v=6"></script>
+  <script type="module" src="scripts/modal.js?v=7"></script>
   <script type="module" src="scripts/toast.js?v=5"></script>
-  <script type="module" src="scripts/portal.js?v=5"></script>
+  <script type="module" src="scripts/portal.js?v=12"></script>
 </body>
 </html>

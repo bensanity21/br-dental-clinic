@@ -2,13 +2,14 @@
 // Replaces localStorage demo state with real backend database calls.
 // All mutations require confirmModal + go through API endpoints (PDO, prepared statements).
 
-import { api } from './api.js';
-import { confirmModal, openModal, closeModal } from './modal.js';
+import { api } from './api.js?v=6';
+import { confirmModal, openModal, closeModal } from './modal.js?v=7';
 import { showToast } from './toast.js';
 
 let currentUser = null;
 let role = '';
 let dentistInfo = null;
+let bookingDentistId = null;
 
 async function loadSession() {
   const res = await api.get('auth/me.php');
@@ -55,7 +56,7 @@ async function initApp() {
     const ok = await loadSession();
     if (!ok) {
       // Session invalid or expired -> redirect to login
-      window.location.assign('/draft for clinic/index.html');
+      window.location.assign(new URL('./index.html', document.baseURI).href);
       return;
     }
     renderNavigation(); // Inject sidebar + top navbar HTML
@@ -165,6 +166,18 @@ function renderNavigation() {
               <span>Users & Roles</span>
             </a>
           </li>
+          <li>
+            <a href="#" class="nav-link" data-view="admin-archives">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h18v4H3z"></path><path d="M5 8v12h14V8M10 12h4"></path></svg>
+              <span>Archive</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="nav-link" data-view="admin-settings">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.7 2.94-.08-.02a1.7 1.7 0 0 0-1.7.35l-.06.05h-3.4l-.04-.08a1.7 1.7 0 0 0-1.45-1.03l-.08-.01-1.7-2.94.05-.07a1.7 1.7 0 0 0-.18-1.76L9.4 14V10l.06-.05a1.7 1.7 0 0 0 .18-1.76l-.05-.07 1.7-2.94.08-.01a1.7 1.7 0 0 0 1.45-1.03l.04-.08h3.4l.06.05a1.7 1.7 0 0 0 1.7.35l.08-.02 1.7 2.94-.06.06A1.7 1.7 0 0 0 19.4 9l.06.05v4z"></path></svg>
+              <span>Clinic Settings</span>
+            </a>
+          </li>
           ` : ''}
         </ul>
       </nav>
@@ -186,14 +199,10 @@ function renderNavigation() {
   // ---------- Top Navbar ----------
   navbarSlot.innerHTML = `
     <header class="top-navbar" id="top-navbar">
-      <div class="navbar-brand">
-        <img class="brand-mark" src="brand-icon.png" alt="" width="32" height="32">
-        <span class="brand-name">BR Dental Clinic</span>
-      </div>
-
       <div class="navbar-search">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="search-icon"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         <input type="search" id="global-search-input" placeholder="Search appointments, services, patients..." aria-label="Global search">
+        <div id="global-search-results" class="global-search-results hidden" role="listbox" aria-label="Search results"></div>
       </div>
 
       <div class="navbar-right">
@@ -283,10 +292,12 @@ async function switchView(targetViewId) {
     case 'patient-dentists': await renderDentists(); break;
     case 'admin-dashboard': await renderDashboardIfRoleAdminOrDoctor(); await renderAdminAppointments(); break;
     case 'admin-appointments': await renderAdminAppointments(); break;
+    case 'admin-archives': await renderArchives(); break;
     case 'admin-patients': await renderAdminPatients(); break;
     case 'admin-records': await renderAdminRecords(); break;
     case 'admin-services': await renderAdminServices(); break;
     case 'admin-dentists': await renderAdminDentists(); break;
+    case 'admin-schedules': await renderScheduleSettings(); break;
   }
 }
 
@@ -325,7 +336,13 @@ async function renderDentists() {
   const dentists = res.data || [];
   if (el.bookDentistField) {
     const d = dentists[0];
-    if (d) el.bookDentistField.value = d.full_name + ' (' + (d.specialization || 'General Dentistry') + ')';
+    if (d) {
+      bookingDentistId = Number(d.id);
+      el.bookDentistField.value = d.full_name + ' (' + (d.specialization || 'General Dentistry') + ')';
+    } else {
+      bookingDentistId = null;
+      el.bookDentistField.value = 'No dentist is available';
+    }
   }
 }
 async function populateBookingDentist() { await renderDentists(); }
@@ -365,10 +382,13 @@ async function renderAdminAppointments() {
         if (a.status === 'Pending') {
           actions = '<button class="btn btn-sm btn-primary" data-id="' + a.id + '" data-action="approve">Approve</button>' +
                     '<button class="btn btn-sm btn-outline" data-id="' + a.id + '" data-action="cancel">Cancel</button>';
-        } else {
+        } else if (a.status === 'Approved') {
           actions = '<button class="btn btn-sm btn-primary" data-id="' + a.id + '" data-action="complete">Complete</button>' +
                     '<button class="btn btn-sm btn-outline" data-id="' + a.id + '" data-action="cancel">Cancel</button>';
+        } else {
+          actions = '';
         }
+        if (role === 'super-admin') actions += '<button class="btn btn-sm btn-outline" data-id="' + a.id + '" data-action="archive">Delete</button>';
         return (
           '<tr>' +
           '<td>' + a.appointment_date + ' (' + a.time_slot + ')</td>' +
@@ -405,11 +425,11 @@ if (document.getElementById('booking-form')) {
   document.getElementById('booking-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const serviceId = document.getElementById('book-service').value;
-    const dentistId = 1;
+    const dentistId = bookingDentistId;
     const date = document.getElementById('book-date').value;
     const time = document.getElementById('book-time').value;
     const notes = document.getElementById('book-notes').value;
-    if (!serviceId || !date || !time) { showToast('Please complete all booking fields.', 'error'); return; }
+    if (!serviceId || !dentistId || !date || !time) { showToast('Please complete all booking fields and ensure a dentist is available.', 'error'); return; }
     const svcText = document.getElementById('book-service').selectedOptions[0]?.text || 'service';
     const confirmed = await confirmModal({ title: 'Confirm Appointment', message: 'Book ' + escapeHtml(svcText) + ' on ' + date + ' at ' + time + '?' });
     if (!confirmed) return;
@@ -531,6 +551,44 @@ async function renderNotifications() {
   }
 }
 
+async function renderGlobalSearch(query) {
+  const panel = document.getElementById('global-search-results');
+  if (!panel) return;
+  const term = query.trim();
+  if (term.length < 2) {
+    panel.classList.add('hidden');
+    panel.innerHTML = '';
+    return;
+  }
+
+  panel.innerHTML = '<div class="global-search-message">Searching…</div>';
+  panel.classList.remove('hidden');
+  const params = new URLSearchParams({ q: term });
+  const res = await api.get('search/global.php?' + params.toString());
+  if (document.getElementById('global-search-input')?.value.trim() !== term) return;
+  if (!res.success) {
+    panel.innerHTML = '<div class="global-search-message">' + escapeHtml(res.message || 'Search failed.') + '</div>';
+    return;
+  }
+
+  const data = res.data || {};
+  const isAdmin = role === 'super-admin' || role === 'doctor';
+  const groups = [
+    { title: 'Appointments', target: isAdmin ? 'admin-appointments' : 'patient-appointments', items: (data.appointments || []).map((item) => ({ label: [item.appointment_date, item.time_slot].filter(Boolean).join(' '), detail: [item.patient_name, item.service_name, item.status].filter(Boolean).join(' · ') })) },
+    { title: 'Services', target: isAdmin ? 'admin-services' : 'patient-services', items: (data.services || []).map((item) => ({ label: item.service_name, detail: item.description || '' })) },
+    { title: 'Patients', target: isAdmin ? 'admin-patients' : 'patient-profile', items: (data.patients || []).map((item) => ({ label: item.full_name, detail: item.email || '' })) },
+    { title: 'Dentists', target: isAdmin ? 'admin-dentists' : 'patient-dentists', items: (data.dentists || []).map((item) => ({ label: item.full_name, detail: item.specialization || '' })) },
+  ].filter((group) => group.items.length);
+
+  if (!groups.length) {
+    panel.innerHTML = '<div class="global-search-message">No matches found.</div>';
+    return;
+  }
+  panel.innerHTML = groups.map((group) => '<section class="global-search-group"><h3>' + escapeHtml(group.title) + '</h3>' +
+    group.items.map((item) => '<button type="button" class="global-search-result" role="option" data-search-view="' + group.target + '"><strong>' + escapeHtml(item.label || '') + '</strong>' +
+      (item.detail ? '<span>' + escapeHtml(item.detail) + '</span>' : '') + '</button>').join('') + '</section>').join('');
+}
+
 async function renderDashboardIfRoleAdminOrDoctor() {
   if (role !== 'super-admin' && role !== 'doctor') return;
   const res = await api.get('dashboard/stats.php');
@@ -565,6 +623,88 @@ if (document.getElementById('admin-patient-search')) {
   document.getElementById('admin-patient-search').addEventListener('input', renderAdminPatients);
 }
 async function renderAdminServices() { await renderServices(); }
+async function renderArchives() {
+  const tbody = document.getElementById('admin-archives-tbody');
+  if (!tbody) return;
+  const res = await api.get('archives/list.php');
+  if (!res.success) { showToast(res.message || 'Failed to load archive.', 'error'); return; }
+  const entries = res.data || [];
+  if (!entries.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty-cell">The archive is empty.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = entries.map((entry) => {
+    const record = entry.record_data || {};
+    let summary;
+    if (entry.original_table === 'appointments') {
+      summary = [record.appointment_date, record.time_slot, 'Patient ID ' + (record.patient_id ?? ''), record.status].filter(Boolean).join(' · ');
+    } else if (entry.original_table === 'users') {
+      summary = [record.full_name, record.email].filter(Boolean).join(' · ');
+    } else if (entry.original_table === 'services') {
+      summary = record.service_name || '';
+    } else {
+      summary = record.full_name || record.treatment_procedure || ('Record ID ' + entry.record_id);
+    }
+    return '<tr>' +
+      '<td>' + escapeHtml(entry.original_table.replaceAll('_', ' ')) + '</td>' +
+      '<td>' + escapeHtml(summary) + '</td>' +
+      '<td>' + escapeHtml(entry.deleted_at || '') + '</td>' +
+      '<td><button type="button" class="btn btn-sm btn-primary" data-archive-restore="' + Number(entry.id) + '">Restore</button> ' +
+      '<button type="button" class="btn btn-sm btn-danger" data-archive-purge="' + Number(entry.id) + '">Delete permanently</button></td>' +
+      '</tr>';
+  }).join('');
+}
+async function renderReport() {
+  const from = document.getElementById('report-from')?.value || '';
+  const to = document.getElementById('report-to')?.value || '';
+  const type = document.getElementById('report-type')?.value || 'appointments';
+  const results = document.getElementById('report-results-body');
+
+  if (!from || !to) { showToast('Choose both a start date and an end date.', 'error'); return; }
+  if (from > to) { showToast('The start date must be on or before the end date.', 'error'); return; }
+
+  const button = document.getElementById('btn-run-report');
+  if (button) button.disabled = true;
+  try {
+    const query = new URLSearchParams({ from, to, type });
+    const res = await api.get('reports/generate.php?' + query.toString());
+    if (!res.success) { showToast(res.message || 'Failed to generate report.', 'error'); return; }
+
+    const rows = res.data?.data || [];
+    let headers;
+    let rowHtml;
+    if (type === 'patients') {
+      headers = ['ID', 'Patient', 'Email', 'Registered'];
+      rowHtml = rows.map((row) => '<tr><td>' + escapeHtml(row.id) + '</td><td>' + escapeHtml(row.full_name) + '</td><td>' + escapeHtml(row.email) + '</td><td>' + escapeHtml(row.created_at) + '</td></tr>');
+    } else if (type === 'services') {
+      headers = ['Service', 'Appointments'];
+      rowHtml = rows.map((row) => '<tr><td>' + escapeHtml(row.service_name) + '</td><td>' + escapeHtml(row.total) + '</td></tr>');
+    } else if (type === 'dentists') {
+      headers = ['Dentist', 'Appointments'];
+      rowHtml = rows.map((row) => '<tr><td>' + escapeHtml(row.full_name) + '</td><td>' + escapeHtml(row.total) + '</td></tr>');
+    } else {
+      headers = ['Status', 'Appointments'];
+      rowHtml = rows.map((row) => '<tr><td>' + escapeHtml(row.status) + '</td><td>' + escapeHtml(row.total) + '</td></tr>');
+    }
+
+    if (results) {
+      results.innerHTML = '<h3 class="mb-3">' + escapeHtml(res.message) + '</h3>' +
+        (rowHtml.length
+          ? '<div class="table-scroll"><table class="data-table"><thead><tr>' + headers.map((header) => '<th>' + header + '</th>').join('') + '</tr></thead><tbody>' + rowHtml.join('') + '</tbody></table></div>'
+          : '<p class="text-sub text-center">No records found for the selected dates.</p>');
+    }
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+async function renderScheduleSettings() {
+  const res = await api.get('schedules/clinic.php');
+  if (!res.success) { showToast(res.message || 'Failed to load clinic schedule.', 'error'); return; }
+  const days = document.getElementById('sched-days');
+  const hours = document.getElementById('sched-hours');
+  if (days) days.value = res.data.operating_days || '';
+  if (hours) hours.value = res.data.operating_hours || '';
+}
 async function renderAdminDentists() {
   const res = await api.get('dentists/list.php');
   if (!res.success) return;
@@ -618,21 +758,131 @@ if (document.getElementById('change-password-form')) {
   });
 }
 
+if (document.getElementById('admin-pass-change-form')) {
+  const adminPasswordForm = document.getElementById('admin-pass-change-form');
+  adminPasswordForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const currentPassword = document.getElementById('admin-curr-pass').value;
+    const newPassword = document.getElementById('admin-new-pass').value;
+    if (newPassword.length < 8) { showToast('New password must be at least 8 characters.', 'error'); return; }
+    const confirmed = await confirmModal({ title: 'Change Password', message: 'Change your account password?' });
+    if (!confirmed) return;
+    const res = await api.post('auth/password.php', { current_password: currentPassword, new_password: newPassword });
+    if (res.success) {
+      showToast('Password changed.');
+      adminPasswordForm.reset();
+    } else {
+      showToast(res.message || 'Password change failed.', 'error');
+    }
+  });
+}
+
 function bindEvents() {
-  if (el.sidebarToggleBtn) el.sidebarToggleBtn.addEventListener('click', () => el.appSidebar.classList.toggle('show-sidebar'));
+  // The navigation is injected after this module loads, so resolve its controls now.
+  const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
+  const appSidebar = document.getElementById('app-sidebar');
+  const btnProfileToggle = document.getElementById('btn-profile-toggle');
+  const profileDropdownPanel = document.getElementById('profile-dropdown-panel');
+  const btnNotifToggle = document.getElementById('btn-notif-toggle');
+  const notifDropdownPanel = document.getElementById('notif-dropdown-panel');
+  const markAllReadButton = document.getElementById('btn-mark-all-read');
+  const searchInput = document.getElementById('global-search-input');
+  const searchResults = document.getElementById('global-search-results');
+  let searchTimer;
+  const scheduleForm = document.getElementById('schedule-settings-form');
+  const addServiceButton = document.getElementById('btn-modal-service');
+  if (addServiceButton) addServiceButton.addEventListener('click', async () => {
+    const service = await openModal('Add New Service',
+      '<form id="form-add-service">' +
+      '<div class="form-group"><label for="m-service-name">Service Name</label><input id="m-service-name" type="text" maxlength="100" required></div>' +
+      '<div class="form-group"><label for="m-service-description">Description</label><textarea id="m-service-description" rows="3" required></textarea></div>' +
+      '<div class="form-group"><label for="m-service-price">Price (₱)</label><input id="m-service-price" type="number" min="0" step="0.01" required></div>' +
+      '</form>', [
+        { text: 'Cancel', class: 'btn-outline', value: false },
+        { text: 'Confirm', class: 'btn-primary', value: () => ({
+          service_name: document.getElementById('m-service-name').value.trim(),
+          description: document.getElementById('m-service-description').value.trim(),
+          price: document.getElementById('m-service-price').value,
+        }) },
+      ]);
+    if (!service) return;
+    if (!service.service_name || !service.description || service.price === '' || !Number.isFinite(Number(service.price)) || Number(service.price) < 0) {
+      showToast('Enter a service name, description, and valid non-negative price.', 'error');
+      return;
+    }
+    const res = await api.post('services/manage.php', { ...service, price: Number(service.price) });
+    if (!res.success) { showToast(res.message || 'Could not add service.', 'error'); return; }
+    showToast('Service added successfully.');
+    await renderAdminServices();
+    closeModal();
+  });
+  const runReportButton = document.getElementById('btn-run-report');
+  if (runReportButton) runReportButton.addEventListener('click', renderReport);
+  if (scheduleForm) scheduleForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const operating_days = document.getElementById('sched-days').value.trim();
+    const operating_hours = document.getElementById('sched-hours').value.trim();
+    const res = await api.post('schedules/clinic.php', { operating_days, operating_hours });
+    if (res.success) showToast('Clinic schedule saved.');
+    else showToast(res.message || 'Failed to save clinic schedule.', 'error');
+  });
+  if (sidebarToggleBtn && appSidebar) sidebarToggleBtn.addEventListener('click', () => appSidebar.classList.toggle('show-sidebar'));
   document.querySelectorAll('.nav-link').forEach((link) => {
     link.addEventListener('click', (e) => { e.preventDefault(); switchView(link.getAttribute('data-view')); });
+  });
+  document.querySelectorAll('[data-navigate]').forEach((button) => {
+    button.addEventListener('click', () => switchView(button.getAttribute('data-navigate')));
   });
   document.querySelectorAll('.btn-logout-action').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const confirmed = await confirmModal({ title: 'Log Out', message: 'Are you sure you want to log out?', danger: true });
       if (!confirmed) return;
       await api.post('auth/logout.php');
-      window.location.assign('/draft for clinic/index.html');
+      window.location.assign(new URL('./index.html', document.baseURI).href);
     });
   });
-  if (el.btnProfileToggle) el.btnProfileToggle.addEventListener('click', (e) => { e.stopPropagation(); el.profileDropdownPanel.classList.toggle('hidden'); el.notifDropdownPanel.classList.add('hidden'); });
-  if (el.btnNotifToggle) el.btnNotifToggle.addEventListener('click', (e) => { e.stopPropagation(); el.notifDropdownPanel.classList.toggle('hidden'); el.profileDropdownPanel.classList.add('hidden'); });
+  if (btnProfileToggle) btnProfileToggle.addEventListener('click', (e) => { e.stopPropagation(); profileDropdownPanel.classList.toggle('hidden'); notifDropdownPanel.classList.add('hidden'); });
+  if (btnNotifToggle) btnNotifToggle.addEventListener('click', (e) => { e.stopPropagation(); notifDropdownPanel.classList.toggle('hidden'); profileDropdownPanel.classList.add('hidden'); });
+  if (searchInput) searchInput.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    const query = searchInput.value;
+    if (query.trim().length < 2) {
+      if (searchResults) { searchResults.classList.add('hidden'); searchResults.innerHTML = ''; }
+      return;
+    }
+    searchTimer = setTimeout(() => renderGlobalSearch(query), 250);
+  });
+  if (searchInput) searchInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && searchResults) searchResults.classList.add('hidden');
+    if (event.key === 'Enter' && searchResults && !searchResults.classList.contains('hidden')) {
+      const firstResult = searchResults.querySelector('[data-search-view]');
+      if (firstResult) firstResult.click();
+    }
+  });
+  if (searchResults) searchResults.addEventListener('click', (event) => {
+    const result = event.target.closest('[data-search-view]');
+    if (!result) return;
+    event.stopPropagation();
+    const target = result.getAttribute('data-search-view');
+    if (searchInput) searchInput.value = '';
+    searchResults.classList.add('hidden');
+    switchView(target);
+  });
+  if (markAllReadButton) markAllReadButton.addEventListener('click', async (event) => {
+    event.stopPropagation();
+    markAllReadButton.disabled = true;
+    try {
+      const res = await api.post('notifications/read.php', { mark_all: true });
+      if (!res.success) {
+        showToast(res.message || 'Could not mark notifications as read.', 'error');
+        return;
+      }
+      await renderNotifications();
+      showToast('All notifications marked as read.');
+    } finally {
+      markAllReadButton.disabled = false;
+    }
+  });
   document.addEventListener('click', closeDropdowns);
   document.querySelectorAll('.dropdown-item').forEach((item) => {
     item.addEventListener('click', (e) => {
@@ -649,6 +899,16 @@ function bindEvents() {
       if (!btn) return;
       const id = btn.getAttribute('data-id');
       const action = btn.getAttribute('data-action');
+      if (action === 'archive') {
+        const confirmed = await confirmModal({ title: 'Move Appointment to Archive', message: 'This appointment will be moved to the archive. You can restore it or permanently delete it later.', danger: true });
+        if (!confirmed) return;
+        const res = await api.del('users/delete.php', { id: Number(id), table: 'appointments' });
+        if (!res.success) { showToast(res.message || 'Could not archive appointment.', 'error'); return; }
+        showToast('Appointment moved to archive.');
+        await renderAdminAppointments();
+        await renderDashboardIfRoleAdminOrDoctor();
+        return;
+      }
       const statusMap = { approve: 'Approved', complete: 'Completed', cancel: 'Cancelled' };
       const newStatus = statusMap[action];
       if (!newStatus) return;
@@ -664,8 +924,35 @@ function bindEvents() {
       } else { showToast(res.message || 'Failed to update.', 'error'); }
     });
   }
+  const archiveTbody = document.getElementById('admin-archives-tbody');
+  if (archiveTbody) archiveTbody.addEventListener('click', async (event) => {
+    const restoreButton = event.target.closest('button[data-archive-restore]');
+    const purgeButton = event.target.closest('button[data-archive-purge]');
+    if (restoreButton) {
+      const id = Number(restoreButton.getAttribute('data-archive-restore'));
+      const confirmed = await confirmModal({ title: 'Restore Archived Record', message: 'Restore this record from the archive?' });
+      if (!confirmed) return;
+      const res = await api.post('archives/restore.php', { id });
+      if (!res.success) { showToast(res.message || 'Could not restore this record.', 'error'); return; }
+      showToast('Record restored.');
+      await renderArchives();
+      await renderAdminAppointments();
+    } else if (purgeButton) {
+      const id = Number(purgeButton.getAttribute('data-archive-purge'));
+      const confirmed = await confirmModal({ title: 'Delete Permanently', message: 'This permanently deletes the archived record and cannot be undone. Continue?', danger: true });
+      if (!confirmed) return;
+      const res = await api.post('archives/hard-delete.php', { id, confirm: 'DELETE' });
+      if (!res.success) { showToast(res.message || 'Could not permanently delete this record.', 'error'); return; }
+      showToast('Archived record permanently deleted.');
+      await renderArchives();
+    }
+  });
 }
-function closeDropdowns() { if (el.profileDropdownPanel) el.profileDropdownPanel.classList.add('hidden'); if (el.notifDropdownPanel) el.notifDropdownPanel.classList.add('hidden'); }
+function closeDropdowns() {
+  if (el.profileDropdownPanel) el.profileDropdownPanel.classList.add('hidden');
+  if (el.notifDropdownPanel) el.notifDropdownPanel.classList.add('hidden');
+  document.getElementById('global-search-results')?.classList.add('hidden');
+}
 function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text ?? ''; return div.innerHTML; }
 
 // Global error handlers — prevent crashes from breaking the page

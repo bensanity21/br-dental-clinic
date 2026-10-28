@@ -19,12 +19,7 @@ ALTER TABLE appointments
   ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
 
--- 4. notifications: make user_id FK explicit (already matches users.id)
---    (index exists via KEY user_id; ensure FK)
-ALTER TABLE notifications
-  ADD CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
-
--- 5. Archives table (soft delete storage)
+-- 4. Archives table (soft delete storage)
 CREATE TABLE IF NOT EXISTS archives (
   id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   original_table VARCHAR(100) NOT NULL,
@@ -38,7 +33,7 @@ CREATE TABLE IF NOT EXISTS archives (
   CONSTRAINT fk_archives_deleted_by FOREIGN KEY (deleted_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- 6. Seed services (if empty)
+-- 5. Seed services (if empty)
 INSERT INTO services (service_name, description, price)
 SELECT * FROM (
   SELECT 'Dental Cleaning (Prophylaxis)', 'Removal of plaque and tartar deposits. Professional cleaning and polishing.', 800.00
@@ -53,7 +48,7 @@ SELECT * FROM (
 ) AS seed
 WHERE NOT EXISTS (SELECT 1 FROM services LIMIT 1);
 
--- 7. Seed dentist: Dr. Ma. Elena B. Retuerma
+-- 6. Seed dentist: Dr. Ma. Elena B. Retuerna
 --    (link to existing super-admin user? no - create standalone dentist linked later; use her own doctor account)
 INSERT INTO dentists (user_id, full_name, specialization, phone_number)
 SELECT * FROM (

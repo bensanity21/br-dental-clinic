@@ -1,8 +1,9 @@
 <?php
 // api/login.php
 header("Content-Type: application/json");
+require_once "../config/config.php";
+session_name(SESSION_NAME);
 session_start();
-session_regenerate_id(true); // New session ID on login — prevents session fixation
 require_once "../connectdb.php";
 
 $data = json_decode(file_get_contents("php://input"), true);
@@ -21,11 +22,13 @@ $stmt->execute([$email]);
 $user = $stmt->fetch();
 
 if ($user && password_verify($password, $user['password_hash'])) {
+    session_regenerate_id(true); // Prevent session fixation after successful authentication.
     // Save session variables
     $_SESSION['user_id'] = $user['id'];
     $_SESSION['role'] = $user['role'];
     $_SESSION['full_name'] = $user['full_name'];
     $_SESSION['email'] = $user['email'];
+    $_SESSION['last_activity'] = time();
 
     echo json_encode([
         "success" => true,

@@ -10,7 +10,6 @@ requireRole(['super-admin']);
 
 $data = json_decode(file_get_contents('php://input'), true);
 $archiveId = $data['id'] ?? null;
-$table = $data['table'] ?? 'users';
 
 if (!$archiveId) { respondError('Archive ID required.', null, 400); }
 
@@ -18,9 +17,12 @@ $stmt = $pdo->prepare('SELECT record_data, original_table, record_id FROM archiv
 $stmt->execute([$archiveId]);
 $archived = $stmt->fetch();
 if (!$archived) { respondError('Archived record not found.', null, 404); }
-if ($archived['original_table'] !== $table) { respondError('Table mismatch.', null, 400); }
+$table = $archived['original_table'];
+$allowedTables = ['users', 'services', 'appointments', 'dental_records', 'dentists'];
+if (!in_array($table, $allowedTables, true)) { respondError('Unsupported archived record type.', null, 400); }
 
 $dataRow = json_decode($archived['record_data'], true);
+if (!is_array($dataRow) || !$dataRow) { respondError('Archived record data is invalid.', null, 400); }
 unset($dataRow['id']); // let MySQL re-assign
 
 // Rebuild insert dynamically

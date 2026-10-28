@@ -17,7 +17,7 @@ if ($user['role'] === 'patient') {
                d.full_name AS dentist_name, u.full_name AS doctor_name
         FROM dental_records dr
         LEFT JOIN dentists d ON dr.dentist_id = d.id
-        LEFT JOIN users u ON dr.dentist_id = u.id
+        LEFT JOIN users u ON d.user_id = u.id
         WHERE dr.patient_id = ?
         ORDER BY dr.record_date DESC
     ");

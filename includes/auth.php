@@ -6,6 +6,7 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/response.php';
 require_once __DIR__ . '/../config/config.php';
 
+session_name(SESSION_NAME);
 session_start();
 
 // Update last activity timestamp on each request

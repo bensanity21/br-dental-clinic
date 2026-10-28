@@ -11,7 +11,7 @@ requireRole(['super-admin']);
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
-    $stmt = $pdo->query('SELECT id, service_name, description, price, created_at FROM services ORDER BY service_name ASC');
+    $stmt = $pdo->query('SELECT id, service_name, description, price FROM services ORDER BY service_name ASC');
     respondSuccess('Services retrieved', $stmt->fetchAll());
 }
 

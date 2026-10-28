@@ -432,6 +432,23 @@ input:focus, select:focus, textarea:focus {
 /* Brand mark + clinic name */
 .clinic-brand { display: inline-flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
 
+.navbar-brand {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.6rem;
+  line-height: 1;
+}
+
+.brand-mark {
+  display: block;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
 .brand-icon {
   display: block;
   flex: 0 0 auto;
@@ -475,7 +492,9 @@ input:focus, select:focus, textarea:focus {
 .sidebar-footer { padding: 1rem 1.2rem; border-top: 1px solid var(--border-color); }
 
 .nav-link {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
   margin: 0.16rem 0;
   padding: 0.72rem 0.9rem;
   border-radius: 8px;
@@ -484,6 +503,7 @@ input:focus, select:focus, textarea:focus {
   font-size: 0.92rem;
   transition: color 0.16s ease, background-color 0.16s ease;
 }
+.nav-link svg { display: block; flex: 0 0 18px; width: 18px; height: 18px; }
 .nav-link:hover { background: #f0f6f3; color: var(--teal-dark); text-decoration: none; }
 .nav-link.active { background: var(--teal-light); color: var(--teal-dark); font-weight: 700; }
 
@@ -516,6 +536,26 @@ input:focus, select:focus, textarea:focus {
 #sidebar-toggle-btn { display: none; }
 
 .navbar-search { position: relative; width: 100%; max-width: 390px; margin-right: auto; }
+.global-search-results {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  left: 0;
+  z-index: 150;
+  width: min(460px, calc(100vw - 2rem));
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: 0 14px 32px rgba(30, 58, 48, 0.16);
+}
+.global-search-group { padding: 0.35rem 0; border-bottom: 1px solid var(--border-color); }
+.global-search-group:last-child { border-bottom: 0; }
+.global-search-group h3, .global-search-message { padding: 0.55rem 0.85rem; color: var(--text-muted); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.global-search-result { display: flex; width: 100%; flex-direction: column; gap: 0.12rem; padding: 0.55rem 0.85rem; background: #fff; border: 0; text-align: left; cursor: pointer; }
+.global-search-result:hover, .global-search-result:focus-visible { background: #f0f6f3; outline: 0; }
+.global-search-result strong { color: var(--text-main); font-size: 0.84rem; font-weight: 600; }
+.global-search-result span { color: var(--text-muted); font-size: 0.75rem; }
 
 .navbar-search input[type="search"] {
   min-height: 42px;
@@ -717,6 +757,7 @@ input:focus, select:focus, textarea:focus {
 .kpi-sub   { font-size: 0.78rem; color: var(--text-muted); }
 
 .report-filters { display: flex; align-items: flex-end; gap: 1rem; flex-wrap: wrap; }
+.report-filters > .form-group { margin-bottom: 0; }
 
 
 /* 13. MODAL (generic) ----------------------------------------------------- */

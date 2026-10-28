@@ -35,14 +35,14 @@ if (!$apt) {
 
 // Authorization: patient can only cancel their own; doctor/super-admin can change any
 if ($user['role'] === 'patient') {
-    if ($apt['patient_id'] !== $user['id']) {
+    if ((int)$apt['patient_id'] !== (int)$user['id']) {
         respondError('You can only modify your own appointments.', null, 403);
     }
     if ($newStatus !== 'Cancelled') {
         respondError('Patients can only cancel appointments.', null, 403);
     }
 } elseif ($user['role'] === 'doctor') {
-    if ($apt['dentist_user_id'] !== $user['id'] && $apt['dentist_user_id'] !== null) {
+    if ((int)($apt['dentist_user_id'] ?? 0) !== (int)$user['id']) {
         respondError('You can only modify your own appointments.', null, 403);
     }
 }

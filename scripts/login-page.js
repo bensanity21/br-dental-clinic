@@ -28,19 +28,22 @@ if (form) {
     try {
       const res = await api.post("login.php", { email, password });
 
-      if (res.success) {
+      console.log("Login API response:", res); // Debug logging
+
+      if (res && res.success) {
         showToast("Welcome back, " + res.data.user.name + "!");
-        if (res.data.user.role === "super-admin" || res.data.user.role === "doctor") {
-          window.location.assign("/draft for clinic/admin.html");
-        } else {
-          window.location.assign("/draft for clinic/user.html");
-        }
+        const redirectUrl = (res.data.user.role === "super-admin" || res.data.user.role === "doctor")
+          ? "/draft for clinic/admin.html"
+          : "/draft for clinic/user.html";
+        // Use both assign and href for maximum browser compatibility
+        window.location.assign(redirectUrl);
+        window.location.href = redirectUrl;
       } else {
-        setAuthAlert(res.message || "Invalid email or password.", "danger");
+        setAuthAlert(res && res.message ? res.message : "Invalid email or password.", "danger");
       }
     } catch (err) {
       console.error("Login error:", err);
-      setAuthAlert("Failed to connect to the backend server.", "danger");
+      setAuthAlert("Failed to connect to the backend server. " + (err.message || ""), "danger");
     }
   });
 }

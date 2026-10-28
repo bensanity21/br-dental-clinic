@@ -31,8 +31,8 @@ if (form) {
       console.log("Login API response:", res); // Debug logging
 
       if (res && res.success) {
-        showToast("Welcome back, " + res.data.user.name + "!");
-        const redirectUrl = (res.data.user.role === "super-admin" || res.data.user.role === "doctor")
+        showToast("Welcome back, " + res.data.name + "!");
+        const redirectUrl = (res.data.role === "super-admin" || res.data.role === "doctor")
           ? "/draft for clinic/admin.html"
           : "/draft for clinic/user.html";
         // Use both assign and href for maximum browser compatibility

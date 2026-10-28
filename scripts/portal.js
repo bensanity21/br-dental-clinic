@@ -58,6 +58,7 @@ async function initApp() {
       window.location.assign('/draft for clinic/index.html');
       return;
     }
+    renderNavigation(); // Inject sidebar + top navbar HTML
     bindEvents();
     renderRoleBasedNav();
     await renderNotifications();
@@ -68,6 +69,159 @@ async function initApp() {
     console.error('Init error:', err);
     showToast('Application failed to load. Please refresh and try again.', 'error');
   }
+}
+
+/**
+ * Injects the sidebar and top navigation bar HTML into the slot divs.
+ * The HTML references IDs that portal.js bindings expect (sidebar-toggle-btn,
+ * btn-profile-toggle, btn-notif-toggle, notif-count-badge, etc.).
+ */
+function renderNavigation() {
+  const sidebarSlot = document.getElementById('sidebar-slot');
+  const navbarSlot = document.getElementById('navbar-slot');
+  if (!sidebarSlot || !navbarSlot) return;
+
+  const isAdmin = role === 'super-admin';
+  const isDoctor = role === 'doctor';
+  const fullName = currentUser.full_name || 'User';
+  const firstName = fullName.split(' ')[0] || 'User';
+
+  // ---------- Sidebar ----------
+  sidebarSlot.innerHTML = `
+    <aside class="sidebar" id="app-sidebar">
+      <div class="sidebar-header">
+        <div class="clinic-brand">
+          <div class="brand-mark" aria-hidden="true">🦷</div>
+          <span class="brand-name">BR Dental Clinic</span>
+        </div>
+        <button type="button" class="btn-icon sidebar-toggle-btn" id="sidebar-toggle-btn" aria-label="Toggle navigation">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <ul>
+          <li>
+            <a href="#" class="nav-link${!isAdmin ? ' active' : ''}" data-view="${isAdmin ? 'admin-dashboard' : 'patient-home'}">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1" ry="1"></rect><rect x="14" y="3" width="7" height="7" rx="1" ry="1"></rect><rect x="14" y="14" width="7" height="7" rx="1" ry="1"></rect><rect x="3" y="14" width="7" height="7" rx="1" ry="1"></rect></svg>
+              <span>Dashboard</span>
+            </a>
+          </li>
+          ${!isAdmin ? `
+          <li>
+            <a href="#" class="nav-link" data-view="patient-services">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="2" x2="12" y2="22"></line><path d="M5 12h14M12 5l7 7-7 7-7-7 7-7"></path></svg>
+              <span>Services</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="nav-link" data-view="patient-book">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 11v2a4 4 0 0 1-4 4H5a4 4 0 0 1-4-4V5a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v2"></path></svg>
+              <span>Book Appointment</span>
+            </a>
+          </li>
+          ` : `
+          <li>
+            <a href="#" class="nav-link" data-view="admin-appointments">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+              <span>Appointments</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="nav-link" data-view="admin-patients">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.47M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              <span>Patients</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="nav-link" data-view="admin-records">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+              <span>Dental Records</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="nav-link" data-view="admin-services">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"></circle><line x1="12" y1="1" x2="12" y2="3"></line><path d="M17.5 18.5a2.5 2.5 0 1 1 0 5H17a1 1 0 1 0 0 2h4.5a1 1 0 1 0 0-2H20a2.5 2.5 0 1 1 0-5z"></path><polyline points="3 11 6 13 8 12"></polyline></svg>
+              <span>Services</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="nav-link" data-view="admin-schedules">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              <span>Schedules</span>
+            </a>
+          </li>
+          <li>
+            <a href="#" class="nav-link" data-view="admin-reports">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"></line><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+              <span>Reports</span>
+            </a>
+          </li>
+          `}
+          ${isAdmin ? `
+          <li>
+            <a href="#" class="nav-link" data-view="admin-users">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></svg>
+              <span>Users & Roles</span>
+            </a>
+          </li>
+          ` : ''}
+        </ul>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-profile">
+          <div class="sidebar-profile-avatar">${firstName.charAt(0).toUpperCase()}</div>
+          <div class="sidebar-profile-info">
+            <div class="sidebar-profile-name">${fullName}</div>
+            <div class="sidebar-profile-role">${isAdmin ? 'Master Admin' : isDoctor ? 'Doctor' : 'Patient'}</div>
+          </div>
+        </div>
+        <div class="sidebar-divider"></div>
+        <button type="button" class="btn btn-logout-action btn-block" id="btn-logout-action">Log Out</button>
+      </div>
+    </aside>
+  `;
+
+  // ---------- Top Navbar ----------
+  navbarSlot.innerHTML = `
+    <header class="top-navbar" id="top-navbar">
+      <div class="navbar-brand">
+        <div class="brand-mark" aria-hidden="true">🦷</div>
+        <span class="brand-name">BR Dental Clinic</span>
+      </div>
+
+      <div class="navbar-search">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="search-icon"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="search" id="global-search-input" placeholder="Search appointments, services, patients..." aria-label="Global search">
+      </div>
+
+      <div class="navbar-right">
+        <div class="navbar-item">
+          <button type="button" class="btn-icon btn-notif-toggle" id="btn-notif-toggle" aria-label="Notifications">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+            <span id="notif-count-badge" class="badge-count hidden">0</span>
+          </button>
+        </div>
+
+        <div class="navbar-item">
+          <button type="button" class="btn-icon btn-profile-toggle" id="btn-profile-toggle" aria-label="Profile">
+            <span class="avatar-circle">${firstName.charAt(0).toUpperCase()}</span>
+          </button>
+        </div>
+      </div>
+    </header>
+  `;
+
+  // Re-fetch DOM elements now that they exist
+  el.sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
+  el.appSidebar = document.getElementById('app-sidebar');
+  el.btnProfileToggle = document.getElementById('btn-profile-toggle');
+  el.profileDropdownPanel = document.getElementById('profile-dropdown-panel');
+  el.btnNotifToggle = document.getElementById('btn-notif-toggle');
+  el.notifDropdownPanel = document.getElementById('notif-dropdown-panel');
+  el.notifCountBadge = document.getElementById('notif-count-badge');
+  el.notifListContainer = document.getElementById('notif-list-container');
 }
 
 function renderRoleBasedNav() {

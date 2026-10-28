@@ -9,7 +9,7 @@ import { showToast } from './toast.js';
 let currentUser = null;
 let role = '';
 let dentistInfo = null;
-let bookingDentistId = null;
+let serviceCatalog = [];
 
 async function loadSession() {
   const res = await api.get('auth/me.php');
@@ -29,7 +29,9 @@ const el = {
   notifDropdownPanel: document.getElementById('notif-dropdown-panel'),
   notifCountBadge: document.getElementById('notif-count-badge'),
   notifListContainer: document.getElementById('notif-list-container'),
-  patientServicesGrid: document.getElementById('patient-services-grid'),
+  patientServicesTbody: document.getElementById('patient-services-tbody'),
+  patientServiceSearch: document.getElementById('patient-service-search'),
+  adminServiceSearch: document.getElementById('admin-service-search'),
   bookServiceSelect: document.getElementById('book-service'),
   bookDentistField: document.getElementById('book-dentist'),
   patientAppointmentsTbody: document.getElementById('patient-appointments-tbody'),
@@ -111,20 +113,20 @@ function renderNavigation() {
           ${!isAdmin ? `
           <li>
             <a href="#" class="nav-link" data-view="patient-services">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="2" x2="12" y2="22"></line><path d="M5 12h14M12 5l7 7-7 7-7-7 7-7"></path></svg>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2"></rect><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18M10 12v2h4v-2"></path></svg>
               <span>Services</span>
             </a>
           </li>
           <li>
-            <a href="#" class="nav-link" data-view="patient-book">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 11v2a4 4 0 0 1-4 4H5a4 4 0 0 1-4-4V5a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v2"></path></svg>
-              <span>Book Appointment</span>
+            <a href="#" class="nav-link" data-view="patient-appointments">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M8 2v4M16 2v4M3 9h18"></path><rect x="8" y="13" width="3" height="3" rx="0.4"></rect></svg>
+              <span>Appointment</span>
             </a>
           </li>
           ` : `
           <li>
             <a href="#" class="nav-link" data-view="admin-appointments">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M8 2v4M16 2v4M3 9h18"></path><rect x="8" y="13" width="3" height="3" rx="0.4"></rect></svg>
               <span>Appointments</span>
             </a>
           </li>
@@ -142,7 +144,7 @@ function renderNavigation() {
           </li>
           <li>
             <a href="#" class="nav-link" data-view="admin-services">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12.01" y2="12"></line><polyline points="12 5 9 17 15 17"></polyline></svg>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2"></rect><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18M10 12v2h4v-2"></path></svg>
               <span>Services</span>
             </a>
           </li>
@@ -182,17 +184,6 @@ function renderNavigation() {
         </ul>
       </nav>
 
-      <div class="sidebar-footer">
-        <div class="sidebar-profile">
-          <div class="sidebar-profile-avatar">${firstName.charAt(0).toUpperCase()}</div>
-          <div class="sidebar-profile-info">
-            <div class="sidebar-profile-name">${fullName}</div>
-            <div class="sidebar-profile-role">${isAdmin ? 'Master Admin' : isDoctor ? 'Doctor' : 'Patient'}</div>
-          </div>
-        </div>
-        <div class="sidebar-divider"></div>
-        <button type="button" class="btn btn-logout-action btn-block" id="btn-logout-action">Log Out</button>
-      </div>
     </aside>
   `;
 
@@ -201,7 +192,7 @@ function renderNavigation() {
     <header class="top-navbar" id="top-navbar">
       <div class="navbar-search">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="search-icon"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        <input type="search" id="global-search-input" placeholder="Search appointments, services, patients..." aria-label="Global search">
+        <input type="search" id="global-search-input" placeholder="Search anything..." aria-label="Search clinic information">
         <div id="global-search-results" class="global-search-results hidden" role="listbox" aria-label="Search results"></div>
       </div>
 
@@ -225,19 +216,19 @@ function renderNavigation() {
         </div>
 
         <div class="navbar-item">
-          <button type="button" class="btn-icon btn-profile-toggle" id="btn-profile-toggle" aria-label="Profile" style="position: relative;">
-            <span class="avatar-circle">${firstName.charAt(0).toUpperCase()}</span>
+          <button type="button" class="profile-menu-toggle" id="btn-profile-toggle" aria-label="Open account menu" aria-expanded="false">
+            <span class="profile-menu-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c.4-3.5 2.7-5.5 7-5.5s6.6 2 7 5.5"></path></svg></span>
+            <span class="profile-menu-name">${escapeHtml(fullName)}</span>
+            <svg class="profile-menu-chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
           </button>
-          <div id="profile-dropdown-panel" class="dropdown-panel dropdown-right hidden" style="position: absolute; top: 100%; right: 0; width: 200px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); margin-top: 0.5rem; z-index: 100;">
-            <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #f3f4f6;">
-              <div style="font-weight: 600; font-size: 0.875rem; color: #111827;">${fullName}</div>
-              <div style="font-size: 0.75rem; color: #6b7280;">${isAdmin ? 'Master Admin' : isDoctor ? 'Doctor' : 'Patient'}</div>
+          <div id="profile-dropdown-panel" class="dropdown-panel dropdown-right profile-dropdown-card hidden" aria-hidden="true">
+            <div class="profile-dropdown-heading">
+              <span class="profile-dropdown-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c.4-3.5 2.7-5.5 7-5.5s6.6 2 7 5.5"></path></svg></span>
+              <span class="profile-dropdown-identity"><strong>${escapeHtml(fullName)}</strong><span>${isAdmin ? 'Master Admin' : isDoctor ? 'Doctor' : 'Patient'}</span></span>
             </div>
-            <hr style="margin: 0.5rem 0; border: none; border-top: 1px solid #f3f4f6;">
-            <a href="#" class="dropdown-item" style="display: block; padding: 0.625rem 1rem; color: #374151; text-decoration: none; font-size: 0.875rem;" data-view-target="profile">My Profile</a>
-            <a href="#" class="dropdown-item" style="display: block; padding: 0.625rem 1rem; color: #374151; text-decoration: none; font-size: 0.875rem;" data-view-target="appointments">My Appointments</a>
-            <hr style="margin: 0.5rem 0; border: none; border-top: 1px solid #f3f4f6;">
-            <button type="button" class="btn-logout-action" style="width: 100%; padding: 0.625rem 1rem; text-align: left; color: #dc2626; background: none; border: none; cursor: pointer; font-size: 0.875rem;" id="btn-logout-action">Log Out</button>
+            <a href="#" class="profile-dropdown-item" data-view-target="profile"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c.5-4.2 3.2-6.5 8-6.5s7.5 2.3 8 6.5"></path></svg><span>View Profile</span></a>
+            <a href="#" class="profile-dropdown-item" data-view-target="appointments"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4M8 3v4M3 10h18M9 15l2 2 4-4"></path></svg><span>Appointments</span></a>
+            <button type="button" class="profile-dropdown-item profile-dropdown-logout btn-logout-action" id="btn-logout-action"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 17l5-5-5-5M15 12H3"></path><path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7"></path></svg><span>Log Out</span></button>
           </div>
         </div>
       </div>
@@ -304,30 +295,41 @@ async function switchView(targetViewId) {
 async function renderServices() {
   const res = await api.get('services/list.php');
   if (!res.success) { showToast('Failed to load services.', 'error'); return; }
-  const services = res.data || [];
-  if (el.patientServicesGrid) {
-    el.patientServicesGrid.innerHTML = services.map((s) => (
-      '<div class="card">' +
-      '<h3>' + escapeHtml(s.service_name) + '</h3>' +
-      '<p class="text-sub mt-2">' + escapeHtml(s.description || '') + '</p>' +
-      '<div class="service-price">₱' + Number(s.price || 0).toFixed(2) + '</div>' +
-      '</div>'
-    )).join('');
-  }
+  serviceCatalog = res.data || [];
+  renderServiceTables();
   if (el.bookServiceSelect) {
     el.bookServiceSelect.innerHTML = '<option value="">-- Choose a Service --</option>' +
-      services.map((s) => '<option value="' + s.id + '">' + escapeHtml(s.service_name) + '</option>').join('');
+      serviceCatalog.map((s) => '<option value="' + Number(s.id) + '">' + escapeHtml(s.service_name) + '</option>').join('');
   }
-  if (el.adminServicesTbody) {
-    el.adminServicesTbody.innerHTML = services.map((s) => (
-      '<tr>' +
-      '<td><strong>' + escapeHtml(s.service_name) + '</strong></td>' +
-      '<td>' + escapeHtml(s.description || '') + '</td>' +
-      '<td>₱' + Number(s.price || 0).toFixed(2) + '</td>' +
-      '<td><button class="btn btn-sm btn-danger" onclick="deleteService(' + s.id + ')">Delete</button></td>' +
-      '</tr>'
-    )).join('');
-  }
+}
+
+function renderServiceTables() {
+  const renderRows = (tbody, query, admin = false) => {
+    if (!tbody) return;
+    const normalizedQuery = (query || '').trim().toLowerCase();
+    const services = serviceCatalog.filter((service) =>
+      !normalizedQuery || [service.service_name, service.description].some((value) => String(value || '').toLowerCase().includes(normalizedQuery))
+    );
+    const colspan = admin ? 4 : 3;
+    if (!services.length) {
+      tbody.innerHTML = '<tr><td colspan="' + colspan + '" class="empty-cell">' + (normalizedQuery ? 'No matching services found.' : 'No services are currently available.') + '</td></tr>';
+      return;
+    }
+    tbody.innerHTML = services.map((service) => {
+      const actions = admin
+        ? '<td class="service-actions"><button type="button" class="service-edit-button" data-service-edit="' + Number(service.id) + '">Edit</button>' +
+          '<button type="button" class="btn btn-sm btn-danger" data-service-delete="' + Number(service.id) + '">Delete</button></td>'
+        : '';
+      return '<tr>' +
+        '<td><strong>' + escapeHtml(service.service_name) + '</strong></td>' +
+        '<td class="service-description">' + escapeHtml(service.description || '') + '</td>' +
+        '<td class="service-price-cell">₱' + Number(service.price || 0).toFixed(2) + '</td>' +
+        actions +
+        '</tr>';
+    }).join('');
+  };
+  renderRows(el.patientServicesTbody, el.patientServiceSearch?.value, false);
+  renderRows(el.adminServicesTbody, el.adminServiceSearch?.value, true);
 }
 
 async function renderDentists() {
@@ -335,14 +337,9 @@ async function renderDentists() {
   if (!res.success) { showToast('Failed to load dentists.', 'error'); return; }
   const dentists = res.data || [];
   if (el.bookDentistField) {
-    const d = dentists[0];
-    if (d) {
-      bookingDentistId = Number(d.id);
-      el.bookDentistField.value = d.full_name + ' (' + (d.specialization || 'General Dentistry') + ')';
-    } else {
-      bookingDentistId = null;
-      el.bookDentistField.value = 'No dentist is available';
-    }
+    el.bookDentistField.innerHTML = '<option value="">' + (dentists.length ? '-- Choose a Dentist --' : 'No dentists are available') + '</option>' +
+      dentists.map((dentist) => '<option value="' + Number(dentist.id) + '">' + escapeHtml(dentist.full_name) + (dentist.specialization ? ' (' + escapeHtml(dentist.specialization) + ')' : '') + '</option>').join('');
+    el.bookDentistField.disabled = dentists.length === 0;
   }
 }
 async function populateBookingDentist() { await renderDentists(); }
@@ -425,11 +422,11 @@ if (document.getElementById('booking-form')) {
   document.getElementById('booking-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const serviceId = document.getElementById('book-service').value;
-    const dentistId = bookingDentistId;
+    const dentistId = Number(document.getElementById('book-dentist').value);
     const date = document.getElementById('book-date').value;
     const time = document.getElementById('book-time').value;
     const notes = document.getElementById('book-notes').value;
-    if (!serviceId || !dentistId || !date || !time) { showToast('Please complete all booking fields and ensure a dentist is available.', 'error'); return; }
+    if (!serviceId || !dentistId || !date || !time) { showToast('Please choose a service, dentist, date, and time slot.', 'error'); return; }
     const svcText = document.getElementById('book-service').selectedOptions[0]?.text || 'service';
     const confirmed = await confirmModal({ title: 'Confirm Appointment', message: 'Book ' + escapeHtml(svcText) + ' on ' + date + ' at ' + time + '?' });
     if (!confirmed) return;
@@ -461,11 +458,47 @@ window.cancelApt = async (id) => {
 };
 
 window.deleteService = async (id) => {
-  const confirmed = await confirmModal({ title: 'Delete Service', message: 'Permanently delete this service?', danger: true });
+  const confirmed = await confirmModal({ title: 'Archive Service', message: 'Move this service to the archive? You can restore it later.', danger: true });
   if (!confirmed) return;
-  const res = await api.del('services/manage.php', { id });
-  if (res.success) { showToast('Service deleted.'); await renderAdminServices(); await renderServices(); }
-  else { showToast(res.message || 'Failed to delete.', 'error'); }
+  const res = await api.del('users/delete.php', { id, table: 'services' });
+  if (res.success) { showToast('Service moved to archive.'); await renderServices(); }
+  else { showToast(res.message || 'Failed to archive service.', 'error'); }
+}
+
+async function openServiceForm(service = null) {
+  const isEdit = Boolean(service);
+  const resultPromise = openModal(isEdit ? 'Edit Service' : 'Add New Service',
+    '<form id="form-service-editor">' +
+    '<div class="form-group"><label for="m-service-name">Service Name</label><input id="m-service-name" type="text" maxlength="100" required></div>' +
+    '<div class="form-group"><label for="m-service-description">Description</label><textarea id="m-service-description" rows="3" required></textarea></div>' +
+    '<div class="form-group"><label for="m-service-price">Price (₱)</label><input id="m-service-price" type="number" min="0" step="0.01" required></div>' +
+    '</form>', [
+      { text: 'Cancel', class: 'btn-outline', value: false },
+      { text: 'Confirm', class: 'btn-primary', value: () => ({
+        service_name: document.getElementById('m-service-name').value.trim(),
+        description: document.getElementById('m-service-description').value.trim(),
+        price: document.getElementById('m-service-price').value,
+      }) },
+    ]);
+  document.getElementById('m-service-name').value = service?.service_name || '';
+  document.getElementById('m-service-description').value = service?.description || '';
+  document.getElementById('m-service-price').value = service?.price ?? '';
+  const values = await resultPromise;
+  if (!values) return;
+  if (!values.service_name || !values.description || values.price === '' || !Number.isFinite(Number(values.price)) || Number(values.price) < 0) {
+    showToast('Enter a service name, description, and valid non-negative price.', 'error');
+    return;
+  }
+  const payload = { ...values, price: Number(values.price) };
+  const response = isEdit
+    ? await api.patch('services/manage.php', { id: Number(service.id), ...payload })
+    : await api.post('services/manage.php', payload);
+  if (!response.success) {
+    showToast(response.message || (isEdit ? 'Could not update service.' : 'Could not add service.'), 'error');
+    return;
+  }
+  showToast(isEdit ? 'Service updated successfully.' : 'Service added successfully.');
+  await renderServices();
 }
 
 async function renderPatientRecords() {
@@ -791,30 +824,18 @@ function bindEvents() {
   let searchTimer;
   const scheduleForm = document.getElementById('schedule-settings-form');
   const addServiceButton = document.getElementById('btn-modal-service');
-  if (addServiceButton) addServiceButton.addEventListener('click', async () => {
-    const service = await openModal('Add New Service',
-      '<form id="form-add-service">' +
-      '<div class="form-group"><label for="m-service-name">Service Name</label><input id="m-service-name" type="text" maxlength="100" required></div>' +
-      '<div class="form-group"><label for="m-service-description">Description</label><textarea id="m-service-description" rows="3" required></textarea></div>' +
-      '<div class="form-group"><label for="m-service-price">Price (₱)</label><input id="m-service-price" type="number" min="0" step="0.01" required></div>' +
-      '</form>', [
-        { text: 'Cancel', class: 'btn-outline', value: false },
-        { text: 'Confirm', class: 'btn-primary', value: () => ({
-          service_name: document.getElementById('m-service-name').value.trim(),
-          description: document.getElementById('m-service-description').value.trim(),
-          price: document.getElementById('m-service-price').value,
-        }) },
-      ]);
-    if (!service) return;
-    if (!service.service_name || !service.description || service.price === '' || !Number.isFinite(Number(service.price)) || Number(service.price) < 0) {
-      showToast('Enter a service name, description, and valid non-negative price.', 'error');
-      return;
+  if (addServiceButton) addServiceButton.addEventListener('click', () => openServiceForm());
+  if (el.patientServiceSearch) el.patientServiceSearch.addEventListener('input', renderServiceTables);
+  if (el.adminServiceSearch) el.adminServiceSearch.addEventListener('input', renderServiceTables);
+  if (el.adminServicesTbody) el.adminServicesTbody.addEventListener('click', async (event) => {
+    const editButton = event.target.closest('[data-service-edit]');
+    const deleteButton = event.target.closest('[data-service-delete]');
+    if (editButton) {
+      const service = serviceCatalog.find((item) => Number(item.id) === Number(editButton.dataset.serviceEdit));
+      if (service) await openServiceForm(service);
+    } else if (deleteButton) {
+      await window.deleteService(Number(deleteButton.dataset.serviceDelete));
     }
-    const res = await api.post('services/manage.php', { ...service, price: Number(service.price) });
-    if (!res.success) { showToast(res.message || 'Could not add service.', 'error'); return; }
-    showToast('Service added successfully.');
-    await renderAdminServices();
-    closeModal();
   });
   const runReportButton = document.getElementById('btn-run-report');
   if (runReportButton) runReportButton.addEventListener('click', renderReport);
@@ -841,7 +862,14 @@ function bindEvents() {
       window.location.assign(new URL('./index.html', document.baseURI).href);
     });
   });
-  if (btnProfileToggle) btnProfileToggle.addEventListener('click', (e) => { e.stopPropagation(); profileDropdownPanel.classList.toggle('hidden'); notifDropdownPanel.classList.add('hidden'); });
+  if (btnProfileToggle) btnProfileToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const willOpen = profileDropdownPanel.classList.contains('hidden');
+    profileDropdownPanel.classList.toggle('hidden');
+    profileDropdownPanel.setAttribute('aria-hidden', String(!willOpen));
+    btnProfileToggle.setAttribute('aria-expanded', String(willOpen));
+    notifDropdownPanel.classList.add('hidden');
+  });
   if (btnNotifToggle) btnNotifToggle.addEventListener('click', (e) => { e.stopPropagation(); notifDropdownPanel.classList.toggle('hidden'); profileDropdownPanel.classList.add('hidden'); });
   if (searchInput) searchInput.addEventListener('input', () => {
     clearTimeout(searchTimer);
@@ -884,7 +912,7 @@ function bindEvents() {
     }
   });
   document.addEventListener('click', closeDropdowns);
-  document.querySelectorAll('.dropdown-item').forEach((item) => {
+  document.querySelectorAll('[data-view-target]').forEach((item) => {
     item.addEventListener('click', (e) => {
       e.preventDefault();
       const target = item.getAttribute('data-view-target');
@@ -951,6 +979,8 @@ function bindEvents() {
 function closeDropdowns() {
   if (el.profileDropdownPanel) el.profileDropdownPanel.classList.add('hidden');
   if (el.notifDropdownPanel) el.notifDropdownPanel.classList.add('hidden');
+  document.getElementById('profile-dropdown-panel')?.setAttribute('aria-hidden', 'true');
+  document.getElementById('btn-profile-toggle')?.setAttribute('aria-expanded', 'false');
   document.getElementById('global-search-results')?.classList.add('hidden');
 }
 function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text ?? ''; return div.innerHTML; }

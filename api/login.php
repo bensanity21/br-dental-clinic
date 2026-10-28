@@ -11,7 +11,7 @@ $email = filter_var($data['email'] ?? '', FILTER_VALIDATE_EMAIL);
 $password = $data['password'] ?? '';
 
 if (!$email || empty($password)) {
-    echo json_encode(["status" => "error", "message" => "Please enter a valid email address and password."]);
+    echo json_encode(["success" => false, "message" => "Please enter a valid email address and password.", "data" => null]);
     exit();
 }
 
@@ -28,8 +28,9 @@ if ($user && password_verify($password, $user['password_hash'])) {
     $_SESSION['email'] = $user['email'];
 
     echo json_encode([
-        "status" => "success",
-        "user" => [
+        "success" => true,
+        "message" => "Login successful",
+        "data" => [
             "id" => $user['id'],
             "name" => $user['full_name'],
             "email" => $user['email'],
@@ -37,6 +38,6 @@ if ($user && password_verify($password, $user['password_hash'])) {
         ]
     ]);
 } else {
-    echo json_encode(["status" => "error", "message" => "Invalid email or password."]);
+    echo json_encode(["success" => false, "message" => "Invalid email or password.", "data" => null]);
 }
 ?>

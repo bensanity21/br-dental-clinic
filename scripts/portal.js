@@ -91,7 +91,7 @@ function renderNavigation() {
     <aside class="sidebar" id="app-sidebar">
       <div class="sidebar-header">
         <div class="clinic-brand">
-          <div class="brand-mark" aria-hidden="true">🦷</div>
+          <img class="brand-mark" src="brand-icon.png" alt="" width="32" height="32">
           <span class="brand-name">BR Dental Clinic</span>
         </div>
         <button type="button" class="btn-icon sidebar-toggle-btn" id="sidebar-toggle-btn" aria-label="Toggle navigation">
@@ -141,7 +141,7 @@ function renderNavigation() {
           </li>
           <li>
             <a href="#" class="nav-link" data-view="admin-services">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1"></circle><line x1="12" y1="1" x2="12" y2="3"></line><path d="M17.5 18.5a2.5 2.5 0 1 1 0 5H17a1 1 0 1 0 0 2h4.5a1 1 0 1 0 0-2H20a2.5 2.5 0 1 1 0-5z"></path><polyline points="3 11 6 13 8 12"></polyline></svg>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12.01" y2="12"></line><polyline points="12 5 9 17 15 17"></polyline></svg>
               <span>Services</span>
             </a>
           </li>
@@ -161,7 +161,7 @@ function renderNavigation() {
           ${isAdmin ? `
           <li>
             <a href="#" class="nav-link" data-view="admin-users">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></svg>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.47M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
               <span>Users & Roles</span>
             </a>
           </li>
@@ -187,7 +187,7 @@ function renderNavigation() {
   navbarSlot.innerHTML = `
     <header class="top-navbar" id="top-navbar">
       <div class="navbar-brand">
-        <div class="brand-mark" aria-hidden="true">🦷</div>
+        <img class="brand-mark" src="brand-icon.png" alt="" width="32" height="32">
         <span class="brand-name">BR Dental Clinic</span>
       </div>
 
@@ -198,16 +198,38 @@ function renderNavigation() {
 
       <div class="navbar-right">
         <div class="navbar-item">
-          <button type="button" class="btn-icon btn-notif-toggle" id="btn-notif-toggle" aria-label="Notifications">
+          <button type="button" class="btn-icon btn-notif-toggle" id="btn-notif-toggle" aria-label="Notifications" style="position: relative;">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
             <span id="notif-count-badge" class="badge-count hidden">0</span>
           </button>
+          <div id="notif-dropdown-panel" class="dropdown-panel dropdown-right hidden" style="position: absolute; top: 100%; right: 0; width: 320px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); margin-top: 0.5rem; z-index: 100;">
+            <div class="dropdown-header" style="padding: 0.75rem 1rem; border-bottom: 1px solid #f3f4f6;">
+              <h3 style="margin: 0; font-size: 0.875rem; font-weight: 600; color: #111827;">Notifications</h3>
+            </div>
+            <ul id="notif-list-container" class="dropdown-list" style="list-style: none; margin: 0; padding: 0; max-height: 240px; overflow-y: auto;">
+              <li class="empty-list-text" style="padding: 0.75rem 1rem; color: #6b7280; font-size: 0.875rem;">No new notifications.</li>
+            </ul>
+            <div style="padding: 0.5rem 1rem; border-top: 1px solid #f3f4f6;">
+              <button type="button" class="btn btn-outline" style="width: 100%; padding: 0.5rem 1rem; font-size: 0.875rem;" id="btn-mark-all-read">Mark all as read</button>
+            </div>
+          </div>
         </div>
 
         <div class="navbar-item">
-          <button type="button" class="btn-icon btn-profile-toggle" id="btn-profile-toggle" aria-label="Profile">
+          <button type="button" class="btn-icon btn-profile-toggle" id="btn-profile-toggle" aria-label="Profile" style="position: relative;">
             <span class="avatar-circle">${firstName.charAt(0).toUpperCase()}</span>
           </button>
+          <div id="profile-dropdown-panel" class="dropdown-panel dropdown-right hidden" style="position: absolute; top: 100%; right: 0; width: 200px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); margin-top: 0.5rem; z-index: 100;">
+            <div style="padding: 0.75rem 1rem; border-bottom: 1px solid #f3f4f6;">
+              <div style="font-weight: 600; font-size: 0.875rem; color: #111827;">${fullName}</div>
+              <div style="font-size: 0.75rem; color: #6b7280;">${isAdmin ? 'Master Admin' : isDoctor ? 'Doctor' : 'Patient'}</div>
+            </div>
+            <hr style="margin: 0.5rem 0; border: none; border-top: 1px solid #f3f4f6;">
+            <a href="#" class="dropdown-item" style="display: block; padding: 0.625rem 1rem; color: #374151; text-decoration: none; font-size: 0.875rem;" data-view-target="profile">My Profile</a>
+            <a href="#" class="dropdown-item" style="display: block; padding: 0.625rem 1rem; color: #374151; text-decoration: none; font-size: 0.875rem;" data-view-target="appointments">My Appointments</a>
+            <hr style="margin: 0.5rem 0; border: none; border-top: 1px solid #f3f4f6;">
+            <button type="button" class="btn-logout-action" style="width: 100%; padding: 0.625rem 1rem; text-align: left; color: #dc2626; background: none; border: none; cursor: pointer; font-size: 0.875rem;" id="btn-logout-action">Log Out</button>
+          </div>
         </div>
       </div>
     </header>

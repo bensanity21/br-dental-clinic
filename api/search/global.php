@@ -6,10 +6,12 @@ require_once '../../includes/response.php';
 require_once '../../includes/db.php';
 
 requireLogin();
+requireRole(['patient', 'doctor', 'super-admin']);
 $user = currentUser();
 
-$q = trim($_GET['q'] ?? '');
-if (!$q) {
+$q = trim((string)($_GET['q'] ?? ''));
+$q = mb_substr($q, 0, 100, 'UTF-8');
+if ($q === '') {
     respondSuccess('Search results', ['appointments' => [], 'services' => [], 'patients' => [], 'dentists' => []]);
 }
 
@@ -26,22 +28,17 @@ $stmt = $pdo->prepare("SELECT d.id, d.full_name, d.specialization FROM dentists 
 $stmt->execute([$like, $like]);
 $results['dentists'] = $stmt->fetchAll();
 
-// Patients — admin/doctor only; patients can only find their own profile.
+// Patient data is limited to the signed-in patient's own profile or all patients
+// for the Master Admin. Doctors find assigned patients through appointment results.
 if ($user['role'] === 'super-admin') {
     $stmt = $pdo->prepare("SELECT id, full_name, email FROM users WHERE role = 'patient' AND (full_name LIKE ? OR email LIKE ?) LIMIT 20");
     $stmt->execute([$like, $like]);
-} elseif ($user['role'] === 'doctor') {
-    $dentistStmt = $pdo->prepare('SELECT id FROM dentists WHERE user_id = ? LIMIT 1');
-    $dentistStmt->execute([$user['id']]);
-    $dentist = $dentistStmt->fetch();
-    $dId = $dentist ? (int)$dentist['id'] : 0;
-    $stmt = $pdo->prepare("SELECT DISTINCT u.id, u.full_name, u.email FROM users u INNER JOIN appointments a ON a.patient_id = u.id WHERE a.dentist_id = ? AND (u.full_name LIKE ? OR u.email LIKE ?) LIMIT 20");
-    $stmt->execute([$dId, $like, $like]);
-} else {
+    $results['patients'] = $stmt->fetchAll();
+} elseif ($user['role'] === 'patient') {
     $stmt = $pdo->prepare("SELECT id, full_name, email FROM users WHERE id = ? AND (full_name LIKE ? OR email LIKE ?) LIMIT 20");
     $stmt->execute([$user['id'], $like, $like]);
+    $results['patients'] = $stmt->fetchAll();
 }
-$results['patients'] = $stmt->fetchAll();
 
 // Appointments — role-aware
 if ($user['role'] === 'super-admin') {

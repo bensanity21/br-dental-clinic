@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 360" role="img" aria-labelledby="title">
+  <title id="title">Dental care illustration</title>
+  <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#e3f4ee"/><stop offset="1" stop-color="#c6e7db"/></linearGradient></defs>
+  <rect width="800" height="360" fill="url(#bg)"/><circle cx="680" cy="42" r="138" fill="#fff" opacity=".34"/><circle cx="108" cy="350" r="160" fill="#fff" opacity=".27"/>
+  <path d="M400 69c-49-27-106 4-102 63 3 45 29 87 42 130 9 30 20 40 31 17l29-57 29 57c11 23 22 13 31-17 13-43 39-85 42-130 4-59-53-90-102-63Z" fill="#fff" stroke="#168f7d" stroke-width="12" stroke-linejoin="round"/>
+  <path d="M555 97v110m-55-55h110" stroke="#7445a0" stroke-width="20" stroke-linecap="round"/><circle cx="555" cy="152" r="75" fill="none" stroke="#fff" stroke-width="10" opacity=".9"/>
+</svg>

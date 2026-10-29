@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 360" role="img" aria-labelledby="title">
+  <title id="title">Dental crown illustration</title>
+  <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#eee8fb"/><stop offset="1" stop-color="#dcd2f1"/></linearGradient></defs>
+  <rect width="800" height="360" fill="url(#bg)"/><circle cx="680" cy="42" r="138" fill="#fff" opacity=".32"/><circle cx="108" cy="350" r="160" fill="#fff" opacity=".27"/>
+  <path d="M400 120c-49-27-106 4-102 63 3 45 29 87 42 130 9 30 20 40 31 17l29-57 29 57c11 23 22 13 31-17 13-43 39-85 42-130 4-59-53-90-102-63Z" fill="#fff" stroke="#7445a0" stroke-width="12" stroke-linejoin="round"/>
+  <path d="m332 111 21 21 22-42 25 37 25-37 22 42 21-21-9 63H341l-9-63Z" fill="#f4cf75" stroke="#a77b28" stroke-width="9" stroke-linejoin="round"/><path d="M353 151h94" stroke="#fff2c7" stroke-width="7" stroke-linecap="round"/>
+</svg>

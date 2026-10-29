@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BR Dental Clinic - Master Admin Portal</title>
   <meta name="description" content="BR Dental Clinic master admin portal.">
-  <link rel="stylesheet" href="style.css?v=13">
+  <link rel="stylesheet" href="style.css?v=17">
 </head>
 <body>
   <a class="skip-link" href="#views-viewport">Skip to main content</a>
@@ -78,7 +78,7 @@
           </div>
 
           <div class="card mt-4">
-            <h2>Today's Appointments Schedule</h2>
+            <h2 id="dashboard-today-heading">Today's Appointments Schedule</h2>
             <div class="table-scroll">
               <table class="data-table">
                 <thead>
@@ -217,14 +217,17 @@
           </div>
           <div class="card">
             <div class="table-scroll">
-              <table class="data-table">
+              <table class="data-table dental-records-table">
                 <thead>
                   <tr>
                     <th>Date</th>
                     <th>Patient Name</th>
+                    <th>Time</th>
                     <th>Treatment Provided</th>
-                    <th>Clinical Notes</th>
+                    <th>Contact Number</th>
                     <th>Attending Doctor</th>
+                    <th>Clinical Notes</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody id="admin-records-tbody">
@@ -244,28 +247,8 @@
             </div>
             <button type="button" class="btn btn-primary" id="btn-modal-service">Add New Service</button>
           </div>
-          <div class="card services-search-card">
-            <label class="services-search-control">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-              <input type="search" id="admin-service-search" placeholder="Search services" aria-label="Search services">
-            </label>
-          </div>
-          <div class="card services-table-card">
-            <div class="table-scroll">
-              <table class="data-table services-table">
-                <thead>
-                  <tr>
-                    <th>Service</th>
-                    <th>Description</th>
-                    <th>Price</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="admin-services-tbody">
-                  <!-- Dynamic content -->
-                </tbody>
-              </table>
-            </div>
+          <div id="admin-service-cards" class="service-card-grid admin-service-card-grid" aria-live="polite">
+            <p class="service-cards-empty">Loading services…</p>
           </div>
         </section>
 
@@ -440,9 +423,9 @@
       </div>
     </div>
   </div>
-  <script type="module" src="scripts/api.js?v=6"></script>
+  <script type="module" src="scripts/api.js?v=8"></script>
   <script type="module" src="scripts/modal.js?v=8"></script>
   <script type="module" src="scripts/toast.js?v=5"></script>
-  <script type="module" src="scripts/portal.js?v=27"></script>
+  <script type="module" src="scripts/portal.js?v=32"></script>
 </body>
 </html>

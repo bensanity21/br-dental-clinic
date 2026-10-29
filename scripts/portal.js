@@ -2,7 +2,7 @@
 // Replaces localStorage demo state with real backend database calls.
 // All mutations require confirmModal + go through API endpoints (PDO, prepared statements).
 
-import { api, setCsrfToken } from './api.js?v=7';
+import { api, setCsrfToken } from './api.js?v=8';
 import { confirmModal, openModal, closeModal } from './modal.js?v=8';
 import { showToast } from './toast.js';
 
@@ -33,9 +33,8 @@ const el = {
   notifDropdownPanel: document.getElementById('notif-dropdown-panel'),
   notifCountBadge: document.getElementById('notif-count-badge'),
   notifListContainer: document.getElementById('notif-list-container'),
-  patientServicesTbody: document.getElementById('patient-services-tbody'),
-  patientServiceSearch: document.getElementById('patient-service-search'),
-  adminServiceSearch: document.getElementById('admin-service-search'),
+  patientServiceCards: document.getElementById('patient-service-cards'),
+  adminServiceCards: document.getElementById('admin-service-cards'),
   bookServiceSelect: document.getElementById('book-service'),
   bookDentistField: document.getElementById('book-dentist'),
   patientAppointmentsTbody: document.getElementById('patient-appointments-tbody'),
@@ -45,10 +44,10 @@ const el = {
   changePasswordForm: document.getElementById('change-password-form'),
   adminTodayTbody: document.getElementById('admin-today-tbody'),
   adminAppointmentsTbody: document.getElementById('admin-appointments-tbody'),
+  adminAppointmentFilter: document.getElementById('admin-apt-filter'),
   adminPatientsTbody: document.getElementById('admin-patients-tbody'),
   adminPatientsSearch: document.getElementById('admin-patient-search'),
   adminRecordsTbody: document.getElementById('admin-records-tbody'),
-  adminServicesTbody: document.getElementById('admin-services-tbody'),
   kpiTotalPatients: document.getElementById('kpi-total-patients'),
   kpiTodayAppointments: document.getElementById('kpi-today-appointments'),
   kpiActiveDentists: document.getElementById('kpi-active-dentists'),
@@ -91,6 +90,11 @@ function renderNavigation() {
 
   const isAdmin = role === 'super-admin';
   const isDoctor = role === 'doctor';
+  const searchPlaceholder = isAdmin
+    ? 'Search Master Admin sections...'
+    : isDoctor
+      ? 'Search your clinic sections...'
+      : 'Search your appointments and services...';
   const fullName = currentUser.full_name || 'User';
   const firstName = fullName.split(' ')[0] || 'User';
 
@@ -186,7 +190,7 @@ function renderNavigation() {
     <header class="top-navbar" id="top-navbar">
       <div class="navbar-search">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="search-icon"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        <input type="search" id="global-search-input" placeholder="Search anything..." aria-label="Search clinic information" aria-controls="global-search-results" aria-expanded="false" autocomplete="off">
+        <input type="search" id="global-search-input" placeholder="${searchPlaceholder}" aria-label="Search information available to your account" aria-controls="global-search-results" aria-expanded="false" autocomplete="off">
         <div id="global-search-results" class="global-search-results hidden" role="region" aria-label="Search results" aria-live="polite"></div>
       </div>
 
@@ -299,46 +303,59 @@ async function renderServices() {
   const res = await api.get('services/list.php');
   if (!res.success) { showToast('Failed to load services.', 'error'); return; }
   serviceCatalog = res.data || [];
-  renderServiceTables();
+  renderServiceCards();
   if (el.bookServiceSelect) {
     el.bookServiceSelect.innerHTML = '<option value="">-- Choose a Service --</option>' +
       serviceCatalog.map((s) => '<option value="' + Number(s.id) + '">' + escapeHtml(s.service_name) + '</option>').join('');
   }
 }
 
-function renderServiceTables() {
+function serviceIllustration(name) {
+  const normalized = String(name || '').toLowerCase();
+  if (normalized.includes('clean') || normalized.includes('prophy')) return 'assets/services/cleaning.svg';
+  if (normalized.includes('extract') || normalized.includes('molar')) return 'assets/services/extraction.svg';
+  if (normalized.includes('fill') || normalized.includes('composite')) return 'assets/services/filling.svg';
+  if (normalized.includes('whiten')) return 'assets/services/whitening.svg';
+  if (normalized.includes('root canal')) return 'assets/services/root-canal.svg';
+  if (normalized.includes('denture')) return 'assets/services/dentures.svg';
+  if (normalized.includes('crown')) return 'assets/services/crown.svg';
+  if (normalized.includes('fluoride')) return 'assets/services/fluoride.svg';
+  if (normalized.includes('ortho') || normalized.includes('brace')) return 'assets/services/braces.svg';
+  return 'assets/services/general-care.svg';
+}
+
+function renderServiceCards() {
   const formatServicePrice = (price) => {
     const amount = Number(price);
     return Number.isFinite(amount)
       ? '₱' + amount.toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
       : '₱0';
   };
-  const renderRows = (tbody, query, admin = false) => {
-    if (!tbody) return;
-    const normalizedQuery = (query || '').trim().toLowerCase();
-    const services = serviceCatalog.filter((service) =>
-      !normalizedQuery || [service.service_name, service.description].some((value) => String(value || '').toLowerCase().includes(normalizedQuery))
-    );
-    const colspan = admin ? 4 : 3;
-    if (!services.length) {
-      tbody.innerHTML = '<tr><td colspan="' + colspan + '" class="empty-cell">' + (normalizedQuery ? 'No matching services found.' : 'No services are currently available.') + '</td></tr>';
+  const renderCards = (container, admin = false) => {
+    if (!container) return;
+    if (!serviceCatalog.length) {
+      container.innerHTML = '<p class="service-cards-empty">No services are currently available.</p>';
       return;
     }
-    tbody.innerHTML = services.map((service) => {
+    container.innerHTML = serviceCatalog.map((service) => {
+      const name = escapeHtml(service.service_name || 'Dental service');
+      const image = service.image_url || service.image_path || serviceIllustration(service.service_name);
       const actions = admin
-        ? '<td class="service-actions"><button type="button" class="service-edit-button" data-service-edit="' + Number(service.id) + '">Edit</button>' +
-          '<button type="button" class="btn btn-sm btn-danger" data-service-delete="' + Number(service.id) + '">Delete</button></td>'
-        : '';
-      return '<tr>' +
-        '<td><strong>' + escapeHtml(service.service_name) + '</strong></td>' +
-        '<td class="service-description">' + escapeHtml(service.description || '') + '</td>' +
-        '<td class="service-price-cell"><span class="service-price-value">' + formatServicePrice(service.price || 0) + '</span></td>' +
-        actions +
-        '</tr>';
+        ? '<div class="service-card-actions"><button type="button" class="btn btn-soft" data-service-edit="' + Number(service.id) + '">Edit</button>' +
+          '<button type="button" class="icon-action-button icon-action-danger" data-service-delete="' + Number(service.id) + '" aria-label="Delete ' + name + '" title="Delete service"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2m3 0-.9 14H5.9L5 6m4 4v6m6-6v6"></path></svg></button></div>'
+        : '<button type="button" class="btn btn-primary service-book-button" data-service-book="' + Number(service.id) + '" aria-label="Book an appointment for ' + name + '">Book an Appointment</button>';
+      return '<article class="service-card">' +
+        '<img class="service-card-image" src="' + escapeHtml(image) + '" alt="Illustration for ' + name + '" loading="lazy">' +
+        '<div class="service-card-content">' +
+        '<h2 class="service-card-title">' + name + '</h2>' +
+        '<p class="service-card-description">' + escapeHtml(service.description || 'Ask the clinic for more information about this treatment.') + '</p>' +
+        '<div class="service-card-bottom"><div class="service-card-price"><span>Price</span><strong>' + formatServicePrice(service.price || 0) + '</strong></div>' + actions + '</div>' +
+        '</div>' +
+        '</article>';
     }).join('');
   };
-  renderRows(el.patientServicesTbody, el.patientServiceSearch?.value, false);
-  renderRows(el.adminServicesTbody, el.adminServiceSearch?.value, true);
+  renderCards(el.patientServiceCards);
+  renderCards(el.adminServiceCards, true);
 }
 
 async function renderDentists() {
@@ -378,23 +395,33 @@ async function renderAdminAppointments() {
   const res = await api.get('appointments/all.php');
   if (!res.success) { showToast('Failed to load appointments.', 'error'); return; }
   const appts = res.data || [];
+  const selectedStatus = el.adminAppointmentFilter?.value || 'ALL';
+  const visibleAppointments = selectedStatus === 'ALL'
+    ? appts
+    : appts.filter((appointment) => String(appointment.status || '').toLowerCase() === selectedStatus.toLowerCase());
   if (el.adminAppointmentsTbody) {
-    if (appts.length === 0) {
-      el.adminAppointmentsTbody.innerHTML = '<tr><td colspan="6" class="empty-cell">No appointments found.</td></tr>';
+    if (visibleAppointments.length === 0) {
+      const emptyMessage = appts.length ? 'No appointments match this status.' : 'No appointments found.';
+      el.adminAppointmentsTbody.innerHTML = '<tr><td colspan="6" class="empty-cell">' + emptyMessage + '</td></tr>';
     } else {
-      el.adminAppointmentsTbody.innerHTML = appts.map((a) => {
+      const iconButton = (a, action, label, icon, variant) =>
+        '<button type="button" class="icon-action-button ' + variant + '" data-id="' + Number(a.id) + '" data-action="' + action + '" aria-label="' + label + ' appointment" title="' + label + '"><svg viewBox="0 0 24 24" aria-hidden="true">' + icon + '</svg></button>';
+      const checkIcon = '<path d="m5 12 4 4L19 6"></path>';
+      const cancelIcon = '<path d="m6 6 12 12M18 6 6 18"></path>';
+      const trashIcon = '<path d="M3 6h18M8 6V4h8v2m3 0-.9 14H5.9L5 6m4 4v6m6-6v6"></path>';
+      el.adminAppointmentsTbody.innerHTML = visibleAppointments.map((a) => {
         const statusClass = 'status-' + (a.status || 'Pending').toLowerCase();
         let actions;
         if (a.status === 'Pending') {
-          actions = '<button class="btn btn-sm btn-primary" data-id="' + a.id + '" data-action="approve">Approve</button>' +
-                    '<button class="btn btn-sm btn-outline" data-id="' + a.id + '" data-action="cancel">Cancel</button>';
+          actions = iconButton(a, 'approve', 'Approve', checkIcon, 'icon-action-success') +
+                    iconButton(a, 'cancel', 'Cancel', cancelIcon, 'icon-action-neutral');
         } else if (a.status === 'Approved') {
-          actions = '<button class="btn btn-sm btn-primary" data-id="' + a.id + '" data-action="complete">Complete</button>' +
-                    '<button class="btn btn-sm btn-outline" data-id="' + a.id + '" data-action="cancel">Cancel</button>';
+          actions = iconButton(a, 'complete', 'Complete', checkIcon, 'icon-action-success') +
+                    iconButton(a, 'cancel', 'Cancel', cancelIcon, 'icon-action-neutral');
         } else {
           actions = '';
         }
-        if (role === 'super-admin') actions += '<button class="btn btn-sm btn-outline" data-id="' + a.id + '" data-action="archive">Delete</button>';
+        if (role === 'super-admin') actions += iconButton(a, 'archive', 'Delete', trashIcon, 'icon-action-danger');
         return (
           '<tr>' +
           '<td>' + a.appointment_date + ' (' + a.time_slot + ')</td>' +
@@ -532,45 +559,95 @@ async function renderAdminRecords() {
   if (!res.success) { showToast('Failed to load records.', 'error'); return; }
   const records = res.data || [];
   if (el.adminRecordsTbody) {
-    if (records.length === 0) { el.adminRecordsTbody.innerHTML = '<tr><td colspan="5" class="empty-cell">No clinical records.</td></tr>'; }
+    if (records.length === 0) { el.adminRecordsTbody.innerHTML = '<tr><td colspan="8" class="empty-cell">No clinical records.</td></tr>'; }
     else { el.adminRecordsTbody.innerHTML = records.map((r) => (
       '<tr>' +
-      '<td>' + r.record_date + '</td>' +
+      '<td>' + escapeHtml(r.record_date || '') + '</td>' +
       '<td><strong>' + escapeHtml(r.patient_name || '') + '</strong></td>' +
+      '<td class="record-time-cell">' + escapeHtml(formatRecordTime(r.record_time)) + '</td>' +
       '<td>' + escapeHtml(r.treatment_procedure || '') + '</td>' +
-      '<td>' + escapeHtml(r.clinical_notes || '') + '</td>' +
+      '<td class="record-contact-cell">' + escapeHtml(r.patient_contact || '—') + '</td>' +
       '<td>' + escapeHtml(r.dentist_name || '') + '</td>' +
+      '<td class="record-notes-cell">' + escapeHtml(r.clinical_notes || '—') + '</td>' +
+      '<td class="record-actions-cell">' +
+        (r.status === 'Completed'
+          ? '<span class="record-completed" role="status" aria-label="Completed" title="Completed"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"></path></svg></span>'
+          : '<button type="button" class="icon-action-button icon-action-success" data-record-action="complete" data-record-id="' + Number(r.id) + '" aria-label="Mark record complete" title="Mark complete"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"></path></svg></button>') +
+        '<button type="button" class="icon-action-button icon-action-danger" data-record-action="archive" data-record-id="' + Number(r.id) + '" aria-label="Archive dental record" title="Move to archive"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2m3 0-.9 14H5.9L5 6m4 4v6m6-6v6"></path></svg></button>' +
+      '</td>' +
       '</tr>'
     )).join(''); }
   }
 }
 
+function formatRecordTime(value) {
+  const match = String(value || '').match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return '—';
+  const hour = Number(match[1]);
+  if (hour < 0 || hour > 23) return '—';
+  return (hour % 12 || 12) + ':' + match[2] + ' ' + (hour < 12 ? 'AM' : 'PM');
+}
+
 if (document.getElementById('btn-modal-record')) {
   document.getElementById('btn-modal-record').addEventListener('click', async () => {
-    const usersRes = await api.get('users/list.php?role=patient');
-    const patients = usersRes.success ? usersRes.data : [];
-    const patientOptions = patients.map((p) => '<option value="' + p.id + '">' + escapeHtml(p.full_name) + ' (' + p.email + ')</option>').join('');
-    const confirmed = await openModal('Add Clinical Record',
+    const [servicesRes, dentistsRes] = await Promise.all([
+      api.get('services/list.php'),
+      api.get('dentists/list.php'),
+    ]);
+    if (!servicesRes.success || !dentistsRes.success) {
+      showToast('Could not load services or doctors for the clinical record form.', 'error');
+      return;
+    }
+    const services = servicesRes.data || [];
+    const allDentists = dentistsRes.data || [];
+    const dentists = role === 'doctor' && dentistInfo
+      ? allDentists.filter((dentist) => Number(dentist.id) === Number(dentistInfo.id))
+      : allDentists;
+    if (!services.length || !dentists.length) {
+      showToast(!services.length ? 'Add a service before creating a clinical record.' : 'Add an attending doctor before creating a clinical record.', 'error');
+      return;
+    }
+    const serviceOptions = services.map((service) => '<option value="' + Number(service.id) + '">' + escapeHtml(service.service_name) + '</option>').join('');
+    const dentistOptions = dentists.map((dentist) => '<option value="' + Number(dentist.id) + '"' + (role === 'doctor' && Number(dentist.id) === Number(dentistInfo?.id) ? ' selected' : '') + '>' + escapeHtml(dentist.full_name) + (dentist.specialization ? ' (' + escapeHtml(dentist.specialization) + ')' : '') + '</option>').join('');
+    const now = new Date();
+    const localToday = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    const modalResult = openModal('Add Clinical Record',
       '<form id="form-add-record">' +
-      '<div class="form-group"><label for="m-rec-patient">Patient</label><select id="m-rec-patient" required>' + patientOptions + '</select></div>' +
-      '<div class="form-group"><label for="m-rec-treatment">Treatment / Procedure</label><input type="text" id="m-rec-treatment" required placeholder="e.g. Tooth Extraction"></div>' +
-      '<div class="form-group"><label for="m-rec-notes">Clinical Notes</label><textarea id="m-rec-notes" rows="3" required placeholder="Observations or prescribed care..."></textarea></div>' +
-      '<div class="form-group"><label for="m-rec-date">Date</label><input type="date" id="m-rec-date" value="' + new Date().toISOString().split('T')[0] + '" required></div>' +
+      '<div class="form-group"><label for="m-rec-patient-name">Patient Name <span class="required-mark">*</span></label><input type="text" id="m-rec-patient-name" maxlength="255" autocomplete="name" required placeholder="Enter patient name"></div>' +
+      '<div class="form-group"><label for="m-rec-contact">Contact Number <span class="required-mark">*</span></label><input type="tel" id="m-rec-contact" maxlength="40" autocomplete="tel" required placeholder="Patient contact number"></div>' +
+      '<div class="form-group"><label for="m-rec-service">Service <span class="required-mark">*</span></label><select id="m-rec-service" required><option value="">-- Choose a Service --</option>' + serviceOptions + '</select></div>' +
+      '<div class="form-group"><label for="m-rec-dentist">Attending Doctor <span class="required-mark">*</span></label><select id="m-rec-dentist" required' + (role === 'doctor' ? ' disabled' : '') + '><option value="">-- Choose a Doctor --</option>' + dentistOptions + '</select></div>' +
+      '<div class="grid-2col"><div class="form-group"><label for="m-rec-date">Date <span class="required-mark">*</span></label><input type="date" id="m-rec-date" value="' + localToday + '" required></div>' +
+      '<div class="form-group"><label for="m-rec-time">Time <span class="required-mark">*</span></label><input type="time" id="m-rec-time" required></div></div>' +
+      '<div class="form-group"><label for="m-rec-notes">Clinical Notes (Optional)</label><textarea id="m-rec-notes" rows="3" placeholder="Observations or prescribed care..."></textarea></div>' +
       '</form>',
       [ { text: 'Cancel', class: 'btn-outline', value: false }, { text: 'Save Record', class: 'btn-primary', value: true } ]);
+    const recordForm = document.getElementById('form-add-record');
+    const saveRecordButton = document.querySelector('#modal-footer .btn-primary');
+    saveRecordButton?.addEventListener('click', (event) => {
+      if (!recordForm.reportValidity()) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    }, true);
+    const confirmed = await modalResult;
     if (!confirmed) return;
-    const treatment = document.getElementById('m-rec-treatment').value.trim();
     const notes = document.getElementById('m-rec-notes').value.trim();
-    const patientId = document.getElementById('m-rec-patient').value;
+    const patientName = document.getElementById('m-rec-patient-name').value.trim();
+    const contact = document.getElementById('m-rec-contact').value.trim();
+    const serviceId = document.getElementById('m-rec-service').value;
+    const dentistId = document.getElementById('m-rec-dentist').value || dentistInfo?.id;
     const date = document.getElementById('m-rec-date').value;
-    const dentistId = dentistInfo ? dentistInfo.id : 1;
-    if (!treatment || !notes || !patientId) { showToast('Please fill all fields.', 'error'); return; }
+    const time = document.getElementById('m-rec-time').value;
+    if (!patientName || !contact || !serviceId || !dentistId || !date || !time) { showToast('Please complete the patient name, contact number, service, doctor, date, and time fields.', 'error'); return; }
     const res = await api.post('records/add.php', {
-      patient_id: parseInt(patientId),
+      patient_name: patientName,
       dentist_id: parseInt(dentistId),
-      treatment_procedure: treatment,
+      service_id: parseInt(serviceId),
+      patient_contact: contact,
       clinical_notes: notes,
       record_date: date,
+      record_time: time,
     });
     if (res.success) { showToast('Clinical record added.'); closeModal(); await renderAdminRecords(); await renderPatientRecords(); }
     else { showToast(res.message || 'Failed to add record.', 'error'); }
@@ -610,9 +687,11 @@ async function renderNotifications() {
       else { el.notifListContainer.innerHTML = notifications.map((n) => {
         const isUnread = Number(n.is_read) === 0;
         return '<li class="notification-item' + (isUnread ? ' is-unread' : '') + '">' +
+          '<button type="button" class="notification-item-button" data-notification-id="' + Number(n.id) + '" aria-label="Open notification: ' + escapeHtml(n.message) + '">' +
           '<div class="notification-message-row"><div class="notification-message">' + escapeHtml(n.message) + '</div>' +
           (isUnread ? '<span class="notification-unread-indicator"><span class="notification-unread-dot" aria-hidden="true"></span><span class="sr-only">Unread notification</span></span>' : '') + '</div>' +
           '<span class="notification-date">' + escapeHtml(n.created_at || '') + '</span>' +
+          '</button>' +
           '</li>';
       }).join(''); }
       el.notifListContainer.scrollTop = previousScrollTop;
@@ -630,6 +709,16 @@ function startNotificationPolling() {
   window.setInterval(refreshWhenVisible, 5000);
   document.addEventListener('visibilitychange', refreshWhenVisible);
   window.addEventListener('focus', refreshWhenVisible);
+}
+
+function isSearchDestinationAvailable(target) {
+  if (!document.getElementById('view-' + target)) return false;
+  const navLink = document.querySelector('.nav-link[data-view="' + target + '"]');
+  if (navLink && navLink.closest('li') && getComputedStyle(navLink.closest('li')).display !== 'none') return true;
+
+  const prefix = role === 'patient' ? 'patient-' : 'admin-';
+  return Array.from(document.querySelectorAll('.profile-dropdown-item[data-view-target]'))
+    .some((item) => prefix + item.getAttribute('data-view-target') === target);
 }
 
 async function renderGlobalSearch(query) {
@@ -661,7 +750,7 @@ async function renderGlobalSearch(query) {
     { title: 'Services', target: isAdmin ? 'admin-services' : 'patient-services', items: (data.services || []).map((item) => ({ label: item.service_name, detail: item.description || '' })) },
     { title: 'Patients', target: isAdmin ? 'admin-patients' : 'patient-profile', items: (data.patients || []).map((item) => ({ label: item.full_name, detail: item.email || '' })) },
     { title: 'Dentists', target: isAdmin ? 'admin-dentists' : 'patient-dentists', items: (data.dentists || []).map((item) => ({ label: item.full_name, detail: item.specialization || '' })) },
-  ].filter((group) => group.items.length);
+  ].filter((group) => group.items.length && isSearchDestinationAvailable(group.target));
 
   if (!groups.length) {
     panel.innerHTML = '<div class="global-search-message">No matches found.</div>';
@@ -888,9 +977,8 @@ function bindEvents() {
   const clinicInfoForm = document.getElementById('admin-clinic-info-form');
   const addServiceButton = document.getElementById('btn-modal-service');
   if (addServiceButton) addServiceButton.addEventListener('click', () => openServiceForm());
-  if (el.patientServiceSearch) el.patientServiceSearch.addEventListener('input', renderServiceTables);
-  if (el.adminServiceSearch) el.adminServiceSearch.addEventListener('input', renderServiceTables);
-  if (el.adminServicesTbody) el.adminServicesTbody.addEventListener('click', async (event) => {
+  if (el.adminAppointmentFilter) el.adminAppointmentFilter.addEventListener('change', renderAdminAppointments);
+  if (el.adminServiceCards) el.adminServiceCards.addEventListener('click', async (event) => {
     const editButton = event.target.closest('[data-service-edit]');
     const deleteButton = event.target.closest('[data-service-delete]');
     if (editButton) {
@@ -898,6 +986,17 @@ function bindEvents() {
       if (service) await openServiceForm(service);
     } else if (deleteButton) {
       await window.deleteService(Number(deleteButton.dataset.serviceDelete));
+    }
+  });
+  if (el.patientServiceCards) el.patientServiceCards.addEventListener('click', async (event) => {
+    const bookButton = event.target.closest('[data-service-book]');
+    if (!bookButton) return;
+    const serviceId = Number(bookButton.dataset.serviceBook);
+    if (!Number.isInteger(serviceId) || serviceId <= 0) return;
+    await switchView('patient-book');
+    if (el.bookServiceSelect) {
+      el.bookServiceSelect.value = String(serviceId);
+      el.bookServiceSelect.dispatchEvent(new Event('change', { bubbles: true }));
     }
   });
   const runReportButton = document.getElementById('btn-run-report');
@@ -1004,6 +1103,11 @@ function bindEvents() {
     if (!result) return;
     event.stopPropagation();
     const target = result.getAttribute('data-search-view');
+    if (!isSearchDestinationAvailable(target)) {
+      searchResults.classList.add('hidden');
+      searchInput?.setAttribute('aria-expanded', 'false');
+      return;
+    }
     if (searchInput) searchInput.value = '';
     searchResults.classList.add('hidden');
     searchInput?.setAttribute('aria-expanded', 'false');
@@ -1039,6 +1143,45 @@ function bindEvents() {
     } finally {
       if (!markedRead) markAllReadButton.disabled = false;
     }
+  });
+  if (el.notifListContainer) el.notifListContainer.addEventListener('click', async (event) => {
+    const notificationButton = event.target.closest('button[data-notification-id]');
+    if (!notificationButton) return;
+    const notificationId = Number(notificationButton.dataset.notificationId);
+    if (!Number.isInteger(notificationId) || notificationId <= 0) return;
+
+    const message = notificationButton.querySelector('.notification-message')?.textContent || '';
+    const messageLower = message.toLowerCase();
+    let targetView = role === 'patient' ? 'patient-home' : 'admin-dashboard';
+    if (messageLower.includes('appointment')) targetView = role === 'patient' ? 'patient-appointments' : 'admin-appointments';
+    else if (messageLower.includes('service')) targetView = role === 'patient' ? 'patient-services' : 'admin-services';
+    else if (messageLower.includes('record')) targetView = role === 'patient' ? 'patient-records' : 'admin-records';
+    else if (messageLower.includes('patient') && role !== 'patient') targetView = 'admin-patients';
+    else if (messageLower.includes('dentist') || messageLower.includes('doctor')) targetView = role === 'patient' ? 'patient-dentists' : 'admin-dentists';
+    else if ((messageLower.includes('schedule') || messageLower.includes('clinic')) && role === 'super-admin') targetView = 'admin-settings';
+
+    notificationButton.disabled = true;
+    const markedRead = await api.post('notifications/read.php', { id: notificationId });
+    if (!markedRead.success) {
+      notificationButton.disabled = false;
+      showToast(markedRead.message || 'Could not mark this notification as read.', 'error');
+      return;
+    }
+
+    notificationButton.disabled = false;
+    const item = notificationButton.closest('.notification-item');
+    item?.classList.remove('is-unread');
+    item?.querySelector('.notification-unread-indicator')?.remove();
+    const unreadBadge = el.notifCountBadge;
+    if (unreadBadge) {
+      const remaining = Math.max(0, (Number(unreadBadge.textContent) || 0) - 1);
+      unreadBadge.textContent = String(remaining);
+      unreadBadge.classList.toggle('hidden', remaining === 0);
+      btnNotifToggle?.setAttribute('aria-label', remaining ? 'Notifications, ' + remaining + ' unread' : 'Notifications');
+    }
+    lastNotificationSnapshot = null;
+    renderNotifications();
+    await switchView(targetView);
   });
   document.addEventListener('click', closeDropdowns);
   document.querySelectorAll('[data-view-target]').forEach((item) => {
@@ -1081,6 +1224,27 @@ function bindEvents() {
       } else { showToast(res.message || 'Failed to update.', 'error'); }
     });
   }
+  if (el.adminRecordsTbody) el.adminRecordsTbody.addEventListener('click', async (event) => {
+    const button = event.target.closest('button[data-record-action][data-record-id]');
+    if (!button) return;
+    const id = Number(button.getAttribute('data-record-id'));
+    const action = button.getAttribute('data-record-action');
+    if (action === 'complete') {
+      const confirmed = await confirmModal({ title: 'Complete Clinical Record', message: 'Mark this clinical record as complete?' });
+      if (!confirmed) return;
+      const result = await api.patch('records/status.php', { id, status: 'Completed' });
+      if (!result.success) { showToast(result.message || 'Could not complete this record.', 'error'); return; }
+      showToast('Clinical record marked complete.');
+      await renderAdminRecords();
+    } else if (action === 'archive') {
+      const confirmed = await confirmModal({ title: 'Archive Clinical Record', message: 'Move this clinical record to the archive? You can restore it later.', danger: true });
+      if (!confirmed) return;
+      const result = await api.del('users/delete.php', { id, table: 'dental_records' });
+      if (!result.success) { showToast(result.message || 'Could not archive this record.', 'error'); return; }
+      showToast('Clinical record moved to archive.');
+      await renderAdminRecords();
+    }
+  });
   const archiveTbody = document.getElementById('admin-archives-tbody');
   if (archiveTbody) archiveTbody.addEventListener('click', async (event) => {
     const restoreButton = event.target.closest('button[data-archive-restore]');
@@ -1094,6 +1258,7 @@ function bindEvents() {
       showToast('Record restored.');
       await renderArchives();
       await renderAdminAppointments();
+      await renderAdminRecords();
     } else if (purgeButton) {
       const id = Number(purgeButton.getAttribute('data-archive-purge'));
       const confirmed = await confirmModal({ title: 'Delete Permanently', message: 'This permanently deletes the archived record and cannot be undone. Continue?', danger: true });

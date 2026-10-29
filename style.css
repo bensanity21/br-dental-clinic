@@ -686,7 +686,11 @@ input:focus, select:focus, textarea:focus {
 .dropdown-logout-btn:hover { background: var(--danger-bg); }
 
 .empty-list-text { padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
-.notification-item { padding: 0.65rem 1rem; border-bottom: 1px solid var(--border-color); font-size: 0.82rem; }
+.notification-item { padding: 0; border-bottom: 1px solid var(--border-color); font-size: 0.82rem; }
+.notification-item-button { display: block; width: 100%; padding: 0.65rem 1rem; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
+.notification-item-button:hover { background: #f4faf7; }
+.notification-item-button:focus-visible { position: relative; z-index: 1; outline: 3px solid var(--teal-primary); outline-offset: -3px; }
+.notification-item-button:disabled { cursor: wait; }
 .notification-message-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
 .notification-message { min-width: 0; color: var(--text-main); line-height: 1.45; }
 .notification-unread-indicator { display: inline-flex; flex: 0 0 auto; align-items: center; padding-top: 0.25rem; }
@@ -723,21 +727,42 @@ input:focus, select:focus, textarea:focus {
 
 .service-price { margin-top: 0.8rem; font-weight: 700; font-size: 0.95rem; color: var(--teal-dark); }
 
-/* Services list */
-.services-search-card { padding: 0.85rem 1.1rem; margin-bottom: 1rem; }
-.services-search-control { display: flex; align-items: center; gap: 0.55rem; width: min(100%, 300px); height: 42px; padding: 0 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-muted); }
-.services-search-control:focus-within { border-color: #0d6556; outline: 3px solid #0d6556; outline-offset: 2px; box-shadow: none; }
-.services-search-control input { width: 100%; min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 0; outline: 0; background: transparent; box-shadow: none; color: var(--text-main); font: inherit; }
-.services-search-control input:focus { border: 0; outline: 0; background: transparent; box-shadow: none; }
-.services-search-control input::placeholder { color: var(--text-muted); }
-.services-table-card { padding: 0.85rem 1rem; }
-.services-table { min-width: 620px; }
-.services-table th { padding-top: 0.8rem; padding-bottom: 0.8rem; color: #53645d; font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; }
-.services-table td { padding-top: 0.95rem; padding-bottom: 0.95rem; }
-.services-table .service-description { color: var(--text-muted); }
-.services-table .service-price-cell { white-space: nowrap; }
-.service-price-value { display: inline-flex; align-items: center; padding: 0.4rem 0.65rem; border-radius: 999px; background: #e7f4ef; color: #075e50; font-size: 1rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
-.services-table .service-actions { white-space: nowrap; }
+/* Services cards */
+.service-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr)); align-items: stretch; gap: 1.25rem; }
+.service-card { display: flex; min-width: 0; flex-direction: column; overflow: hidden; border: 1px solid var(--border-color); border-radius: 14px; background: var(--white); box-shadow: var(--shadow-sm); transition: transform 0.18s ease, box-shadow 0.18s ease; }
+.service-card:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(25, 58, 48, 0.1); }
+.service-card-image { display: block; width: 100%; aspect-ratio: 16 / 8.5; object-fit: cover; background: #e7f4ef; }
+.service-card-content { display: flex; min-height: 220px; flex: 1; flex-direction: column; padding: 1.15rem; }
+.service-card-title { margin: 0; color: var(--text-main); font-size: 1.08rem; line-height: 1.35; }
+.service-card-description { display: -webkit-box; overflow: hidden; margin: 0.65rem 0 1rem; color: var(--text-muted); line-height: 1.55; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.service-card-bottom { display: flex; flex: 1; flex-direction: column; justify-content: flex-end; gap: 1rem; margin-top: auto; }
+.service-card-price { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; padding-top: 0.85rem; border-top: 1px solid var(--border-color); color: var(--text-muted); }
+.service-card-price strong { color: var(--teal-dark); font-size: 1.15rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.service-book-button { width: 100%; min-height: 44px; }
+.service-card-actions { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
+.service-card-actions .icon-action-button { margin: 0; }
+.service-cards-empty { grid-column: 1 / -1; margin: 0; padding: 2rem 1rem; border: 1px dashed var(--border-dark); border-radius: 12px; color: var(--text-muted); text-align: center; }
+.admin-service-card-grid { margin-top: 0.25rem; }
+.required-mark { color: var(--danger); }
+.dental-records-table { min-width: 1320px; }
+.dental-records-table th { white-space: nowrap; }
+.dental-records-table td { vertical-align: top; }
+.dental-records-table .record-time-cell,
+.dental-records-table .record-contact-cell { white-space: nowrap; }
+.dental-records-table .record-notes-cell { min-width: 230px; white-space: normal; }
+.icon-action-button { display: inline-flex; width: 2.15rem; height: 2.15rem; align-items: center; justify-content: center; margin: 0 0.15rem; padding: 0; border: 1px solid transparent; border-radius: 8px; background: transparent; cursor: pointer; vertical-align: middle; }
+.icon-action-button svg { width: 1.1rem; height: 1.1rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.icon-action-button:hover { background: #f0f6f3; }
+.icon-action-button:focus-visible { outline: 3px solid var(--teal-primary); outline-offset: 2px; }
+.icon-action-success { color: var(--teal-dark); }
+.icon-action-neutral { color: var(--text-muted); }
+.icon-action-danger { color: var(--danger); }
+.icon-action-danger:hover { background: var(--danger-bg); }
+.record-actions-cell { white-space: nowrap; }
+.record-completed { display: inline-flex; width: 2.15rem; height: 2.15rem; align-items: center; justify-content: center; margin: 0 0.15rem; color: var(--teal-dark); }
+.record-completed svg { width: 1.1rem; height: 1.1rem; fill: none; stroke: currentColor; stroke-width: 2.25; stroke-linecap: round; stroke-linejoin: round; }
+.service-actions .icon-action-button { margin-left: 0.25rem; }
+#view-admin-dashboard #dashboard-today-heading { font-size: 1.125rem; font-weight: 700; }
 .service-edit-button { margin-right: 0.65rem; padding: 0.25rem 0.2rem; border: 0; background: transparent; color: var(--teal-dark); font: inherit; font-weight: 700; cursor: pointer; }
 .service-edit-button:hover { text-decoration: underline; }
 

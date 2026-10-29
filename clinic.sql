@@ -86,11 +86,15 @@ INSERT INTO `clinic_settings` (`id`, `clinic_name`, `phone_number`, `address`) V
 
 CREATE TABLE `dental_records` (
   `id` int(10) UNSIGNED NOT NULL,
-  `patient_id` int(10) UNSIGNED NOT NULL,
+  `patient_id` int(10) UNSIGNED DEFAULT NULL,
+  `patient_name` varchar(255) DEFAULT NULL,
   `dentist_id` int(10) UNSIGNED NOT NULL,
   `treatment_procedure` varchar(255) NOT NULL,
   `clinical_notes` text DEFAULT NULL,
-  `record_date` date NOT NULL
+  `record_date` date NOT NULL,
+  `record_time` time DEFAULT NULL,
+  `patient_contact` varchar(40) DEFAULT NULL,
+  `status` enum('In Progress','Completed') NOT NULL DEFAULT 'In Progress'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------

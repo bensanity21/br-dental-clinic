@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 360" role="img" aria-labelledby="title">
+  <title id="title">Dental cleaning illustration</title>
+  <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#dff5ef"/><stop offset="1" stop-color="#b9e7da"/></linearGradient></defs>
+  <rect width="800" height="360" fill="url(#bg)"/><circle cx="650" cy="55" r="130" fill="#fff" opacity=".28"/><circle cx="130" cy="330" r="150" fill="#fff" opacity=".24"/>
+  <path d="M400 70c-51-28-110 4-106 65 3 45 29 88 42 133 9 31 20 41 32 17l32-61 32 61c12 24 23 14 32-17 13-45 39-88 42-133 4-61-55-93-106-65Z" fill="#fff" stroke="#148d7b" stroke-width="12" stroke-linejoin="round"/>
+  <path d="m255 140 12 24 25 4-18 17 4 25-23-12-22 12 4-25-18-17 25-4 11-24Zm285 60 9 18 20 3-14 14 3 20-18-9-18 9 3-20-14-14 20-3 9-18Z" fill="#fff" stroke="#13a18c" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M584 100 646 238M572 94l23-10 62 138-23 10Z" fill="#0d8f7c" stroke="#fff" stroke-width="8" stroke-linejoin="round"/><path d="m630 227 21 8-12 24-18-7Z" fill="#7445a0"/>
+</svg>

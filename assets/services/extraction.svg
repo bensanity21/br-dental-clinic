@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 360" role="img" aria-labelledby="title">
+  <title id="title">Tooth extraction illustration</title>
+  <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#f0e5f7"/><stop offset="1" stop-color="#d8c2eb"/></linearGradient></defs>
+  <rect width="800" height="360" fill="url(#bg)"/><circle cx="675" cy="45" r="135" fill="#fff" opacity=".3"/><circle cx="95" cy="345" r="150" fill="#fff" opacity=".28"/>
+  <path d="M400 75c-48-26-105 5-101 62 3 44 28 86 41 128 9 29 20 38 31 16l29-55 29 55c11 22 22 13 31-16 13-42 38-84 41-128 4-57-53-88-101-62Z" fill="#fff" stroke="#7445a0" stroke-width="12" stroke-linejoin="round"/>
+  <path d="m305 108 58 53m132-53-58 53m-74 95 24-47m82 47-24-47" fill="none" stroke="#168f7d" stroke-width="14" stroke-linecap="round"/><path d="m365 158 35 30 35-30M399 188v35" fill="none" stroke="#168f7d" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m548 102 10 21 23 4-17 16 4 23-20-11-20 11 4-23-17-16 23-4 10-21Z" fill="#fff" stroke="#7445a0" stroke-width="6"/>
+</svg>

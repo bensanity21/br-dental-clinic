@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 360" role="img" aria-labelledby="title">
+  <title id="title">Fluoride treatment illustration</title>
+  <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#def5f6"/><stop offset="1" stop-color="#bfe9e6"/></linearGradient></defs>
+  <rect width="800" height="360" fill="url(#bg)"/><circle cx="680" cy="42" r="138" fill="#fff" opacity=".34"/><circle cx="108" cy="350" r="160" fill="#fff" opacity=".27"/>
+  <path d="M400 106c-49-27-106 4-102 63 3 45 29 87 42 130 9 30 20 40 31 17l29-57 29 57c11 23 22 13 31-17 13-43 39-85 42-130 4-59-53-90-102-63Z" fill="#fff" stroke="#168f9c" stroke-width="12" stroke-linejoin="round"/>
+  <path d="M550 84c0 35-29 63-63 63s-63-28-63-63c0-31 34-75 55-99 4-5 12-5 16 0 21 24 55 68 55 99Z" transform="translate(0 86) scale(.72) translate(180 0)" fill="#69c8df" stroke="#148d9a" stroke-width="11"/><path d="m493 178 17 17 32-37" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

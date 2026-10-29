@@ -8,6 +8,10 @@ require_once '../../includes/db.php';
 requireLogin();
 $user = currentUser();
 
+// Notification state changes frequently; never serve a cached unread count or list.
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+
 $stmt = $pdo->prepare("
     SELECT id, message, is_read, created_at
     FROM notifications

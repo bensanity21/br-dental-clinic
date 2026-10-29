@@ -3,7 +3,7 @@
 // All mutations require confirmModal + go through API endpoints (PDO, prepared statements).
 
 import { api } from './api.js?v=6';
-import { confirmModal, openModal, closeModal } from './modal.js?v=7';
+import { confirmModal, openModal, closeModal } from './modal.js?v=8';
 import { showToast } from './toast.js';
 
 let currentUser = null;
@@ -91,18 +91,18 @@ function renderNavigation() {
 
   // ---------- Sidebar ----------
   sidebarSlot.innerHTML = `
-    <aside class="sidebar" id="app-sidebar">
+    <aside class="sidebar" id="app-sidebar" aria-label="Clinic navigation">
       <div class="sidebar-header">
         <div class="clinic-brand">
           <img class="brand-mark" src="brand-icon.png" alt="" width="32" height="32">
           <span class="brand-name">BR Dental Clinic</span>
         </div>
-        <button type="button" class="btn-icon sidebar-toggle-btn" id="sidebar-toggle-btn" aria-label="Toggle navigation">
+        <button type="button" class="btn-icon sidebar-toggle-btn" id="sidebar-toggle-btn" aria-label="Toggle navigation" aria-controls="app-sidebar" aria-expanded="false">
           <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
       </div>
 
-      <nav class="sidebar-nav">
+      <nav class="sidebar-nav" aria-label="Main navigation">
         <ul>
           <li>
             <a href="#" class="nav-link${!isAdmin ? ' active' : ''}" data-view="${isAdmin ? 'admin-dashboard' : 'patient-home'}">
@@ -186,25 +186,26 @@ function renderNavigation() {
 
     </aside>
   `;
+  updateSidebarAccessibility();
 
   // ---------- Top Navbar ----------
   navbarSlot.innerHTML = `
     <header class="top-navbar" id="top-navbar">
       <div class="navbar-search">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="search-icon"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        <input type="search" id="global-search-input" placeholder="Search anything..." aria-label="Search clinic information">
-        <div id="global-search-results" class="global-search-results hidden" role="listbox" aria-label="Search results"></div>
+        <input type="search" id="global-search-input" placeholder="Search anything..." aria-label="Search clinic information" aria-controls="global-search-results" aria-expanded="false" autocomplete="off">
+        <div id="global-search-results" class="global-search-results hidden" role="region" aria-label="Search results" aria-live="polite"></div>
       </div>
 
       <div class="navbar-right">
         <div class="navbar-item">
-          <button type="button" class="btn-icon btn-notif-toggle" id="btn-notif-toggle" aria-label="Notifications" style="position: relative;">
+          <button type="button" class="btn-icon btn-notif-toggle" id="btn-notif-toggle" aria-label="Notifications" aria-controls="notif-dropdown-panel" aria-expanded="false" style="position: relative;">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-            <span id="notif-count-badge" class="badge-count hidden">0</span>
+            <span id="notif-count-badge" class="badge-count hidden" aria-hidden="true">0</span>
           </button>
-          <div id="notif-dropdown-panel" class="dropdown-panel dropdown-right hidden" style="position: absolute; top: 100%; right: 0; width: 320px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); margin-top: 0.5rem; z-index: 100;">
+          <div id="notif-dropdown-panel" class="dropdown-panel dropdown-right hidden" role="region" aria-labelledby="notif-dropdown-heading" aria-hidden="true" style="position: absolute; top: 100%; right: 0; width: 320px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); margin-top: 0.5rem; z-index: 100;">
             <div class="dropdown-header" style="padding: 0.75rem 1rem; border-bottom: 1px solid #f3f4f6;">
-              <h3 style="margin: 0; font-size: 0.875rem; font-weight: 600; color: #111827;">Notifications</h3>
+              <h3 id="notif-dropdown-heading" style="margin: 0; font-size: 0.875rem; font-weight: 600; color: #111827;">Notifications</h3>
             </div>
             <ul id="notif-list-container" class="dropdown-list" style="list-style: none; margin: 0; padding: 0; max-height: 240px; overflow-y: auto;">
               <li class="empty-list-text" style="padding: 0.75rem 1rem; color: #6b7280; font-size: 0.875rem;">No new notifications.</li>
@@ -221,7 +222,7 @@ function renderNavigation() {
             <span class="profile-menu-name">${escapeHtml(fullName)}</span>
             <svg class="profile-menu-chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
           </button>
-          <div id="profile-dropdown-panel" class="dropdown-panel dropdown-right profile-dropdown-card hidden" aria-hidden="true">
+          <div id="profile-dropdown-panel" class="dropdown-panel dropdown-right profile-dropdown-card hidden" role="region" aria-label="Account options" aria-hidden="true">
             <div class="profile-dropdown-heading">
               <span class="profile-dropdown-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c.4-3.5 2.7-5.5 7-5.5s6.6 2 7 5.5"></path></svg></span>
               <span class="profile-dropdown-identity"><strong>${escapeHtml(fullName)}</strong><span>${isAdmin ? 'Master Admin' : isDoctor ? 'Doctor' : 'Patient'}</span></span>
@@ -273,7 +274,14 @@ async function switchView(targetViewId) {
   if (navLink) navLink.classList.add('active');
   closeDropdowns();
   if (el.appSidebar) el.appSidebar.classList.remove('show-sidebar');
+  updateSidebarAccessibility();
+  document.getElementById('sidebar-toggle-btn')?.setAttribute('aria-expanded', 'false');
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  const pageHeading = targetView.querySelector('h1');
+  if (pageHeading) {
+    pageHeading.setAttribute('tabindex', '-1');
+    pageHeading.focus({ preventScroll: true });
+  }
   switch (targetViewId) {
     case 'patient-home':
     case 'patient-services': await renderServices(); break;
@@ -304,6 +312,12 @@ async function renderServices() {
 }
 
 function renderServiceTables() {
+  const formatServicePrice = (price) => {
+    const amount = Number(price);
+    return Number.isFinite(amount)
+      ? '₱' + amount.toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+      : '₱0';
+  };
   const renderRows = (tbody, query, admin = false) => {
     if (!tbody) return;
     const normalizedQuery = (query || '').trim().toLowerCase();
@@ -323,7 +337,7 @@ function renderServiceTables() {
       return '<tr>' +
         '<td><strong>' + escapeHtml(service.service_name) + '</strong></td>' +
         '<td class="service-description">' + escapeHtml(service.description || '') + '</td>' +
-        '<td class="service-price-cell">₱' + Number(service.price || 0).toFixed(2) + '</td>' +
+        '<td class="service-price-cell"><span class="service-price-value">' + formatServicePrice(service.price || 0) + '</span></td>' +
         actions +
         '</tr>';
     }).join('');
@@ -543,10 +557,10 @@ if (document.getElementById('btn-modal-record')) {
     const patientOptions = patients.map((p) => '<option value="' + p.id + '">' + escapeHtml(p.full_name) + ' (' + p.email + ')</option>').join('');
     const confirmed = await openModal('Add Clinical Record',
       '<form id="form-add-record">' +
-      '<div class="form-group"><label>Patient</label><select id="m-rec-patient" required>' + patientOptions + '</select></div>' +
-      '<div class="form-group"><label>Treatment / Procedure</label><input type="text" id="m-rec-treatment" required placeholder="e.g. Tooth Extraction"></div>' +
-      '<div class="form-group"><label>Clinical Notes</label><textarea id="m-rec-notes" rows="3" required placeholder="Observations or prescribed care..."></textarea></div>' +
-      '<div class="form-group"><label>Date</label><input type="date" id="m-rec-date" value="' + new Date().toISOString().split('T')[0] + '" required></div>' +
+      '<div class="form-group"><label for="m-rec-patient">Patient</label><select id="m-rec-patient" required>' + patientOptions + '</select></div>' +
+      '<div class="form-group"><label for="m-rec-treatment">Treatment / Procedure</label><input type="text" id="m-rec-treatment" required placeholder="e.g. Tooth Extraction"></div>' +
+      '<div class="form-group"><label for="m-rec-notes">Clinical Notes</label><textarea id="m-rec-notes" rows="3" required placeholder="Observations or prescribed care..."></textarea></div>' +
+      '<div class="form-group"><label for="m-rec-date">Date</label><input type="date" id="m-rec-date" value="' + new Date().toISOString().split('T')[0] + '" required></div>' +
       '</form>',
       [ { text: 'Cancel', class: 'btn-outline', value: false }, { text: 'Save Record', class: 'btn-primary', value: true } ]);
     if (!confirmed) return;
@@ -572,15 +586,25 @@ async function renderNotifications() {
   const res = await api.get('notifications/list.php');
   if (!res.success) return;
   const { notifications, unread_count } = res.data;
-  if (el.notifCountBadge) { el.notifCountBadge.textContent = unread_count; el.notifCountBadge.classList.toggle('hidden', unread_count === 0); }
+  const unreadCount = Number(unread_count) || 0;
+  const notifToggle = document.getElementById('btn-notif-toggle');
+  if (el.notifCountBadge) {
+    el.notifCountBadge.textContent = unreadCount;
+    el.notifCountBadge.classList.toggle('hidden', unreadCount === 0);
+  }
+  if (notifToggle) notifToggle.setAttribute('aria-label', unreadCount ? 'Notifications, ' + unreadCount + ' unread' : 'Notifications');
+  const markAllReadButton = document.getElementById('btn-mark-all-read');
+  if (markAllReadButton) markAllReadButton.disabled = unreadCount === 0;
   if (el.notifListContainer) {
     if (notifications.length === 0) { el.notifListContainer.innerHTML = '<li class="empty-list-text">No new notifications.</li>'; }
-    else { el.notifListContainer.innerHTML = notifications.map((n) => (
-      '<li style="padding:0.6rem 1rem;border-bottom:1px solid var(--border-color);font-size:0.82rem;">' +
-      '<div>' + escapeHtml(n.message) + '</div>' +
-      '<span class="text-sub" style="font-size:0.72rem;">' + n.created_at + '</span>' +
-      '</li>'
-    )).join(''); }
+    else { el.notifListContainer.innerHTML = notifications.map((n) => {
+      const isUnread = Number(n.is_read) === 0;
+      return '<li class="notification-item' + (isUnread ? ' is-unread' : '') + '">' +
+        '<div class="notification-message-row"><div class="notification-message">' + escapeHtml(n.message) + '</div>' +
+        (isUnread ? '<span class="notification-unread-indicator"><span class="notification-unread-dot" aria-hidden="true"></span><span class="sr-only">Unread notification</span></span>' : '') + '</div>' +
+        '<span class="notification-date">' + escapeHtml(n.created_at || '') + '</span>' +
+        '</li>';
+    }).join(''); }
   }
 }
 
@@ -591,11 +615,13 @@ async function renderGlobalSearch(query) {
   if (term.length < 2) {
     panel.classList.add('hidden');
     panel.innerHTML = '';
+    document.getElementById('global-search-input')?.setAttribute('aria-expanded', 'false');
     return;
   }
 
   panel.innerHTML = '<div class="global-search-message">Searching…</div>';
   panel.classList.remove('hidden');
+  document.getElementById('global-search-input')?.setAttribute('aria-expanded', 'true');
   const params = new URLSearchParams({ q: term });
   const res = await api.get('search/global.php?' + params.toString());
   if (document.getElementById('global-search-input')?.value.trim() !== term) return;
@@ -618,7 +644,7 @@ async function renderGlobalSearch(query) {
     return;
   }
   panel.innerHTML = groups.map((group) => '<section class="global-search-group"><h3>' + escapeHtml(group.title) + '</h3>' +
-    group.items.map((item) => '<button type="button" class="global-search-result" role="option" data-search-view="' + group.target + '"><strong>' + escapeHtml(item.label || '') + '</strong>' +
+    group.items.map((item) => '<button type="button" class="global-search-result" data-search-view="' + group.target + '"><strong>' + escapeHtml(item.label || '') + '</strong>' +
       (item.detail ? '<span>' + escapeHtml(item.detail) + '</span>' : '') + '</button>').join('') + '</section>').join('');
 }
 
@@ -847,7 +873,13 @@ function bindEvents() {
     if (res.success) showToast('Clinic schedule saved.');
     else showToast(res.message || 'Failed to save clinic schedule.', 'error');
   });
-  if (sidebarToggleBtn && appSidebar) sidebarToggleBtn.addEventListener('click', () => appSidebar.classList.toggle('show-sidebar'));
+  if (sidebarToggleBtn && appSidebar) sidebarToggleBtn.addEventListener('click', () => {
+    const willOpen = !appSidebar.classList.contains('show-sidebar');
+    appSidebar.classList.toggle('show-sidebar', willOpen);
+    sidebarToggleBtn.setAttribute('aria-expanded', String(willOpen));
+    updateSidebarAccessibility();
+  });
+  window.addEventListener('resize', updateSidebarAccessibility);
   document.querySelectorAll('.nav-link').forEach((link) => {
     link.addEventListener('click', (e) => { e.preventDefault(); switchView(link.getAttribute('data-view')); });
   });
@@ -869,22 +901,57 @@ function bindEvents() {
     profileDropdownPanel.setAttribute('aria-hidden', String(!willOpen));
     btnProfileToggle.setAttribute('aria-expanded', String(willOpen));
     notifDropdownPanel.classList.add('hidden');
+    notifDropdownPanel.setAttribute('aria-hidden', 'true');
+    btnNotifToggle.setAttribute('aria-expanded', 'false');
   });
-  if (btnNotifToggle) btnNotifToggle.addEventListener('click', (e) => { e.stopPropagation(); notifDropdownPanel.classList.toggle('hidden'); profileDropdownPanel.classList.add('hidden'); });
+  if (btnNotifToggle) btnNotifToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const willOpen = notifDropdownPanel.classList.contains('hidden');
+    notifDropdownPanel.classList.toggle('hidden', !willOpen);
+    notifDropdownPanel.setAttribute('aria-hidden', String(!willOpen));
+    btnNotifToggle.setAttribute('aria-expanded', String(willOpen));
+    profileDropdownPanel.classList.add('hidden');
+    profileDropdownPanel.setAttribute('aria-hidden', 'true');
+    btnProfileToggle.setAttribute('aria-expanded', 'false');
+  });
   if (searchInput) searchInput.addEventListener('input', () => {
     clearTimeout(searchTimer);
     const query = searchInput.value;
     if (query.trim().length < 2) {
       if (searchResults) { searchResults.classList.add('hidden'); searchResults.innerHTML = ''; }
+      searchInput.setAttribute('aria-expanded', 'false');
       return;
     }
     searchTimer = setTimeout(() => renderGlobalSearch(query), 250);
   });
   if (searchInput) searchInput.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && searchResults) searchResults.classList.add('hidden');
+    if (event.key === 'Escape' && searchResults) {
+      searchResults.classList.add('hidden');
+      searchInput.setAttribute('aria-expanded', 'false');
+    }
+    if (event.key === 'ArrowDown' && searchResults && !searchResults.classList.contains('hidden')) {
+      const firstResult = searchResults.querySelector('[data-search-view]');
+      if (firstResult) { event.preventDefault(); firstResult.focus(); }
+    }
     if (event.key === 'Enter' && searchResults && !searchResults.classList.contains('hidden')) {
       const firstResult = searchResults.querySelector('[data-search-view]');
       if (firstResult) firstResult.click();
+    }
+  });
+  if (searchResults) searchResults.addEventListener('keydown', (event) => {
+    const results = Array.from(searchResults.querySelectorAll('[data-search-view]'));
+    const currentIndex = results.indexOf(document.activeElement);
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      searchResults.classList.add('hidden');
+      searchInput?.setAttribute('aria-expanded', 'false');
+      searchInput?.focus();
+    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      if (!results.length) return;
+      event.preventDefault();
+      const direction = event.key === 'ArrowDown' ? 1 : -1;
+      const nextIndex = (currentIndex + direction + results.length) % results.length;
+      results[nextIndex].focus();
     }
   });
   if (searchResults) searchResults.addEventListener('click', (event) => {
@@ -894,21 +961,38 @@ function bindEvents() {
     const target = result.getAttribute('data-search-view');
     if (searchInput) searchInput.value = '';
     searchResults.classList.add('hidden');
+    searchInput?.setAttribute('aria-expanded', 'false');
     switchView(target);
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    const profileIsOpen = profileDropdownPanel && !profileDropdownPanel.classList.contains('hidden');
+    const notificationsAreOpen = notifDropdownPanel && !notifDropdownPanel.classList.contains('hidden');
+    const sidebarIsOpen = appSidebar && appSidebar.classList.contains('show-sidebar');
+    if (!profileIsOpen && !notificationsAreOpen && !sidebarIsOpen) return;
+    closeDropdowns();
+    if (sidebarIsOpen) {
+      appSidebar.classList.remove('show-sidebar');
+      sidebarToggleBtn?.setAttribute('aria-expanded', 'false');
+      updateSidebarAccessibility();
+    }
+    (profileIsOpen ? btnProfileToggle : notificationsAreOpen ? btnNotifToggle : sidebarToggleBtn)?.focus();
   });
   if (markAllReadButton) markAllReadButton.addEventListener('click', async (event) => {
     event.stopPropagation();
     markAllReadButton.disabled = true;
+    let markedRead = false;
     try {
       const res = await api.post('notifications/read.php', { mark_all: true });
       if (!res.success) {
         showToast(res.message || 'Could not mark notifications as read.', 'error');
         return;
       }
+      markedRead = true;
       await renderNotifications();
       showToast('All notifications marked as read.');
     } finally {
-      markAllReadButton.disabled = false;
+      if (!markedRead) markAllReadButton.disabled = false;
     }
   });
   document.addEventListener('click', closeDropdowns);
@@ -980,8 +1064,23 @@ function closeDropdowns() {
   if (el.profileDropdownPanel) el.profileDropdownPanel.classList.add('hidden');
   if (el.notifDropdownPanel) el.notifDropdownPanel.classList.add('hidden');
   document.getElementById('profile-dropdown-panel')?.setAttribute('aria-hidden', 'true');
+  document.getElementById('notif-dropdown-panel')?.setAttribute('aria-hidden', 'true');
   document.getElementById('btn-profile-toggle')?.setAttribute('aria-expanded', 'false');
+  document.getElementById('btn-notif-toggle')?.setAttribute('aria-expanded', 'false');
   document.getElementById('global-search-results')?.classList.add('hidden');
+  document.getElementById('global-search-input')?.setAttribute('aria-expanded', 'false');
+}
+function updateSidebarAccessibility() {
+  const sidebar = document.getElementById('app-sidebar');
+  const toggle = document.getElementById('sidebar-toggle-btn');
+  if (!sidebar) return;
+  const isMobile = window.matchMedia('(max-width: 768px)').matches;
+  const isOpen = sidebar.classList.contains('show-sidebar');
+  const hiddenFromAccessTree = isMobile && !isOpen;
+  if (hiddenFromAccessTree && sidebar.contains(document.activeElement)) toggle?.focus();
+  sidebar.inert = hiddenFromAccessTree;
+  sidebar.setAttribute('aria-hidden', String(hiddenFromAccessTree));
+  if (toggle) toggle.setAttribute('aria-expanded', String(isOpen));
 }
 function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text ?? ''; return div.innerHTML; }
 

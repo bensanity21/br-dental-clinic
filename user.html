@@ -5,16 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BR Dental Clinic - User Portal</title>
   <meta name="description" content="BR Dental Clinic user portal.">
-  <link rel="stylesheet" href="style.css?v=7">
+  <link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
+  <a class="skip-link" href="#views-viewport">Skip to main content</a>
   
   <div id="app-shell" class="app-shell">
     <div id="sidebar-slot"></div>
     <div class="main-wrapper">
       <div id="navbar-slot"></div>
       <div id="toast-container" class="toast-container" aria-live="polite"></div>
-      <div id="views-viewport" class="views-viewport">
+      <main id="views-viewport" class="views-viewport" tabindex="-1">
 
 <!-- PATIENT: HOME -->
         <section id="view-patient-home" class="page-view active">
@@ -294,11 +295,11 @@
           </div>
         </section>
 
-      </div>
+      </main>
     </div>
     <div id="modal-slot">
       <div id="modal-backdrop" class="modal-backdrop hidden" aria-hidden="true">
-        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1">
           <header class="modal-header">
             <h2 id="modal-title">Dialog Title</h2>
             <button type="button" class="btn-icon btn-modal-close" aria-label="Close dialog">&times;</button>
@@ -310,8 +311,8 @@
     </div>
   </div>
   <script type="module" src="scripts/api.js?v=6"></script>
-  <script type="module" src="scripts/modal.js?v=7"></script>
+  <script type="module" src="scripts/modal.js?v=8"></script>
   <script type="module" src="scripts/toast.js?v=5"></script>
-  <script type="module" src="scripts/portal.js?v=19"></script>
+  <script type="module" src="scripts/portal.js?v=25"></script>
 </body>
 </html>

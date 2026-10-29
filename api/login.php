@@ -2,8 +2,7 @@
 // api/login.php
 header("Content-Type: application/json");
 require_once "../config/config.php";
-session_name(SESSION_NAME);
-session_start();
+require_once "../includes/session.php";
 require_once "../connectdb.php";
 
 $data = json_decode(file_get_contents("php://input"), true);
@@ -29,6 +28,7 @@ if ($user && password_verify($password, $user['password_hash'])) {
     $_SESSION['full_name'] = $user['full_name'];
     $_SESSION['email'] = $user['email'];
     $_SESSION['last_activity'] = time();
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
     echo json_encode([
         "success" => true,
@@ -37,7 +37,8 @@ if ($user && password_verify($password, $user['password_hash'])) {
             "id" => $user['id'],
             "name" => $user['full_name'],
             "email" => $user['email'],
-            "role" => $user['role']
+            "role" => $user['role'],
+            "csrf_token" => $_SESSION['csrf_token']
         ]
     ]);
 } else {

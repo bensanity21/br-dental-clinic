@@ -150,15 +150,7 @@ CREATE TABLE `users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `users`
---
-
-INSERT INTO `users` (`id`, `full_name`, `email`, `password_hash`, `phone_number`, `role`, `created_at`) VALUES
-(1, 'Master Admin', 'admin@brdental.com', '$2y$10$uywop7r0dxk3VsDiGC1Jg.KpRENZOcSa7Np4XVP7AEQv5/GiTw8HS', '09066636112', 'super-admin', '2026-10-25 07:43:28'),
-(2, 'Test Patient', 'testpatient@mail.com', '$2y$10$RoFgwzgDqK368Rj6CsdUuOXX2eeuzII8AXf3FQLkCt1x1NXUlXYPy', NULL, 'patient', '2026-10-25 09:36:57'),
-(6, 'bene', 'cagurol2benedict1@gmail.com', '$2y$10$8OtTieDIEiPFCq2i1rDNLO8Z2869DFe14pU2yoajX798tZtFqdD.G', NULL, 'patient', '2026-10-25 09:50:14'),
-(7, 'test1234', 'test1234@gmail.com', '$2y$10$sRL3v5fSyPPlYMLJrQqn9uIZ4iThnDv3Dtlw5B02n1Fz/eIb42TiS', NULL, 'patient', '2026-10-25 10:42:21');
-
+-- User accounts are intentionally not included in the public schema dump.
 --
 -- Indexes for dumped tables
 --

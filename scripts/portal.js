@@ -2,7 +2,7 @@
 // Replaces localStorage demo state with real backend database calls.
 // All mutations require confirmModal + go through API endpoints (PDO, prepared statements).
 
-import { api } from './api.js?v=6';
+import { api, setCsrfToken } from './api.js?v=7';
 import { confirmModal, openModal, closeModal } from './modal.js?v=8';
 import { showToast } from './toast.js';
 
@@ -10,10 +10,14 @@ let currentUser = null;
 let role = '';
 let dentistInfo = null;
 let serviceCatalog = [];
+let knownNotificationIds = null;
+let notificationsRequestInFlight = false;
+let lastNotificationSnapshot = null;
 
 async function loadSession() {
   const res = await api.get('auth/me.php');
   if (!res.success) return false;
+  setCsrfToken(res.data.csrf_token);
   currentUser = res.data.user;
   role = currentUser.role;
   dentistInfo = res.data.dentist || null;
@@ -65,6 +69,7 @@ async function initApp() {
     bindEvents();
     renderRoleBasedNav();
     await renderNotifications();
+    startNotificationPolling();
     await renderDashboardIfRoleAdminOrDoctor();
     const activeView = document.querySelector('.page-view.active');
     if (activeView) await switchView(activeView.id.replace('view-', ''));
@@ -149,12 +154,6 @@ function renderNavigation() {
             </a>
           </li>
           <li>
-            <a href="#" class="nav-link" data-view="admin-schedules">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-              <span>Schedules</span>
-            </a>
-          </li>
-          <li>
             <a href="#" class="nav-link" data-view="admin-reports">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"></line><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
               <span>Reports</span>
@@ -172,12 +171,6 @@ function renderNavigation() {
             <a href="#" class="nav-link" data-view="admin-archives">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h18v4H3z"></path><path d="M5 8v12h14V8M10 12h4"></path></svg>
               <span>Archive</span>
-            </a>
-          </li>
-          <li>
-            <a href="#" class="nav-link" data-view="admin-settings">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.7 2.94-.08-.02a1.7 1.7 0 0 0-1.7.35l-.06.05h-3.4l-.04-.08a1.7 1.7 0 0 0-1.45-1.03l-.08-.01-1.7-2.94.05-.07a1.7 1.7 0 0 0-.18-1.76L9.4 14V10l.06-.05a1.7 1.7 0 0 0 .18-1.76l-.05-.07 1.7-2.94.08-.01a1.7 1.7 0 0 0 1.45-1.03l.04-.08h3.4l.06.05a1.7 1.7 0 0 0 1.7.35l.08-.02 1.7 2.94-.06.06A1.7 1.7 0 0 0 19.4 9l.06.05v4z"></path></svg>
-              <span>Clinic Settings</span>
             </a>
           </li>
           ` : ''}
@@ -228,7 +221,9 @@ function renderNavigation() {
               <span class="profile-dropdown-identity"><strong>${escapeHtml(fullName)}</strong><span>${isAdmin ? 'Master Admin' : isDoctor ? 'Doctor' : 'Patient'}</span></span>
             </div>
             <a href="#" class="profile-dropdown-item" data-view-target="profile"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c.5-4.2 3.2-6.5 8-6.5s7.5 2.3 8 6.5"></path></svg><span>View Profile</span></a>
-            <a href="#" class="profile-dropdown-item" data-view-target="appointments"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4M8 3v4M3 10h18M9 15l2 2 4-4"></path></svg><span>Appointments</span></a>
+            ${isAdmin
+              ? '<a href="#" class="profile-dropdown-item" data-view-target="settings"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.7 2.94-.08-.02a1.7 1.7 0 0 0-1.7.35l-.06.05h-3.4l-.04-.08a1.7 1.7 0 0 0-1.45-1.03l-.08-.01-1.7-2.94.05-.07a1.7 1.7 0 0 0-.18-1.76L9.4 14v-4l.06-.05a1.7 1.7 0 0 0 .18-1.76l-.05-.07 1.7-2.94.08-.01a1.7 1.7 0 0 0 1.45-1.03l.04-.08h3.4l.06.05a1.7 1.7 0 0 0 1.7.35l.08-.02 1.7 2.94-.06.06A1.7 1.7 0 0 0 19.4 9l.06.05v4z"></path></svg><span>Settings</span></a>'
+              : '<a href="#" class="profile-dropdown-item" data-view-target="appointments"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4M8 3v4M3 10h18M9 15l2 2 4-4"></path></svg><span>Appointments</span></a>'}
             <button type="button" class="profile-dropdown-item profile-dropdown-logout btn-logout-action" id="btn-logout-action"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 17l5-5-5-5M15 12H3"></path><path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7"></path></svg><span>Log Out</span></button>
           </div>
         </div>
@@ -296,7 +291,7 @@ async function switchView(targetViewId) {
     case 'admin-records': await renderAdminRecords(); break;
     case 'admin-services': await renderAdminServices(); break;
     case 'admin-dentists': await renderAdminDentists(); break;
-    case 'admin-schedules': await renderScheduleSettings(); break;
+    case 'admin-settings': await renderAdminSettings(); break;
   }
 }
 
@@ -583,29 +578,58 @@ if (document.getElementById('btn-modal-record')) {
 }
 
 async function renderNotifications() {
-  const res = await api.get('notifications/list.php');
-  if (!res.success) return;
-  const { notifications, unread_count } = res.data;
-  const unreadCount = Number(unread_count) || 0;
-  const notifToggle = document.getElementById('btn-notif-toggle');
-  if (el.notifCountBadge) {
-    el.notifCountBadge.textContent = unreadCount;
-    el.notifCountBadge.classList.toggle('hidden', unreadCount === 0);
+  if (notificationsRequestInFlight) return;
+  notificationsRequestInFlight = true;
+  try {
+    const res = await api.get('notifications/list.php', { headers: { 'X-Background-Poll': '1' } });
+    if (!res.success) return;
+    const notifications = Array.isArray(res.data.notifications) ? res.data.notifications : [];
+    const unreadCount = Number(res.data.unread_count) || 0;
+    const notifToggle = document.getElementById('btn-notif-toggle');
+    if (el.notifCountBadge) {
+      el.notifCountBadge.textContent = unreadCount;
+      el.notifCountBadge.classList.toggle('hidden', unreadCount === 0);
+    }
+    if (notifToggle) notifToggle.setAttribute('aria-label', unreadCount ? 'Notifications, ' + unreadCount + ' unread' : 'Notifications');
+    const markAllReadButton = document.getElementById('btn-mark-all-read');
+    if (markAllReadButton) markAllReadButton.disabled = unreadCount === 0;
+
+    if (knownNotificationIds === null) {
+      knownNotificationIds = new Set(notifications.map((item) => String(item.id)));
+    } else {
+      const arriving = notifications.filter((item) => Number(item.is_read) === 0 && !knownNotificationIds.has(String(item.id)));
+      if (arriving.length > 3) showToast('You have ' + arriving.length + ' new notifications.', 'info');
+      else arriving.slice().reverse().forEach((item) => showToast('New notification: ' + item.message, 'info'));
+      notifications.forEach((item) => knownNotificationIds.add(String(item.id)));
+    }
+
+    const notificationSnapshot = JSON.stringify(notifications.map((item) => [item.id, item.message, item.is_read, item.created_at]));
+    if (el.notifListContainer && notificationSnapshot !== lastNotificationSnapshot) {
+      const previousScrollTop = el.notifListContainer.scrollTop;
+      if (notifications.length === 0) { el.notifListContainer.innerHTML = '<li class="empty-list-text">No new notifications.</li>'; }
+      else { el.notifListContainer.innerHTML = notifications.map((n) => {
+        const isUnread = Number(n.is_read) === 0;
+        return '<li class="notification-item' + (isUnread ? ' is-unread' : '') + '">' +
+          '<div class="notification-message-row"><div class="notification-message">' + escapeHtml(n.message) + '</div>' +
+          (isUnread ? '<span class="notification-unread-indicator"><span class="notification-unread-dot" aria-hidden="true"></span><span class="sr-only">Unread notification</span></span>' : '') + '</div>' +
+          '<span class="notification-date">' + escapeHtml(n.created_at || '') + '</span>' +
+          '</li>';
+      }).join(''); }
+      el.notifListContainer.scrollTop = previousScrollTop;
+      lastNotificationSnapshot = notificationSnapshot;
+    }
+  } finally {
+    notificationsRequestInFlight = false;
   }
-  if (notifToggle) notifToggle.setAttribute('aria-label', unreadCount ? 'Notifications, ' + unreadCount + ' unread' : 'Notifications');
-  const markAllReadButton = document.getElementById('btn-mark-all-read');
-  if (markAllReadButton) markAllReadButton.disabled = unreadCount === 0;
-  if (el.notifListContainer) {
-    if (notifications.length === 0) { el.notifListContainer.innerHTML = '<li class="empty-list-text">No new notifications.</li>'; }
-    else { el.notifListContainer.innerHTML = notifications.map((n) => {
-      const isUnread = Number(n.is_read) === 0;
-      return '<li class="notification-item' + (isUnread ? ' is-unread' : '') + '">' +
-        '<div class="notification-message-row"><div class="notification-message">' + escapeHtml(n.message) + '</div>' +
-        (isUnread ? '<span class="notification-unread-indicator"><span class="notification-unread-dot" aria-hidden="true"></span><span class="sr-only">Unread notification</span></span>' : '') + '</div>' +
-        '<span class="notification-date">' + escapeHtml(n.created_at || '') + '</span>' +
-        '</li>';
-    }).join(''); }
-  }
+}
+
+function startNotificationPolling() {
+  const refreshWhenVisible = () => {
+    if (document.visibilityState === 'visible') renderNotifications();
+  };
+  window.setInterval(refreshWhenVisible, 5000);
+  document.addEventListener('visibilitychange', refreshWhenVisible);
+  window.addEventListener('focus', refreshWhenVisible);
 }
 
 async function renderGlobalSearch(query) {
@@ -756,13 +780,25 @@ async function renderReport() {
     if (button) button.disabled = false;
   }
 }
-async function renderScheduleSettings() {
-  const res = await api.get('schedules/clinic.php');
-  if (!res.success) { showToast(res.message || 'Failed to load clinic schedule.', 'error'); return; }
-  const days = document.getElementById('sched-days');
-  const hours = document.getElementById('sched-hours');
-  if (days) days.value = res.data.operating_days || '';
-  if (hours) hours.value = res.data.operating_hours || '';
+async function renderAdminSettings() {
+  const [clinicRes, scheduleRes] = await Promise.all([
+    api.get('settings/clinic.php'),
+    api.get('schedules/clinic.php'),
+  ]);
+  if (!clinicRes.success) showToast(clinicRes.message || 'Failed to load clinic details.', 'error');
+  else {
+    const phone = document.getElementById('admin-setting-phone');
+    const address = document.getElementById('admin-setting-address');
+    if (phone) phone.value = clinicRes.data.phone_number || '';
+    if (address) address.value = clinicRes.data.address || '';
+  }
+  if (!scheduleRes.success) showToast(scheduleRes.message || 'Failed to load clinic hours.', 'error');
+  else {
+    const days = document.getElementById('sched-days');
+    const hours = document.getElementById('sched-hours');
+    if (days) days.value = scheduleRes.data.operating_days || '';
+    if (hours) hours.value = scheduleRes.data.operating_hours || '';
+  }
 }
 async function renderAdminDentists() {
   const res = await api.get('dentists/list.php');
@@ -849,6 +885,7 @@ function bindEvents() {
   const searchResults = document.getElementById('global-search-results');
   let searchTimer;
   const scheduleForm = document.getElementById('schedule-settings-form');
+  const clinicInfoForm = document.getElementById('admin-clinic-info-form');
   const addServiceButton = document.getElementById('btn-modal-service');
   if (addServiceButton) addServiceButton.addEventListener('click', () => openServiceForm());
   if (el.patientServiceSearch) el.patientServiceSearch.addEventListener('input', renderServiceTables);
@@ -870,8 +907,16 @@ function bindEvents() {
     const operating_days = document.getElementById('sched-days').value.trim();
     const operating_hours = document.getElementById('sched-hours').value.trim();
     const res = await api.post('schedules/clinic.php', { operating_days, operating_hours });
-    if (res.success) showToast('Clinic schedule saved.');
-    else showToast(res.message || 'Failed to save clinic schedule.', 'error');
+    if (res.success) showToast('Operating hours saved.');
+    else showToast(res.message || 'Failed to save operating hours.', 'error');
+  });
+  if (clinicInfoForm) clinicInfoForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const phone_number = document.getElementById('admin-setting-phone').value.trim();
+    const address = document.getElementById('admin-setting-address').value.trim();
+    const res = await api.post('settings/clinic.php', { phone_number, address });
+    if (res.success) showToast('Clinic details saved.');
+    else showToast(res.message || 'Failed to save clinic details.', 'error');
   });
   if (sidebarToggleBtn && appSidebar) sidebarToggleBtn.addEventListener('click', () => {
     const willOpen = !appSidebar.classList.contains('show-sidebar');

@@ -15,4 +15,7 @@ if ($user['role'] === 'doctor') {
     $dentist = $stmt->fetch();
 }
 
-respondSuccess('Current user', ['user' => $user, 'dentist' => $dentist]);
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+respondSuccess('Current user', ['user' => $user, 'dentist' => $dentist, 'csrf_token' => $_SESSION['csrf_token']]);

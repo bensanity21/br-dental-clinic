@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BR Dental Clinic - Master Admin Portal</title>
   <meta name="description" content="BR Dental Clinic master admin portal.">
-  <link rel="stylesheet" href="style.css?v=12">
+  <link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
   <a class="skip-link" href="#views-viewport">Skip to main content</a>
@@ -269,27 +269,6 @@
           </div>
         </section>
 
-        <!-- ADMIN: SCHEDULES -->
-        <section id="view-admin-schedules" class="page-view">
-          <div class="page-header">
-            <h1>Clinic Hours & Availability</h1>
-            <p>Configure default working hours and time slot limits.</p>
-          </div>
-          <div class="card form-card-narrow">
-            <form id="schedule-settings-form">
-              <div class="form-group">
-                <label for="sched-days">Operating Days</label>
-                <input type="text" id="sched-days" value="Monday to Saturday">
-              </div>
-              <div class="form-group">
-                <label for="sched-hours">Operating Hours</label>
-                <input type="text" id="sched-hours" value="8:00 AM - 5:00 PM">
-              </div>
-              <button type="submit" class="btn btn-primary">Save Schedule Settings</button>
-            </form>
-          </div>
-        </section>
-
         <!-- ADMIN: REPORTS -->
         <section id="view-admin-reports" class="page-view">
           <div class="page-header flex-between">
@@ -339,27 +318,43 @@
         <!-- ADMIN: SETTINGS -->
         <section id="view-admin-settings" class="page-view">
           <div class="page-header">
-            <h1>Admin Settings</h1>
-            <p>Update administrative details and clinic parameters.</p>
+            <h1>Settings</h1>
+            <p>Manage clinic information, operating days, and hours.</p>
           </div>
-          <div class="card form-card-narrow">
-            <h2>Clinic Details</h2>
-            <form id="admin-clinic-info-form" class="mb-4">
-              <div class="form-group">
-                <label for="admin-setting-name">Clinic Name</label>
-                <input type="text" id="admin-setting-name" value="BR Dental Clinic" readonly class="input-readonly">
-              </div>
-              <div class="form-group">
-                <label for="admin-setting-phone">Phone Number</label>
-                <input type="text" id="admin-setting-phone" value="09066636112">
-              </div>
-              <div class="form-group">
-                <label for="admin-setting-address">Address</label>
-                <input type="text" id="admin-setting-address" value="73 Nyugan Road, Paliparan 1, Dasmarinas City, Cavite">
-              </div>
-              <button type="submit" class="btn btn-primary">Update Clinic Info</button>
-            </form>
-
+          <div class="admin-settings-grid">
+            <section class="card form-card-narrow" aria-labelledby="clinic-details-heading">
+              <h2 id="clinic-details-heading">Clinic Details</h2>
+              <form id="admin-clinic-info-form">
+                <div class="form-group">
+                  <label for="admin-setting-name">Clinic Name</label>
+                  <input type="text" id="admin-setting-name" value="BR Dental Clinic" readonly class="input-readonly">
+                </div>
+                <div class="form-group">
+                  <label for="admin-setting-phone">Phone Number</label>
+                  <input type="tel" id="admin-setting-phone" maxlength="20" required>
+                </div>
+                <div class="form-group">
+                  <label for="admin-setting-address">Address</label>
+                  <textarea id="admin-setting-address" rows="3" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Clinic Details</button>
+              </form>
+            </section>
+            <section class="card form-card-narrow" aria-labelledby="clinic-hours-heading">
+              <h2 id="clinic-hours-heading">Operating Hours</h2>
+              <p class="text-sub">Set the days and hours the clinic is open.</p>
+              <form id="schedule-settings-form">
+                <div class="form-group">
+                  <label for="sched-days">Operating Days</label>
+                  <input type="text" id="sched-days" maxlength="100" required placeholder="Monday to Saturday">
+                </div>
+                <div class="form-group">
+                  <label for="sched-hours">Operating Hours</label>
+                  <input type="text" id="sched-hours" maxlength="100" required placeholder="8:00 AM - 5:00 PM">
+                </div>
+                <button type="submit" class="btn btn-primary">Save Operating Hours</button>
+              </form>
+            </section>
           </div>
         </section>
 
@@ -448,6 +443,6 @@
   <script type="module" src="scripts/api.js?v=6"></script>
   <script type="module" src="scripts/modal.js?v=8"></script>
   <script type="module" src="scripts/toast.js?v=5"></script>
-  <script type="module" src="scripts/portal.js?v=25"></script>
+  <script type="module" src="scripts/portal.js?v=27"></script>
 </body>
 </html>

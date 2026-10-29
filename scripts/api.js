@@ -4,6 +4,11 @@
 // Auto-redirects to login on session expiry (401)
 
 const API_BASE = new URL('./api/', document.baseURI).href.replace(/\/$/, '');
+let csrfToken = '';
+
+export function setCsrfToken(token) {
+  csrfToken = typeof token === 'string' ? token : '';
+}
 
 async function apiRequest(path, options = {}) {
   const url = `${API_BASE}/${path}`;
@@ -11,6 +16,9 @@ async function apiRequest(path, options = {}) {
     'Content-Type': 'application/json',
     ...(options.headers || {}),
   };
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes((options.method || 'GET').toUpperCase()) && csrfToken) {
+    headers['X-CSRF-Token'] = csrfToken;
+  }
 
   const config = {
     ...options,

@@ -24,9 +24,18 @@ if (!$patientId || !$dentistId || !$treatment || !$date) {
 
 // Doctor can only add records for their own appointments' patients
 if ($user['role'] === 'doctor') {
-    $chk = $pdo->prepare("SELECT id FROM appointments WHERE patient_id = ? AND dentist_id = (SELECT id FROM dentists WHERE user_id = ? LIMIT 1) LIMIT 1");
-    $chk->execute([$patientId, $user['id']]);
-    // (soft check - still allow super-admin)
+    $dentistStmt = $pdo->prepare('SELECT id FROM dentists WHERE user_id = ? LIMIT 1');
+    $dentistStmt->execute([$user['id']]);
+    $assignedDentist = $dentistStmt->fetch();
+    if (!$assignedDentist || (int)$assignedDentist['id'] !== (int)$dentistId) {
+        respondError('You can only add records as your own dentist account.', null, 403);
+    }
+
+    $patientStmt = $pdo->prepare('SELECT id FROM appointments WHERE patient_id = ? AND dentist_id = ? LIMIT 1');
+    $patientStmt->execute([$patientId, $assignedDentist['id']]);
+    if (!$patientStmt->fetch()) {
+        respondError('You can only add records for patients assigned to you.', null, 403);
+    }
 }
 
 // Encrypt sensitive clinical notes before saving

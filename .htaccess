@@ -1,0 +1,10 @@
+Options -Indexes
+
+<FilesMatch "(?i)\.(sql|sqlite|env|log|bak|old)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule (^|/)\.git(/|$) - [F,L]
+</IfModule>

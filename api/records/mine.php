@@ -23,8 +23,20 @@ if ($user['role'] === 'patient') {
     ");
     $stmt->execute([$user['id']]);
 } else {
-    // doctor / super-admin: all records
-    $stmt = $pdo->prepare("
+    if ($user['role'] === 'doctor') {
+        $stmt = $pdo->prepare("
+            SELECT dr.id, dr.record_date, dr.treatment_procedure, dr.clinical_notes,
+                   p.full_name AS patient_name, d.full_name AS dentist_name
+            FROM dental_records dr
+            INNER JOIN dentists d ON dr.dentist_id = d.id
+            LEFT JOIN users p ON dr.patient_id = p.id
+            WHERE d.user_id = ?
+            ORDER BY dr.record_date DESC
+        ");
+        $stmt->execute([$user['id']]);
+    } else {
+        // Super-admin can review all records.
+        $stmt = $pdo->prepare("
         SELECT dr.id, dr.record_date, dr.treatment_procedure, dr.clinical_notes,
                p.full_name AS patient_name, d.full_name AS dentist_name
         FROM dental_records dr
@@ -33,6 +45,7 @@ if ($user['role'] === 'patient') {
         ORDER BY dr.record_date DESC
     ");
     $stmt->execute();
+    }
 }
 
 $records = $stmt->fetchAll();

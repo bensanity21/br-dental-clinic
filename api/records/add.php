@@ -5,6 +5,7 @@ require_once '../../includes/auth.php';
 require_once '../../includes/response.php';
 require_once '../../includes/db.php';
 require_once '../../includes/encrypt.php';
+require_once '../../includes/notifications.php';
 
 requireLogin();
 requireRole(['doctor', 'super-admin']);
@@ -95,8 +96,7 @@ $stmt->execute([$patientId, $patientName, $dentistId, $treatment, $encryptedNote
 
 // Notify patient
 if ($patientId !== null) {
-    $stmt = $pdo->prepare("INSERT INTO notifications (user_id, message, is_read) VALUES (?, ?, 0)");
-    $stmt->execute([$patientId, "A new dental record was added on $date."]);
+    createInAppNotification($pdo, (int)$patientId, "A new dental record was added on $date.");
 }
 
 respondSuccess('Dental record added', ['id' => $pdo->lastInsertId()], 201);

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BR Dental Clinic - User Portal</title>
   <meta name="description" content="BR Dental Clinic user portal.">
-  <link rel="stylesheet" href="style.css?v=17">
+  <link rel="stylesheet" href="style.css?v=19">
 </head>
 <body>
   <a class="skip-link" href="#views-viewport">Skip to main content</a>
@@ -195,42 +195,58 @@
 
         <!-- PATIENT: MY PROFILE -->
         <section id="view-patient-profile" class="page-view">
-          <div class="page-header">
-            <h1>My Profile</h1>
-            <p>View and update your personal information.</p>
+          <div class="page-header flex-between profile-page-header">
+            <div><h1>My Profile</h1><p>Your personal information and care summary.</p></div>
+            <button type="button" class="btn btn-primary" id="profile-edit-button" disabled>Edit Profile</button>
           </div>
-          <div class="card form-card-narrow">
-            <form id="patient-profile-form">
-              <div class="form-group">
-                <label for="profile-fullname">Full Name</label>
-                <input type="text" id="profile-fullname" required>
+          <div id="patient-profile-state" class="card profile-loading" role="status" aria-live="polite">Loading your profile…</div>
+          <div id="patient-profile-content" class="hidden">
+            <section class="card patient-profile-identity" aria-labelledby="patient-profile-name">
+              <div class="patient-profile-avatar" id="patient-profile-avatar" aria-hidden="true">P</div>
+              <div class="patient-profile-identity-copy"><h2 id="patient-profile-name"></h2><span class="patient-role-badge">Patient</span><p class="text-sub mt-2">Patient ID: <strong id="patient-profile-id"></strong></p></div>
+            </section>
+            <div class="patient-profile-grid mt-4">
+              <section class="card patient-profile-info-card" aria-labelledby="personal-information-heading">
+                <div class="flex-between profile-card-heading"><div><h2 id="personal-information-heading">Personal Information</h2><p class="text-sub">Details associated with your clinic account.</p></div><span id="profile-readonly-hint" class="text-sub">View only</span></div>
+                <div id="patient-profile-readonly" class="profile-detail-grid">
+                  <div class="profile-detail"><span>Full name</span><strong id="profile-display-name"></strong></div>
+                  <div class="profile-detail"><span>Email address</span><strong id="profile-display-email"></strong></div>
+                  <div class="profile-detail"><span>Phone number</span><strong id="profile-display-phone"></strong></div>
+                  <div class="profile-detail"><span>Registered</span><strong id="profile-display-created"></strong></div>
+                </div>
+                <form id="patient-profile-form" class="hidden mt-3" novalidate>
+                  <div class="form-group"><label for="profile-fullname">Full Name <span class="required-mark">*</span></label><input type="text" id="profile-fullname" maxlength="100" autocomplete="name" required aria-describedby="profile-name-error"><span class="field-error" id="profile-name-error"></span></div>
+                  <div class="form-group"><label for="profile-email">Email Address</label><input type="email" id="profile-email" readonly class="input-readonly" aria-describedby="profile-email-hint"><span class="field-hint" id="profile-email-hint">Email changes are unavailable until email verification is supported.</span></div>
+                  <div class="form-group"><label for="profile-phone">Contact Phone Number</label><input type="tel" id="profile-phone" maxlength="20" autocomplete="tel" placeholder="e.g. 09XXXXXXXXX" aria-describedby="profile-phone-error"><span class="field-error" id="profile-phone-error"></span></div>
+                  <div class="profile-form-actions"><button type="button" class="btn btn-outline" id="profile-cancel-button">Cancel</button><button type="submit" class="btn btn-primary" id="profile-save-button">Save Changes</button></div>
+                </form>
+              </section>
+              <div class="patient-profile-side-column">
+                <section class="card" aria-labelledby="patient-summary-heading"><h2 id="patient-summary-heading">Patient Summary</h2><div class="patient-summary-row"><span>Completed appointments</span><strong id="profile-completed-count">—</strong></div><div class="patient-summary-next"><span class="text-sub">Next appointment</span><strong id="profile-next-appointment">—</strong><span id="profile-next-service" class="text-sub"></span></div><button type="button" class="btn btn-soft mt-3" data-navigate="patient-appointments">View appointments</button></section>
+                <section class="card" aria-labelledby="patient-health-heading"><h2 id="patient-health-heading">Health Information</h2><p class="text-sub">No patient-provided allergies, conditions, or medication information is stored in your account yet. Your professional treatment history is available in Dental Records.</p><button type="button" class="btn btn-outline mt-2" data-navigate="patient-records">View Dental Records</button></section>
               </div>
-              <div class="form-group">
-                <label for="profile-email">Email Address</label>
-                <input type="email" id="profile-email" readonly class="input-readonly">
-                <span class="field-hint">Email updates must be validated through the backend server.</span>
-              </div>
-              <div class="form-group">
-                <label for="profile-phone">Contact Phone Number</label>
-                <input type="tel" id="profile-phone" placeholder="09XXXXXXXXX">
-              </div>
-              <button type="submit" class="btn btn-primary">Save Profile</button>
-            </form>
+            </div>
           </div>
-          <div class="card form-card-narrow mt-4">
-            <h2>Change Password</h2>
-            <form id="change-password-form" class="mt-3">
-              <div class="form-group">
-                <label for="curr-password">Current Password</label>
-                <input type="password" id="curr-password" required autocomplete="current-password" placeholder="Enter current password">
-              </div>
-              <div class="form-group">
-                <label for="new-password">New Password</label>
-                <input type="password" id="new-password" required minlength="8" autocomplete="new-password" placeholder="Minimum 8 characters">
-              </div>
-              <button type="submit" class="btn btn-primary">Update Password</button>
-            </form>
+          <div id="patient-profile-error" class="card form-error-state hidden" role="alert"><p>We couldn’t load your profile right now.</p><button type="button" class="btn btn-outline" id="profile-retry-button">Try again</button></div>
+        </section>
+
+        <!-- PATIENT: SETTINGS -->
+        <section id="view-patient-settings" class="page-view">
+          <div class="page-header"><h1>Settings</h1><p>Manage your account security and in-app preferences.</p></div>
+          <div id="patient-settings-state" class="card profile-loading" role="status" aria-live="polite">Loading your settings…</div>
+          <div id="patient-settings-content" class="patient-settings-grid hidden">
+            <section class="card" aria-labelledby="settings-account-heading"><h2 id="settings-account-heading">Account</h2><p class="text-sub">Your sign-in email is shown for reference. Email changes and usernames are not supported by this account system. Manage your name and phone number on View Profile.</p><div class="form-group mt-3"><label for="settings-account-email">Email Address</label><input id="settings-account-email" type="email" readonly class="input-readonly"></div><button type="button" class="btn btn-outline mt-2" data-navigate="patient-profile">Manage personal details</button></section>
+            <section class="card" aria-labelledby="settings-password-heading"><h2 id="settings-password-heading">Change Password</h2><p class="text-sub">Confirm your current password to set a new one.</p><form id="change-password-form" class="mt-3" novalidate>
+              <div class="form-group"><label for="curr-password">Current Password <span class="required-mark">*</span></label><input type="password" id="curr-password" required autocomplete="current-password"></div>
+              <div class="form-group"><label for="new-password">New Password <span class="required-mark">*</span></label><input type="password" id="new-password" required minlength="8" maxlength="72" autocomplete="new-password" aria-describedby="settings-password-hint"><span class="field-hint" id="settings-password-hint">Use at least 8 characters.</span></div>
+              <div class="form-group"><label for="confirm-new-password">Confirm New Password <span class="required-mark">*</span></label><input type="password" id="confirm-new-password" required minlength="8" maxlength="72" autocomplete="new-password"></div>
+              <button type="submit" class="btn btn-primary" id="settings-password-submit">Update Password</button>
+            </form></section>
+            <section class="card" aria-labelledby="settings-language-heading"><div class="settings-card-title"><svg class="settings-language-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"></path></svg><h2 id="settings-language-heading">Language Preference</h2></div><p class="text-sub">Choose the language used for the patient portal interface.</p><form id="language-preference-form" class="mt-3"><div class="form-group"><label for="patient-language-select">Preferred language</label><select id="patient-language-select" name="language" autocomplete="language"><option value="en">English</option><option value="fil">Filipino (Tagalog)</option></select></div><button type="submit" class="btn btn-primary" id="language-preference-submit">Save Preference</button><p id="language-preference-status" class="field-hint mt-2" aria-live="polite"></p></form></section>
+            <section class="card" aria-labelledby="settings-notifications-heading"><h2 id="settings-notifications-heading">Notifications</h2><p class="text-sub">Choose whether to receive appointment and dental-record updates in this website.</p><div class="settings-toggle-row mt-3"><div><strong>In-app notifications</strong><p class="text-sub">Booking confirmations, appointment status updates, and linked dental-record updates.</p></div><label class="switch-control"><input type="checkbox" id="patient-inapp-notifications"><span class="switch-slider" aria-hidden="true"></span><span class="sr-only">Enable in-app notifications</span></label></div><p id="notification-preference-status" class="field-hint mt-2" aria-live="polite"></p></section>
+            <section class="card" aria-labelledby="settings-privacy-heading"><h2 id="settings-privacy-heading">Privacy &amp; Security</h2><p class="text-sub">Your profile and settings are limited to your signed-in account. Password changes require your current password. Sign out when using a shared device.</p><p class="field-hint mt-2">The clinic privacy policy page and active-session management are not available in this website yet.</p><button type="button" class="btn btn-outline mt-3 btn-logout-action" data-settings-logout>Log Out</button></section>
           </div>
+          <div id="patient-settings-error" class="card form-error-state hidden" role="alert"><p>We couldn’t load your settings right now.</p><button type="button" class="btn btn-outline" id="settings-retry-button">Try again</button></div>
         </section>
 
         <!-- PATIENT: MY APPOINTMENTS -->
@@ -302,6 +318,6 @@
   <script type="module" src="scripts/api.js?v=8"></script>
   <script type="module" src="scripts/modal.js?v=8"></script>
   <script type="module" src="scripts/toast.js?v=5"></script>
-  <script type="module" src="scripts/portal.js?v=32"></script>
+  <script type="module" src="scripts/portal.js?v=34"></script>
 </body>
 </html>

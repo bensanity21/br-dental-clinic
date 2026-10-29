@@ -149,8 +149,17 @@ CREATE TABLE `users` (
   `email` varchar(150) NOT NULL,
   `password_hash` varchar(255) NOT NULL,
   `phone_number` varchar(20) DEFAULT NULL,
+  `language_preference` varchar(5) NOT NULL DEFAULT 'en',
   `role` enum('patient','super-admin','clinic_admin','master_admin') DEFAULT 'patient',
   `created_at` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `patient_notification_preferences` (
+  `patient_id` int(10) UNSIGNED NOT NULL,
+  `in_app_enabled` tinyint(1) NOT NULL DEFAULT 1,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`patient_id`),
+  CONSTRAINT `fk_patient_notification_preferences_user` FOREIGN KEY (`patient_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --

@@ -4,6 +4,7 @@
 require_once '../../includes/auth.php';
 require_once '../../includes/response.php';
 require_once '../../includes/db.php';
+require_once '../../includes/notifications.php';
 
 requireLogin();
 $user = currentUser();
@@ -59,13 +60,11 @@ $statusMessages = [
     'Cancelled'  => "Your appointment on {$apt['appointment_date']} at {$apt['time_slot']} has been cancelled.",
     'Pending'    => "Your appointment on {$apt['appointment_date']} at {$apt['time_slot']} is pending.",
 ];
-$stmt = $pdo->prepare("INSERT INTO notifications (user_id, message, is_read) VALUES (?, ?, 0)");
-$stmt->execute([$apt['patient_id'], $statusMessages[$newStatus]]);
+createInAppNotification($pdo, (int)$apt['patient_id'], $statusMessages[$newStatus]);
 
 // Notify dentist if approved/completed
 if (in_array($newStatus, ['Approved', 'Completed']) && $apt['dentist_user_id']) {
-    $stmt = $pdo->prepare("INSERT INTO notifications (user_id, message, is_read) VALUES (?, ?, 0)");
-    $stmt->execute([$apt['dentist_user_id'], "Appointment on {$apt['appointment_date']} at {$apt['time_slot']} is now $newStatus."]);
+    createInAppNotification($pdo, (int)$apt['dentist_user_id'], "Appointment on {$apt['appointment_date']} at {$apt['time_slot']} is now $newStatus.");
 }
 
 respondSuccess("Appointment status updated to $newStatus");

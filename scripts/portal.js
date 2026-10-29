@@ -5,6 +5,7 @@
 import { api, setCsrfToken } from './api.js?v=8';
 import { confirmModal, openModal, closeModal } from './modal.js?v=8';
 import { showToast } from './toast.js';
+import { setLanguage } from './i18n.js?v=1';
 
 let currentUser = null;
 let role = '';
@@ -13,6 +14,8 @@ let serviceCatalog = [];
 let knownNotificationIds = null;
 let notificationsRequestInFlight = false;
 let lastNotificationSnapshot = null;
+let patientProfileData = null;
+let patientProfileBaseline = null;
 
 async function loadSession() {
   const res = await api.get('auth/me.php');
@@ -21,6 +24,12 @@ async function loadSession() {
   currentUser = res.data.user;
   role = currentUser.role;
   dentistInfo = res.data.dentist || null;
+  if (role === 'patient') {
+    const languageRes = await api.get('preferences/language.php');
+    setLanguage(languageRes.success ? languageRes.data.language_preference : 'en');
+  } else {
+    setLanguage('en');
+  }
   return true;
 }
 
@@ -71,7 +80,11 @@ async function initApp() {
     startNotificationPolling();
     await renderDashboardIfRoleAdminOrDoctor();
     const activeView = document.querySelector('.page-view.active');
-    if (activeView) await switchView(activeView.id.replace('view-', ''));
+    const requestedView = location.hash.startsWith('#view-') ? location.hash.slice(6) : '';
+    const requestedElement = requestedView ? document.getElementById('view-' + requestedView) : null;
+    if (requestedElement && ((role === 'patient' && requestedView.startsWith('patient-')) || (role !== 'patient' && requestedView.startsWith('admin-')))) {
+      await switchView(requestedView);
+    } else if (activeView) await switchView(activeView.id.replace('view-', ''));
   } catch (err) {
     console.error('Init error:', err);
     showToast('Application failed to load. Please refresh and try again.', 'error');
@@ -227,7 +240,7 @@ function renderNavigation() {
             <a href="#" class="profile-dropdown-item" data-view-target="profile"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c.5-4.2 3.2-6.5 8-6.5s7.5 2.3 8 6.5"></path></svg><span>View Profile</span></a>
             ${isAdmin
               ? '<a href="#" class="profile-dropdown-item" data-view-target="settings"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.7 2.94-.08-.02a1.7 1.7 0 0 0-1.7.35l-.06.05h-3.4l-.04-.08a1.7 1.7 0 0 0-1.45-1.03l-.08-.01-1.7-2.94.05-.07a1.7 1.7 0 0 0-.18-1.76L9.4 14v-4l.06-.05a1.7 1.7 0 0 0 .18-1.76l-.05-.07 1.7-2.94.08-.01a1.7 1.7 0 0 0 1.45-1.03l.04-.08h3.4l.06.05a1.7 1.7 0 0 0 1.7.35l.08-.02 1.7 2.94-.06.06A1.7 1.7 0 0 0 19.4 9l.06.05v4z"></path></svg><span>Settings</span></a>'
-              : '<a href="#" class="profile-dropdown-item" data-view-target="appointments"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4M8 3v4M3 10h18M9 15l2 2 4-4"></path></svg><span>Appointments</span></a>'}
+              : '<a href="#" class="profile-dropdown-item" data-view-target="settings"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.7 2.94-.08-.02a1.7 1.7 0 0 0-1.7.35l-.06.05h-3.4l-.04-.08a1.7 1.7 0 0 0-1.45-1.03l-.08-.01-1.7-2.94.05-.07a1.7 1.7 0 0 0-.18-1.76L9.4 14v-4l.06-.05a1.7 1.7 0 0 0 .18-1.76l-.05-.07 1.7-2.94.08-.01a1.7 1.7 0 0 0 1.45-1.03l.04-.08h3.4l.06.05a1.7 1.7 0 0 0 1.7.35l.08-.02 1.7 2.94-.06.06A1.7 1.7 0 0 0 19.4 9l.06.05v4z"></path></svg><span>Settings</span></a>'}
             <button type="button" class="profile-dropdown-item profile-dropdown-logout btn-logout-action" id="btn-logout-action"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 17l5-5-5-5M15 12H3"></path><path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7"></path></svg><span>Log Out</span></button>
           </div>
         </div>
@@ -266,9 +279,20 @@ function renderRoleBasedNav() {
 async function switchView(targetViewId) {
   const targetView = document.getElementById('view-' + targetViewId);
   if (!targetView) { showToast('This page is not available yet.', 'error'); return; }
+  if ((role === 'patient' && !targetViewId.startsWith('patient-')) || (role !== 'patient' && !targetViewId.startsWith('admin-'))) {
+    showToast('This page is not available for your account.', 'error');
+    return;
+  }
+  const profileForm = el.patientProfileForm;
+  if (role === 'patient' && targetViewId !== 'patient-profile' && profileForm && !profileForm.classList.contains('hidden') && profileFormIsDirty()) {
+    const discard = await confirmModal({ title: 'Discard Profile Changes?', message: 'You have unsaved profile changes. Discard them and leave this page?', danger: true });
+    if (!discard) return;
+    resetProfileEdit();
+  }
   document.querySelectorAll('.page-view').forEach((v) => v.classList.remove('active'));
   document.querySelectorAll('.nav-link').forEach((l) => l.classList.remove('active'));
   targetView.classList.add('active');
+  if (location.hash !== '#view-' + targetViewId) history.replaceState(null, '', '#view-' + targetViewId);
   const navLink = document.querySelector('.nav-link[data-view="' + targetViewId + '"]');
   if (navLink) navLink.classList.add('active');
   closeDropdowns();
@@ -287,6 +311,8 @@ async function switchView(targetViewId) {
     case 'patient-book': await renderServices(); await populateBookingDentist(); break;
     case 'patient-appointments': await renderPatientAppointments(); break;
     case 'patient-records': await renderPatientRecords(); break;
+    case 'patient-profile': await renderPatientProfile(); break;
+    case 'patient-settings': await renderPatientSettings(); break;
     case 'patient-dentists': await renderDentists(); break;
     case 'admin-dashboard': await renderDashboardIfRoleAdminOrDoctor(); await renderAdminAppointments(); break;
     case 'admin-appointments': await renderAdminAppointments(); break;
@@ -906,39 +932,224 @@ async function renderAdminDentists() {
   )).join('');
 }
 
+function setProfileError(message) {
+  const nameError = document.getElementById('profile-name-error');
+  const phoneError = document.getElementById('profile-phone-error');
+  if (nameError) nameError.textContent = message?.field === 'name' ? message.text : '';
+  if (phoneError) phoneError.textContent = message?.field === 'phone' ? message.text : '';
+  document.getElementById('profile-fullname')?.setAttribute('aria-invalid', String(message?.field === 'name'));
+  document.getElementById('profile-phone')?.setAttribute('aria-invalid', String(message?.field === 'phone'));
+}
+
+function profileFormIsDirty() {
+  if (!patientProfileBaseline || !el.patientProfileForm) return false;
+  return document.getElementById('profile-fullname')?.value.trim() !== patientProfileBaseline.full_name
+    || document.getElementById('profile-phone')?.value.trim() !== (patientProfileBaseline.phone_number || '');
+}
+
+function resetProfileEdit() {
+  if (!patientProfileData || !el.patientProfileForm) return;
+  document.getElementById('profile-fullname').value = patientProfileData.full_name || '';
+  document.getElementById('profile-phone').value = patientProfileData.phone_number || '';
+  setProfileError(null);
+  el.patientProfileForm.classList.add('hidden');
+  document.getElementById('patient-profile-readonly')?.classList.remove('hidden');
+  document.getElementById('profile-edit-button').classList.remove('hidden');
+  document.getElementById('profile-readonly-hint').textContent = 'View only';
+  patientProfileBaseline = { full_name: patientProfileData.full_name || '', phone_number: patientProfileData.phone_number || '' };
+}
+
+function formatPatientDate(value) {
+  if (!value) return 'Not available';
+  const date = new Date(String(value).slice(0, 10) + 'T00:00:00');
+  return Number.isNaN(date.getTime()) ? 'Not available' : new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(date);
+}
+
+function displayPatientProfile(profile) {
+  patientProfileData = profile;
+  const name = profile.full_name || 'Patient';
+  document.getElementById('patient-profile-name').textContent = name;
+  document.getElementById('patient-profile-avatar').textContent = name.split(/\s+/).slice(0, 2).map((part) => part.charAt(0)).join('').toUpperCase();
+  document.getElementById('patient-profile-id').textContent = '#' + String(profile.id);
+  document.getElementById('profile-display-name').textContent = name;
+  document.getElementById('profile-display-email').textContent = profile.email || 'Not provided';
+  document.getElementById('profile-display-phone').textContent = profile.phone_number || 'Not provided';
+  document.getElementById('profile-display-created').textContent = formatPatientDate(profile.created_at);
+  document.getElementById('profile-completed-count').textContent = String(Number(profile.completed_appointments) || 0);
+  const next = profile.next_appointment;
+  document.getElementById('profile-next-appointment').textContent = next
+    ? formatPatientDate(next.appointment_date) + ' · ' + (next.time_slot || '')
+    : 'No upcoming appointment';
+  document.getElementById('profile-next-service').textContent = next ? (next.service_name + ' · ' + next.status) : '';
+  document.getElementById('profile-fullname').value = name;
+  document.getElementById('profile-email').value = profile.email || '';
+  document.getElementById('profile-phone').value = profile.phone_number || '';
+  document.getElementById('settings-account-email').value = profile.email || '';
+  currentUser.full_name = name;
+  currentUser.email = profile.email || currentUser.email;
+  document.querySelector('#profile-dropdown-panel .profile-dropdown-identity strong')?.replaceChildren(document.createTextNode(name));
+  const menuName = document.querySelector('#btn-profile-toggle .profile-menu-name');
+  if (menuName) menuName.textContent = name;
+  resetProfileEdit();
+}
+
+async function renderPatientProfile() {
+  const state = document.getElementById('patient-profile-state');
+  const content = document.getElementById('patient-profile-content');
+  const error = document.getElementById('patient-profile-error');
+  state?.classList.remove('hidden');
+  if (state) state.textContent = 'Loading your profile…';
+  content?.classList.add('hidden');
+  error?.classList.add('hidden');
+  const res = await api.get('auth/profile.php');
+  if (!res.success || !res.data) {
+    state?.classList.add('hidden');
+    error?.classList.remove('hidden');
+    return;
+  }
+  displayPatientProfile(res.data);
+  state?.classList.add('hidden');
+  content?.classList.remove('hidden');
+  const edit = document.getElementById('profile-edit-button');
+  if (edit) edit.disabled = false;
+}
+
+async function renderPatientSettings() {
+  const state = document.getElementById('patient-settings-state');
+  const content = document.getElementById('patient-settings-content');
+  const error = document.getElementById('patient-settings-error');
+  state?.classList.remove('hidden');
+  if (state) state.textContent = 'Loading your settings…';
+  content?.classList.add('hidden');
+  error?.classList.add('hidden');
+  const [profileRes, preferenceRes, languageRes] = await Promise.all([
+    api.get('auth/profile.php'),
+    api.get('preferences/notifications.php'),
+    api.get('preferences/language.php'),
+  ]);
+  if (!profileRes.success || !preferenceRes.success) {
+    state?.classList.add('hidden');
+    error?.classList.remove('hidden');
+    return;
+  }
+  document.getElementById('settings-account-email').value = profileRes.data.email || '';
+  const toggle = document.getElementById('patient-inapp-notifications');
+  if (toggle) toggle.checked = Boolean(preferenceRes.data.in_app_enabled);
+  const languageSelect = document.getElementById('patient-language-select');
+  if (languageSelect) languageSelect.value = languageRes.success ? languageRes.data.language_preference : 'en';
+  state?.classList.add('hidden');
+  content?.classList.remove('hidden');
+}
+
+if (document.getElementById('profile-edit-button')) {
+  document.getElementById('profile-edit-button').addEventListener('click', () => {
+    patientProfileBaseline = { full_name: patientProfileData?.full_name || '', phone_number: patientProfileData?.phone_number || '' };
+    document.getElementById('patient-profile-readonly')?.classList.add('hidden');
+    el.patientProfileForm?.classList.remove('hidden');
+    document.getElementById('profile-edit-button').classList.add('hidden');
+    document.getElementById('profile-readonly-hint').textContent = 'Editing';
+    document.getElementById('profile-fullname')?.focus();
+  });
+}
+
 if (el.patientProfileForm) {
-  el.patientProfileForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-      const fullName = document.getElementById('profile-fullname').value.trim();
-      const phone = document.getElementById('profile-phone').value.trim();
-      const confirmed = await confirmModal({ title: 'Update Profile', message: 'Save profile changes?' });
-      if (!confirmed) return;
-      const res = await api.patch('auth/profile.php', { full_name: fullName, phone_number: phone });
-      if (res.success) { showToast('Profile updated.'); currentUser.full_name = fullName; }
-      else { showToast(res.message || 'Update failed.', 'error'); }
-    } catch (err) {
-      console.error('Profile update error:', err);
-      showToast('Profile update failed. Please try again.', 'error');
+  el.patientProfileForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!el.patientProfileForm.reportValidity()) return;
+    const fullName = document.getElementById('profile-fullname').value.trim();
+    const phone = document.getElementById('profile-phone').value.trim();
+    setProfileError(null);
+    if (fullName.length < 2 || fullName.length > 100) { setProfileError({ field: 'name', text: 'Enter a name between 2 and 100 characters.' }); document.getElementById('profile-fullname').focus(); return; }
+    if (phone && !/^\+?[0-9 ()\.-]{7,20}$/.test(phone)) { setProfileError({ field: 'phone', text: 'Enter a valid phone number.' }); document.getElementById('profile-phone').focus(); return; }
+    const confirmed = await confirmModal({ title: 'Save Profile Changes', message: 'Save these changes to your profile?' });
+    if (!confirmed) return;
+    const save = document.getElementById('profile-save-button');
+    save.disabled = true;
+    const res = await api.patch('auth/profile.php', { full_name: fullName, phone_number: phone });
+    save.disabled = false;
+    if (!res.success) { showToast(res.message || 'Profile update failed.', 'error'); return; }
+    patientProfileData.full_name = res.data.full_name;
+    patientProfileData.phone_number = res.data.phone_number;
+    displayPatientProfile(patientProfileData);
+    showToast('Profile updated successfully.');
+  });
+  document.getElementById('profile-cancel-button')?.addEventListener('click', async () => {
+    if (profileFormIsDirty()) {
+      const discard = await confirmModal({ title: 'Discard Profile Changes?', message: 'Discard your unsaved profile changes?', danger: true });
+      if (!discard) return;
     }
+    resetProfileEdit();
+  });
+}
+
+if (document.getElementById('profile-retry-button')) document.getElementById('profile-retry-button').addEventListener('click', renderPatientProfile);
+if (document.getElementById('settings-retry-button')) document.getElementById('settings-retry-button').addEventListener('click', renderPatientSettings);
+
+if (document.getElementById('language-preference-form')) {
+  document.getElementById('language-preference-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const select = document.getElementById('patient-language-select');
+    const saveButton = document.getElementById('language-preference-submit');
+    const status = document.getElementById('language-preference-status');
+    const language = select?.value;
+    if (!['en', 'fil'].includes(language)) {
+      if (status) status.textContent = 'Choose a valid language.';
+      return;
+    }
+    if (saveButton) saveButton.disabled = true;
+    if (status) status.textContent = 'Saving…';
+    const result = await api.patch('preferences/language.php', { language_preference: language });
+    if (saveButton) saveButton.disabled = false;
+    if (!result.success) {
+      if (status) status.textContent = 'Could not save your language preference. Please try again.';
+      showToast(result.message || 'Could not save your language preference. Please try again.', 'error');
+      return;
+    }
+    setLanguage(result.data.language_preference);
+    if (status) status.textContent = 'Language preference saved.';
+    showToast('Language preference saved.');
+  });
+}
+
+if (document.getElementById('patient-inapp-notifications')) {
+  document.getElementById('patient-inapp-notifications').addEventListener('change', async (event) => {
+    const toggle = event.currentTarget;
+    const requested = toggle.checked;
+    toggle.disabled = true;
+    const status = document.getElementById('notification-preference-status');
+    if (status) status.textContent = 'Saving…';
+    const result = await api.patch('preferences/notifications.php', { in_app_enabled: requested });
+    toggle.disabled = false;
+    if (!result.success) {
+      toggle.checked = !requested;
+      if (status) status.textContent = 'Could not save this preference. Your previous setting is still active.';
+      showToast(result.message || 'Could not save notification settings.', 'error');
+      return;
+    }
+    if (status) status.textContent = 'Preference saved.';
+    showToast('Notification preference saved.');
   });
 }
 
 if (document.getElementById('change-password-form')) {
-  document.getElementById('change-password-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-      const curr = document.getElementById('curr-password').value;
-      const newPass = document.getElementById('new-password').value;
-      const confirmed = await confirmModal({ title: 'Change Password', message: 'Change your account password?' });
-      if (!confirmed) return;
-      const res = await api.post('auth/password.php', { current_password: curr, new_password: newPass });
-      if (res.success) { showToast('Password changed.'); document.getElementById('change-password-form').reset(); }
-      else { showToast(res.message || 'Password change failed.', 'error'); }
-    } catch (err) {
-      console.error('Password change error:', err);
-      showToast('Password change failed. Please try again.', 'error');
-    }
+  const passwordForm = document.getElementById('change-password-form');
+  passwordForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!passwordForm.reportValidity()) return;
+    const currentPassword = document.getElementById('curr-password').value;
+    const newPassword = document.getElementById('new-password').value;
+    const confirmPassword = document.getElementById('confirm-new-password').value;
+    if (newPassword.length < 8 || newPassword.length > 72) { showToast('New password must be between 8 and 72 characters.', 'error'); return; }
+    if (newPassword !== confirmPassword) { showToast('The new passwords do not match.', 'error'); document.getElementById('confirm-new-password').focus(); return; }
+    if (newPassword === currentPassword) { showToast('Choose a new password different from your current password.', 'error'); return; }
+    const confirmed = await confirmModal({ title: 'Change Password', message: 'Change your account password?' });
+    if (!confirmed) return;
+    const submit = document.getElementById('settings-password-submit');
+    submit.disabled = true;
+    const res = await api.post('auth/password.php', { current_password: currentPassword, new_password: newPassword, confirm_password: confirmPassword });
+    submit.disabled = false;
+    if (res.success) { showToast('Password changed successfully.'); passwordForm.reset(); }
+    else showToast(res.message || 'Password change failed.', 'error');
   });
 }
 
@@ -1270,6 +1481,14 @@ function bindEvents() {
     }
   });
 }
+
+window.addEventListener('beforeunload', (event) => {
+  if (role === 'patient' && el.patientProfileForm && !el.patientProfileForm.classList.contains('hidden') && profileFormIsDirty()) {
+    event.preventDefault();
+    event.returnValue = '';
+  }
+});
+
 function closeDropdowns() {
   if (el.profileDropdownPanel) el.profileDropdownPanel.classList.add('hidden');
   if (el.notifDropdownPanel) el.notifDropdownPanel.classList.add('hidden');

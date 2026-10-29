@@ -5,6 +5,7 @@ require_once '../../includes/auth.php';
 require_once '../../includes/response.php';
 require_once '../../includes/db.php';
 require_once '../../includes/encrypt.php';
+require_once '../../includes/notifications.php';
 
 requireLogin();
 requireRole(['patient']);
@@ -64,20 +65,15 @@ $stmt = $pdo->prepare("
 $stmt->execute([$user['id'], $serviceId, $dentistId, $date, $timeSlot, $notes]);
 $appointmentId = $pdo->lastInsertId();
 
-// Create notification for the patient
-$stmt = $pdo->prepare("
-    INSERT INTO notifications (user_id, message, is_read)
-    VALUES (?, ?, 0)
-");
-$stmt->execute([$user['id'], "Appointment booked for $date at $timeSlot is pending approval."]);
+// Create notification for the patient, respecting their saved preference.
+createInAppNotification($pdo, (int)$user['id'], "Appointment booked for $date at $timeSlot is pending approval.");
 
 // Notify admin/super-admin of new booking
 $stmt = $pdo->prepare("SELECT id FROM users WHERE role = 'super-admin' LIMIT 1");
 $stmt->execute();
 $admin = $stmt->fetch();
 if ($admin) {
-    $stmt = $pdo->prepare("INSERT INTO notifications (user_id, message, is_read) VALUES (?, ?, 0)");
-    $stmt->execute([$admin['id'], "New appointment booking requested by {$user['full_name']} for $date at $timeSlot."]);
+    createInAppNotification($pdo, (int)$admin['id'], "New appointment booking requested by {$user['full_name']} for $date at $timeSlot.");
 }
 
 respondSuccess('Appointment booked successfully', ['id' => $appointmentId, 'status' => 'Pending'], 201);

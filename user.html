@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BR Dental Clinic - User Portal</title>
   <meta name="description" content="BR Dental Clinic user portal.">
-  <link rel="stylesheet" href="style.css?v=19">
+  <link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
   <a class="skip-link" href="#views-viewport">Skip to main content</a>
@@ -234,20 +234,70 @@
         <section id="view-patient-settings" class="page-view">
           <div class="page-header"><h1>Settings</h1><p>Manage your account security and in-app preferences.</p></div>
           <div id="patient-settings-state" class="card profile-loading" role="status" aria-live="polite">Loading your settings…</div>
-          <div id="patient-settings-content" class="patient-settings-grid hidden">
-            <section class="card" aria-labelledby="settings-account-heading"><h2 id="settings-account-heading">Account</h2><p class="text-sub">Your sign-in email is shown for reference. Email changes and usernames are not supported by this account system. Manage your name and phone number on View Profile.</p><div class="form-group mt-3"><label for="settings-account-email">Email Address</label><input id="settings-account-email" type="email" readonly class="input-readonly"></div><button type="button" class="btn btn-outline mt-2" data-navigate="patient-profile">Manage personal details</button></section>
-            <section class="card" aria-labelledby="settings-password-heading"><h2 id="settings-password-heading">Change Password</h2><p class="text-sub">Confirm your current password to set a new one.</p><form id="change-password-form" class="mt-3" novalidate>
-              <div class="form-group"><label for="curr-password">Current Password <span class="required-mark">*</span></label><input type="password" id="curr-password" required autocomplete="current-password"></div>
-              <div class="form-group"><label for="new-password">New Password <span class="required-mark">*</span></label><input type="password" id="new-password" required minlength="8" maxlength="72" autocomplete="new-password" aria-describedby="settings-password-hint"><span class="field-hint" id="settings-password-hint">Use at least 8 characters.</span></div>
-              <div class="form-group"><label for="confirm-new-password">Confirm New Password <span class="required-mark">*</span></label><input type="password" id="confirm-new-password" required minlength="8" maxlength="72" autocomplete="new-password"></div>
-              <button type="submit" class="btn btn-primary" id="settings-password-submit">Update Password</button>
-            </form></section>
-            <section class="card" aria-labelledby="settings-language-heading"><div class="settings-card-title"><svg class="settings-language-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"></path></svg><h2 id="settings-language-heading">Language Preference</h2></div><p class="text-sub">Choose the language used for the patient portal interface.</p><form id="language-preference-form" class="mt-3"><div class="form-group"><label for="patient-language-select">Preferred language</label><select id="patient-language-select" name="language" autocomplete="language"><option value="en">English</option><option value="fil">Filipino (Tagalog)</option></select></div><button type="submit" class="btn btn-primary" id="language-preference-submit">Save Preference</button><p id="language-preference-status" class="field-hint mt-2" aria-live="polite"></p></form></section>
-            <section class="card" aria-labelledby="settings-notifications-heading"><h2 id="settings-notifications-heading">Notifications</h2><p class="text-sub">Choose whether to receive appointment and dental-record updates in this website.</p><div class="settings-toggle-row mt-3"><div><strong>In-app notifications</strong><p class="text-sub">Booking confirmations, appointment status updates, and linked dental-record updates.</p></div><label class="switch-control"><input type="checkbox" id="patient-inapp-notifications"><span class="switch-slider" aria-hidden="true"></span><span class="sr-only">Enable in-app notifications</span></label></div><p id="notification-preference-status" class="field-hint mt-2" aria-live="polite"></p></section>
-            <section class="card" aria-labelledby="settings-privacy-heading"><h2 id="settings-privacy-heading">Privacy &amp; Security</h2><p class="text-sub">Your profile and settings are limited to your signed-in account. Password changes require your current password. Sign out when using a shared device.</p><p class="field-hint mt-2">The clinic privacy policy page and active-session management are not available in this website yet.</p><button type="button" class="btn btn-outline mt-3 btn-logout-action" data-settings-logout>Log Out</button></section>
+          <div id="patient-settings-content" class="settings-layout hidden">
+
+            <!-- 1. Account -->
+            <section class="card settings-card" aria-labelledby="settings-account-heading">
+              <div class="settings-card-head">
+                <span class="settings-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c.5-4.2 3.2-6.5 8-6.5s7.5 2.3 8 6.5"></path></svg></span>
+                <div><h2 id="settings-account-heading">Account</h2><p class="text-sub">Your sign-in email is shown for reference. Email changes and usernames are not supported by this account system. Manage your name and phone number on View Profile.</p></div>
+              </div>
+              <div class="form-group"><label for="settings-account-email">Email Address</label><input id="settings-account-email" type="email" readonly class="input-readonly"></div>
+              <div class="settings-card-actions"><button type="button" class="btn btn-outline" data-navigate="patient-profile">Manage personal details</button></div>
+            </section>
+
+            <!-- 2. Language -->
+            <section class="card settings-card" aria-labelledby="settings-language-heading">
+              <div class="settings-card-head">
+                <span class="settings-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"></path></svg></span>
+                <div><h2 id="settings-language-heading">Language Preference</h2><p class="text-sub">Choose the language used for the patient portal interface.</p></div>
+              </div>
+              <form id="language-preference-form" class="settings-form">
+                <div class="form-group"><label for="patient-language-select">Preferred language</label><select id="patient-language-select" name="language" autocomplete="language"><option value="en">English</option><option value="fil">Filipino (Tagalog)</option></select></div>
+                <div class="settings-card-actions"><button type="submit" class="btn btn-primary" id="language-preference-submit">Save Preference</button><p id="language-preference-status" class="field-hint" aria-live="polite"></p></div>
+              </form>
+            </section>
+
+            <!-- 3. Change Password -->
+            <section class="card settings-card settings-card--wide" aria-labelledby="settings-password-heading">
+              <div class="settings-card-head">
+                <span class="settings-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg></span>
+                <div><h2 id="settings-password-heading">Change Password</h2><p class="text-sub">Confirm your current password to set a new one.</p></div>
+              </div>
+              <form id="change-password-form" class="settings-form" novalidate>
+                <div class="settings-password-fields">
+                  <div class="form-group"><label for="curr-password">Current Password <span class="required-mark">*</span></label><input type="password" id="curr-password" required autocomplete="current-password"></div>
+                  <div class="form-group"><label for="new-password">New Password <span class="required-mark">*</span></label><input type="password" id="new-password" required minlength="8" maxlength="72" autocomplete="new-password" aria-describedby="settings-password-hint"><span class="field-hint" id="settings-password-hint">Use at least 8 characters.</span></div>
+                  <div class="form-group"><label for="confirm-new-password">Confirm New Password <span class="required-mark">*</span></label><input type="password" id="confirm-new-password" required minlength="8" maxlength="72" autocomplete="new-password"></div>
+                </div>
+                <div class="settings-card-actions"><button type="submit" class="btn btn-primary" id="settings-password-submit">Update Password</button></div>
+              </form>
+            </section>
+
+            <!-- 4. Notifications -->
+            <section class="card settings-card" aria-labelledby="settings-notifications-heading">
+              <div class="settings-card-head">
+                <span class="settings-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></span>
+                <div><h2 id="settings-notifications-heading">Notifications</h2><p class="text-sub">Choose whether to receive appointment and dental-record updates in this website.</p></div>
+              </div>
+              <div class="settings-toggle-row"><div><strong>In-app notifications</strong><p class="text-sub">Booking confirmations, appointment status updates, and linked dental-record updates.</p></div><label class="switch-control"><input type="checkbox" id="patient-inapp-notifications"><span class="switch-slider" aria-hidden="true"></span><span class="sr-only">Enable in-app notifications</span></label></div>
+              <div class="settings-card-actions"><p id="notification-preference-status" class="field-hint" aria-live="polite"></p></div>
+            </section>
+
+            <!-- 5. Privacy & Security -->
+            <section class="card settings-card" aria-labelledby="settings-privacy-heading">
+              <div class="settings-card-head">
+                <span class="settings-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z"></path><path d="m9 12 2 2 4-4"></path></svg></span>
+                <div><h2 id="settings-privacy-heading">Privacy &amp; Security</h2><p class="text-sub">Your profile and settings are limited to your signed-in account. Password changes require your current password. Sign out when using a shared device.</p></div>
+              </div>
+              <p class="field-hint">The clinic privacy policy page and active-session management are not available in this website yet.</p>
+              <div class="settings-card-actions"><button type="button" class="btn btn-outline btn-logout-action" data-settings-logout>Log Out</button></div>
+            </section>
+
           </div>
           <div id="patient-settings-error" class="card form-error-state hidden" role="alert"><p>We couldn’t load your settings right now.</p><button type="button" class="btn btn-outline" id="settings-retry-button">Try again</button></div>
         </section>
+
 
         <!-- PATIENT: MY APPOINTMENTS -->
         <section id="view-patient-appointments" class="page-view">

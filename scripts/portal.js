@@ -68,11 +68,17 @@ const el = {
 async function initApp() {
   try {
     const ok = await loadSession();
-    if (!ok) {
+       if (!ok) {
       // Session invalid or expired -> redirect to login
-      window.location.assign(new URL('./index.html', document.baseURI).href);
+      window.location.replace(new URL('./index.html', document.baseURI).href);
       return;
     }
+    const onPatientPage = Boolean(document.getElementById('view-patient-home'));
+    if (onPatientPage !== (role === 'patient')) {
+      window.location.replace(new URL(role === 'patient' ? './user.html' : './admin.html', document.baseURI).href);
+      return;
+    }
+
     renderNavigation(); // Inject sidebar + top navbar HTML
     bindEvents();
     renderRoleBasedNav();
@@ -83,8 +89,8 @@ async function initApp() {
     const requestedView = location.hash.startsWith('#view-') ? location.hash.slice(6) : '';
     const requestedElement = requestedView ? document.getElementById('view-' + requestedView) : null;
     if (requestedElement && ((role === 'patient' && requestedView.startsWith('patient-')) || (role !== 'patient' && requestedView.startsWith('admin-')))) {
-      await switchView(requestedView);
-    } else if (activeView) await switchView(activeView.id.replace('view-', ''));
+          await switchView(requestedView, { push: false });
+    } else if (activeView) await switchView(activeView.id.replace('view-', ''), { push: false });
   } catch (err) {
     console.error('Init error:', err);
     showToast('Application failed to load. Please refresh and try again.', 'error');
@@ -276,7 +282,7 @@ function renderRoleBasedNav() {
   if (pEmail) pEmail.value = currentUser.email || '';
 }
 
-async function switchView(targetViewId) {
+async function switchView(targetViewId, { push = true } = {}) {
   const targetView = document.getElementById('view-' + targetViewId);
   if (!targetView) { showToast('This page is not available yet.', 'error'); return; }
   if ((role === 'patient' && !targetViewId.startsWith('patient-')) || (role !== 'patient' && !targetViewId.startsWith('admin-'))) {
@@ -292,7 +298,7 @@ async function switchView(targetViewId) {
   document.querySelectorAll('.page-view').forEach((v) => v.classList.remove('active'));
   document.querySelectorAll('.nav-link').forEach((l) => l.classList.remove('active'));
   targetView.classList.add('active');
-  if (location.hash !== '#view-' + targetViewId) history.replaceState(null, '', '#view-' + targetViewId);
+    if (location.hash !== '#view-' + targetViewId) history[push ? 'pushState' : 'replaceState'](null, '', '#view-' + targetViewId);
   const navLink = document.querySelector('.nav-link[data-view="' + targetViewId + '"]');
   if (navLink) navLink.classList.add('active');
   closeDropdowns();
@@ -1246,7 +1252,7 @@ function bindEvents() {
       const confirmed = await confirmModal({ title: 'Log Out', message: 'Are you sure you want to log out?', danger: true });
       if (!confirmed) return;
       await api.post('auth/logout.php');
-      window.location.assign(new URL('./index.html', document.baseURI).href);
+      window.location.replace(new URL('./index.html', document.baseURI).href);
     });
   });
   if (btnProfileToggle) btnProfileToggle.addEventListener('click', (e) => {
@@ -1521,6 +1527,31 @@ window.addEventListener('error', (e) => {
 window.addEventListener('unhandledrejection', (e) => {
   console.error('Unhandled rejection:', e.reason);
   showToast('An error occurred: ' + String(e.reason), 'error');
+});
+
+initApp();
+
+// Back/Forward between portal views
+window.addEventListener('popstate', async () => {
+  const id = location.hash.startsWith('#view-') ? location.hash.slice(6) : '';
+  const current = document.querySelector('.page-view.active')?.id.replace('view-', '');
+  if (!id || id === current || !document.getElementById('view-' + id)) return;
+  await switchView(id, { push: false });
+  const now = document.querySelector('.page-view.active')?.id.replace('view-', '');
+  if (now && now !== id) history.replaceState(null, '', '#view-' + now);
+});
+
+// Page restored from the back/forward cache: hide stale data and re-check the session
+window.addEventListener('pageshow', async (event) => {
+  if (!event.persisted) return;
+  document.documentElement.style.visibility = 'hidden';
+  const res = await api.get('auth/me.php');
+  if (res.success) {
+    setCsrfToken(res.data.csrf_token);
+    document.documentElement.style.visibility = '';
+  } else {
+    window.location.replace(new URL('./index.html', document.baseURI).href);
+  }
 });
 
 initApp();

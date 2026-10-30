@@ -1,9 +1,12 @@
 // scripts/login-page.js - Login page using the new API client (PHP sessions + cookies)
 import { bindPasswordToggles, clearFieldErrors, setAuthAlert, showFieldError, validateEmail } from "./helpers.js";
-import { api } from "./api.js";
+import { api, redirectIfSignedIn } from "./api.js";
 import { showToast } from "./toast.js";
 
 bindPasswordToggles();
+
+redirectIfSignedIn();
+window.addEventListener('pageshow', (e) => { if (e.persisted) redirectIfSignedIn(); });
 
 const form = document.getElementById("signin-form");
 if (form) {
@@ -33,7 +36,7 @@ if (form) {
         const redirectUrl = (res.data.role === "super-admin" || res.data.role === "doctor")
           ? new URL("./admin.html", document.baseURI).href
           : new URL("./user.html", document.baseURI).href;
-        window.location.assign(redirectUrl);
+        window.location.replace(redirectUrl);
       } else {
         setAuthAlert(res && res.message ? res.message : "Invalid email or password.", "danger");
       }

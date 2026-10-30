@@ -1,9 +1,12 @@
 // scripts/signup-page.js - Registration using the new API client (forces patient role)
 import { bindPasswordToggles, clearFieldErrors, setAuthAlert, showFieldError, validateEmail } from "./helpers.js";
-import { api } from "./api.js";
+import { api, redirectIfSignedIn } from "./api.js";
 import { showToast } from "./toast.js";
 
 bindPasswordToggles();
+
+redirectIfSignedIn();
+window.addEventListener('pageshow', (e) => { if (e.persisted) redirectIfSignedIn(); });
 
 const form = document.getElementById("signup-form");
 if (form) {

@@ -24,6 +24,7 @@ async function apiRequest(path, options = {}) {
     ...options,
     headers,
     credentials: 'include', // send cookies (PHP session)
+    cache: 'no-store',
   };
 
   if (config.body && typeof config.body !== 'string' && !(config.body instanceof FormData)) {
@@ -36,7 +37,7 @@ async function apiRequest(path, options = {}) {
     // Session expired -> redirect to login
     if (res.status === 401) {
       sessionStorage.removeItem('br-dental-clinic-session');
-      window.location.assign(new URL('./index.html', document.baseURI).href);
+      window.location.replace(new URL('./index.html', document.baseURI).href);
       return { success: false, message: 'Session expired', data: null };
     }
 
@@ -54,5 +55,22 @@ export const api = {
   patch: (path, body) => apiRequest(path, { method: 'PATCH', body }),
   del: (path, body) => apiRequest(path, { method: 'DELETE', body }),
 };
+
+export async function getSessionUser() {
+  try {
+    const res = await fetch(`${API_BASE}/auth/me.php`, { credentials: 'include', cache: 'no-store' });
+    if (!res.ok) return null;
+    const body = await res.json();
+    return body && body.success ? body.data : null;
+  } catch { return null; }
+}
+
+export async function redirectIfSignedIn() {
+  const data = await getSessionUser();
+  const role = data && data.user ? data.user.role : null;
+  if (!role) return;
+  const page = (role === 'super-admin' || role === 'doctor') ? './admin.html' : './user.html';
+  window.location.replace(new URL(page, document.baseURI).href);
+}
 
 export default api;

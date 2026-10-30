@@ -34,13 +34,16 @@ if (!$apt) {
     respondError('Appointment not found.', null, 404);
 }
 
-// Authorization: patient can only cancel their own; doctor/super-admin can change any
+// Authorization: patient can cancel their own, and reschedule their own Pending/Approved
 if ($user['role'] === 'patient') {
     if ((int)$apt['patient_id'] !== (int)$user['id']) {
         respondError('You can only modify your own appointments.', null, 403);
     }
     if ($newStatus !== 'Cancelled') {
-        respondError('Patients can only cancel appointments.', null, 403);
+        // Allow a patient to reschedule their own Pending or Approved appointment
+        if ($newStatus !== 'Rescheduled' || !in_array($apt['status'], ['Pending', 'Approved'], true)) {
+            respondError('Patients can only cancel or reschedule their own appointments.', null, 403);
+        }
     }
 } elseif ($user['role'] === 'doctor') {
     if ((int)($apt['dentist_user_id'] ?? 0) !== (int)$user['id']) {
@@ -58,6 +61,7 @@ $statusMessages = [
     'Approved'   => "Your appointment on {$apt['appointment_date']} at {$apt['time_slot']} has been approved.",
     'Completed'  => "Your appointment on {$apt['appointment_date']} at {$apt['time_slot']} is marked completed.",
     'Cancelled'  => "Your appointment on {$apt['appointment_date']} at {$apt['time_slot']} has been cancelled.",
+    'Rescheduled' => "Your appointment on {$apt['appointment_date']} at {$apt['time_slot']} has been rescheduled.",
     'Pending'    => "Your appointment on {$apt['appointment_date']} at {$apt['time_slot']} is pending.",
 ];
 createInAppNotification($pdo, (int)$apt['patient_id'], $statusMessages[$newStatus]);

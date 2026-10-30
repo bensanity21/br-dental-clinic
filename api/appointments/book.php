@@ -6,6 +6,7 @@ require_once '../../includes/response.php';
 require_once '../../includes/db.php';
 require_once '../../includes/encrypt.php';
 require_once '../../includes/notifications.php';
+require_once '../../includes/booking.php';
 
 requireLogin();
 requireRole(['patient']);
@@ -26,8 +27,14 @@ if (!$serviceId || !$dentistId || !$date || !$timeSlot) {
 }
 
 // Validate date is not in the past
-$today = date('Y-m-d');
-if ($date < $today) {
+$dateObj = is_string($date) ? parseBookingDate($date) : null;
+if (!$dateObj || !is_string($timeSlot) || !in_array($timeSlot, bookingSlots($pdo), true)) {
+    respondError('Enter a valid appointment date and time slot.', null, 400);
+}
+if (!isClinicOpenOn($pdo, $dateObj)) {
+    respondError('The clinic is closed on that day. Please choose another date.', null, 422);
+}
+if (slotHasPassed($dateObj, $timeSlot)) {
     respondError('Cannot book appointments in the past.', null, 400);
 }
 
@@ -46,24 +53,36 @@ if (!$dentist) {
     respondError('Selected dentist does not exist.', null, 400);
 }
 
-// DOUBLE-BOOKING LOCK: same dentist + same date + same time slot already booked (not cancelled)
-$stmt = $pdo->prepare("
-    SELECT id FROM appointments
-    WHERE dentist_id = ? AND appointment_date = ? AND time_slot = ? AND status != 'Cancelled'
-    LIMIT 1
-");
-$stmt->execute([$dentistId, $date, $timeSlot]);
-if ($stmt->fetch()) {
-    respondError('This time slot is already booked. Please choose another time.', null, 409);
+$dateObj = is_string($date) ? parseBookingDate($date) : null;
+if (!$dateObj || !is_string($timeSlot) || !in_array($timeSlot, bookingSlots($pdo), true)) {
+    respondError('Enter a valid appointment date and time slot.', null, 400);
 }
-
-// Insert appointment
-$stmt = $pdo->prepare("
-    INSERT INTO appointments (patient_id, service_id, dentist_id, appointment_date, time_slot, notes, status)
-    VALUES (?, ?, ?, ?, ?, ?, 'Pending')
-");
-$stmt->execute([$user['id'], $serviceId, $dentistId, $date, $timeSlot, $notes]);
-$appointmentId = $pdo->lastInsertId();
+if (!isClinicOpenOn($pdo, $dateObj)) {
+    respondError('The clinic is closed on that day. Please choose another date.', null, 422);
+}
+if (slotHasPassed($dateObj, $timeSlot)) {
+    respondError('Cannot book appointments in the past.', null, 400);
+}
+// Lock the dentist row so two patients can't take the same slot at once
+$pdo->beginTransaction();
+try {
+    $pdo->prepare('SELECT id FROM dentists WHERE id = ? FOR UPDATE')->execute([$dentistId]);
+    if (in_array($timeSlot, takenSlots($pdo, (int)$dentistId, $date), true)) {
+        $pdo->rollBack();
+        respondError('This time slot is already booked. Please choose another time.', null, 409);
+    }
+    $stmt = $pdo->prepare("
+        INSERT INTO appointments (patient_id, service_id, dentist_id, appointment_date, time_slot, notes, status)
+        VALUES (?, ?, ?, ?, ?, ?, 'Pending')
+    ");
+    $stmt->execute([$user['id'], $serviceId, $dentistId, $date, $timeSlot, $notes]);
+    $appointmentId = $pdo->lastInsertId();
+    $pdo->commit();
+} catch (Throwable $e) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+    error_log('Booking failed: ' . $e->getMessage());
+    respondError('Booking failed.', null, 500);
+}
 
 // Create notification for the patient, respecting their saved preference.
 createInAppNotification($pdo, (int)$user['id'], "Appointment booked for $date at $timeSlot is pending approval.");

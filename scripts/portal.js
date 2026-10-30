@@ -5,7 +5,7 @@
 import { api, setCsrfToken } from './api.js?v=8';
 import { confirmModal, openModal, closeModal } from './modal.js?v=8';
 import { showToast } from './toast.js';
-import { setLanguage } from './i18n.js?v=1';
+import { setLanguage, t } from './i18n.js?v=3';
 
 let currentUser = null;
 let role = '';
@@ -508,10 +508,58 @@ if (document.getElementById('booking-form')) {
     if (res.success) {
       showToast('Appointment booked successfully!');
       document.getElementById('booking-form').reset();
+      refreshBookingSlots(); 
       await switchView('patient-appointments');
-    } else { showToast(res.message || 'Booking failed.', 'error'); }
+    } else { showToast(res.message || 'Booking failed.', 'error'); refreshBookingSlots(); }
   });
 }
+
+// Live slot availability for the booking form
+const bookTimeSelect = document.getElementById('book-time');
+const DEFAULT_SLOTS = bookTimeSelect ? Array.from(bookTimeSelect.options).map((o) => o.value).filter(Boolean) : [];
+const SLOT_REASONS = { booked: 'Booked', passed: 'Unavailable', closed: 'Closed' };
+
+function renderTimeOptions(slots) {
+  if (!bookTimeSelect) return;
+  const previous = bookTimeSelect.value;
+  bookTimeSelect.innerHTML = '<option value="">' + escapeHtml(t('-- Choose Time --')) + '</option>' +
+    slots.map((s) => '<option value="' + escapeHtml(s.time) + '"' + (s.available ? '' : ' disabled') + '>' +
+      escapeHtml(s.available ? s.time : s.time + ' — ' + t(SLOT_REASONS[s.reason] || 'Unavailable')) + '</option>').join('');
+  const keep = Array.from(bookTimeSelect.options).find((o) => o.value === previous && !o.disabled);
+  bookTimeSelect.value = keep ? previous : '';
+}
+
+async function refreshBookingSlots() {
+  const dateInput = document.getElementById('book-date');
+  const dentistSelect = document.getElementById('book-dentist');
+  const dateError = document.getElementById('book-date-error');
+  if (!dateInput || !dentistSelect || !bookTimeSelect) return;
+  if (dateError) dateError.textContent = '';
+  const date = dateInput.value;
+  const dentistId = Number(dentistSelect.value);
+  if (!date || !dentistId) {
+    bookTimeSelect.innerHTML = '<option value="">' + escapeHtml(t('-- Choose date and dentist first --')) + '</option>';
+    bookTimeSelect.disabled = true;
+    return;
+  }
+  bookTimeSelect.disabled = false;
+  bookTimeSelect.innerHTML = '<option value="">' + escapeHtml(t('Loading…')) + '</option>';
+  const res = await api.get('appointments/slots.php?date=' + encodeURIComponent(date) + '&dentist_id=' + encodeURIComponent(dentistId));
+  if (!res.success || !res.data || !Array.isArray(res.data.slots)) {
+    bookTimeSelect.innerHTML = '<option value="">' + escapeHtml(t('No appointments found.')) + '</option>';
+    return;
+  }
+  renderTimeOptions(res.data.slots);
+}
+
+(() => {
+  const dateInput = document.getElementById('book-date');
+  if (dateInput) {
+    const n = new Date();
+    dateInput.min = n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0');
+  }
+  ['book-date', 'book-dentist'].forEach((id) => document.getElementById(id)?.addEventListener('change', refreshBookingSlots));
+})();
 
 window.cancelApt = async (id) => {
   const confirmed = await confirmModal({ title: 'Cancel Appointment', message: 'Are you sure you want to cancel this appointment?', danger: true });

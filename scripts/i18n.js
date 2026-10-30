@@ -261,6 +261,13 @@ const filipino = {
   'Are you sure you want to cancel this appointment?': 'Sigurado ka bang kakanselahin ang appointment na ito?',
   'Booking request submitted successfully.': 'Matagumpay na naisumite ang kahilingan sa appointment.',
   'Booking failed.': 'Hindi naisumite ang booking.',
+  'Booked': 'Naka-book na',
+  'Unavailable': 'Hindi available',
+  'Closed': 'Sarado',
+  'The clinic is closed on that day. Please choose another date.': 'Sarado ang klinika sa araw na iyon. Pumili ng ibang petsa.',
+  'Enter a valid appointment date and time slot.': 'Maglagay ng wastong petsa at oras ng appointment.',
+  'Could not load time slots.': 'Hindi ma-load ang mga oras.',
+  '-- Choose date and dentist first --': '-- Pumili muna ng petsa at dentista --',
 };
 
 const english = Object.fromEntries(Object.keys(filipino).map((phrase) => [phrase, phrase]));

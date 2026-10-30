@@ -172,13 +172,11 @@
                 </div>
                 <div class="form-group">
                   <label for="book-time">Preferred Time Slot <span class="req">*</span></label>
-                  <select id="book-time" required>
-                    <option value="">-- Choose Time --</option>
-                    <option value="09:00 AM">09:00 AM</option>
-                    <option value="10:30 AM">10:30 AM</option>
-                    <option value="01:30 PM">01:30 PM</option>
-                    <option value="03:00 PM">03:00 PM</option>
+
+                  <select id="book-time" required disabled>
+                    <option value="">-- Choose date and dentist first --</option>
                   </select>
+
                   <span class="field-error" id="book-time-error"></span>
                 </div>
               </div>
@@ -385,6 +383,6 @@
   <script type="module" src="scripts/api.js?v=8"></script>
   <script type="module" src="scripts/modal.js?v=8"></script>
   <script type="module" src="scripts/toast.js?v=5"></script>
-  <script type="module" src="scripts/portal.js?v=35"></script>
+  <script type="module" src="scripts/portal.js?v=37"></script>
 </body>
 </html>

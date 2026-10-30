@@ -1016,8 +1016,24 @@ async function renderPatientProfile() {
   displayPatientProfile(res.data);
   state?.classList.add('hidden');
   content?.classList.remove('hidden');
+  renderProfileHistory();
   const edit = document.getElementById('profile-edit-button');
   if (edit) edit.disabled = false;
+}
+
+async function renderProfileHistory() {
+  const tbody = document.getElementById('profile-history-tbody');
+  if (!tbody) return;
+  const res = await api.get('appointments/mine.php');
+  if (!res.success) { tbody.innerHTML = '<tr><td colspan="4" class="empty-cell">Failed to load appointments.</td></tr>'; return; }
+  const rows = (res.data || []).slice(0, 5);
+  tbody.innerHTML = rows.length ? rows.map((a) => {
+    const status = a.status || 'Pending';
+    return '<tr><td>' + escapeHtml(formatPatientDate(a.appointment_date)) + '</td>' +
+      '<td>' + escapeHtml(a.service_name || '') + '</td>' +
+      '<td>' + escapeHtml(a.dentist_name || '') + '</td>' +
+      '<td><span class="status-tag status-' + escapeHtml(status.toLowerCase()) + '">' + escapeHtml(status) + '</span></td></tr>';
+  }).join('') : '<tr><td colspan="4" class="empty-cell">No appointments found.</td></tr>';
 }
 
 async function renderPatientSettings() {

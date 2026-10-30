@@ -1301,3 +1301,44 @@ input:focus, select:focus, textarea:focus {
   .settings-card-actions .btn { width: 100%; }
   .settings-toggle-row { align-items: flex-start; }
 }
+
+/* 19. PROFILE VIEW: HIGH-DENSITY LAYOUT ----------------------------------- */
+#view-patient-profile { max-width: 100%; }
+#view-patient-profile .page-header { margin-bottom: 1rem; }
+#view-patient-profile .patient-profile-identity { padding: 1rem 1.25rem; gap: 1rem; }
+#view-patient-profile .patient-profile-avatar { width: 64px; height: 64px; flex-basis: 64px; font-size: 1.4rem; }
+
+#view-patient-profile .patient-profile-grid {
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  align-items: start;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+#view-patient-profile .patient-profile-main-column { display: grid; gap: 1rem; min-width: 0; }
+
+#view-patient-profile .card { padding: 1.15rem; }
+#view-patient-profile .card h2 { font-size: 1.05rem; margin-bottom: 0.2rem; }
+
+#view-patient-profile .profile-detail-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}
+#view-patient-profile .profile-detail { padding: 0.7rem 0.8rem; }
+
+#view-patient-profile .data-table th,
+#view-patient-profile .data-table td { padding: 0.6rem 0.75rem; }
+.status-completed { background: var(--success-bg); color: var(--success); }
+
+#view-patient-profile .patient-profile-side-column {
+  display: flex; flex-direction: column; gap: 0; overflow: hidden;
+  background: var(--white); border: 1px solid var(--border-color);
+  border-radius: 12px; box-shadow: var(--shadow-sm);
+}
+#view-patient-profile .patient-profile-side-column > .card { border: 0; border-radius: 0; box-shadow: none; }
+#view-patient-profile .patient-profile-side-column > .card + .card { border-top: 1px solid var(--border-color); }
+#view-patient-profile .patient-summary-row { margin: 0.75rem 0; padding: 0.65rem 0; }
+
+@media (max-width: 1200px) { #view-patient-profile .profile-detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 900px)  { #view-patient-profile .patient-profile-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 540px)  { #view-patient-profile .profile-detail-grid { grid-template-columns: minmax(0, 1fr); } }

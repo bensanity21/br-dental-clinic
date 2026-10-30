@@ -11,3 +11,5 @@ Thumbs.db
 
 # Local secrets must never be committed
 /config/secrets.local.php
+
+full_codebase.txt

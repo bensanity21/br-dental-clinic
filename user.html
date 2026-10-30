@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BR Dental Clinic - User Portal</title>
   <meta name="description" content="BR Dental Clinic user portal.">
-  <link rel="stylesheet" href="style.css?v=20">
+  <link rel="stylesheet" href="style.css?v=21">
 </head>
 <body>
   <a class="skip-link" href="#views-viewport">Skip to main content</a>
@@ -206,21 +206,38 @@
               <div class="patient-profile-identity-copy"><h2 id="patient-profile-name"></h2><span class="patient-role-badge">Patient</span><p class="text-sub mt-2">Patient ID: <strong id="patient-profile-id"></strong></p></div>
             </section>
             <div class="patient-profile-grid mt-4">
-              <section class="card patient-profile-info-card" aria-labelledby="personal-information-heading">
-                <div class="flex-between profile-card-heading"><div><h2 id="personal-information-heading">Personal Information</h2><p class="text-sub">Details associated with your clinic account.</p></div><span id="profile-readonly-hint" class="text-sub">View only</span></div>
-                <div id="patient-profile-readonly" class="profile-detail-grid">
-                  <div class="profile-detail"><span>Full name</span><strong id="profile-display-name"></strong></div>
-                  <div class="profile-detail"><span>Email address</span><strong id="profile-display-email"></strong></div>
-                  <div class="profile-detail"><span>Phone number</span><strong id="profile-display-phone"></strong></div>
-                  <div class="profile-detail"><span>Registered</span><strong id="profile-display-created"></strong></div>
-                </div>
-                <form id="patient-profile-form" class="hidden mt-3" novalidate>
-                  <div class="form-group"><label for="profile-fullname">Full Name <span class="required-mark">*</span></label><input type="text" id="profile-fullname" maxlength="100" autocomplete="name" required aria-describedby="profile-name-error"><span class="field-error" id="profile-name-error"></span></div>
-                  <div class="form-group"><label for="profile-email">Email Address</label><input type="email" id="profile-email" readonly class="input-readonly" aria-describedby="profile-email-hint"><span class="field-hint" id="profile-email-hint">Email changes are unavailable until email verification is supported.</span></div>
-                  <div class="form-group"><label for="profile-phone">Contact Phone Number</label><input type="tel" id="profile-phone" maxlength="20" autocomplete="tel" placeholder="e.g. 09XXXXXXXXX" aria-describedby="profile-phone-error"><span class="field-error" id="profile-phone-error"></span></div>
-                  <div class="profile-form-actions"><button type="button" class="btn btn-outline" id="profile-cancel-button">Cancel</button><button type="submit" class="btn btn-primary" id="profile-save-button">Save Changes</button></div>
-                </form>
-              </section>
+              <div class="patient-profile-main-column">
+                <section class="card patient-profile-info-card" aria-labelledby="personal-information-heading">
+                  <div class="flex-between profile-card-heading"><div><h2 id="personal-information-heading">Personal Information</h2><p class="text-sub">Details associated with your clinic account.</p></div><span id="profile-readonly-hint" class="text-sub">View only</span></div>
+                  <div id="patient-profile-readonly" class="profile-detail-grid">
+                    <div class="profile-detail"><span>Full name</span><strong id="profile-display-name"></strong></div>
+                    <div class="profile-detail"><span>Email address</span><strong id="profile-display-email"></strong></div>
+                    <div class="profile-detail"><span>Phone number</span><strong id="profile-display-phone"></strong></div>
+                    <div class="profile-detail"><span>Registered</span><strong id="profile-display-created"></strong></div>
+                    <div class="profile-detail"><span>Emergency Contact Person</span><strong id="profile-display-emergency-name">Not provided</strong></div>
+                    <div class="profile-detail"><span>Emergency Contact Phone</span><strong id="profile-display-emergency-phone">Not provided</strong></div>
+                    <div class="profile-detail"><span>Complete Address</span><strong id="profile-display-address">Not provided</strong></div>
+                    <div class="profile-detail"><span>Date of Birth / Age</span><strong id="profile-display-dob">Not provided</strong></div>
+                  </div>
+                  <form id="patient-profile-form" class="hidden mt-3" novalidate>
+                    <div class="form-group"><label for="profile-fullname">Full Name <span class="required-mark">*</span></label><input type="text" id="profile-fullname" maxlength="100" autocomplete="name" required aria-describedby="profile-name-error"><span class="field-error" id="profile-name-error"></span></div>
+                    <div class="form-group"><label for="profile-email">Email Address</label><input type="email" id="profile-email" readonly class="input-readonly" aria-describedby="profile-email-hint"><span class="field-hint" id="profile-email-hint">Email changes are unavailable until email verification is supported.</span></div>
+                    <div class="form-group"><label for="profile-phone">Contact Phone Number</label><input type="tel" id="profile-phone" maxlength="20" autocomplete="tel" placeholder="e.g. 09XXXXXXXXX" aria-describedby="profile-phone-error"><span class="field-error" id="profile-phone-error"></span></div>
+                    <div class="profile-form-actions"><button type="button" class="btn btn-outline" id="profile-cancel-button">Cancel</button><button type="submit" class="btn btn-primary" id="profile-save-button">Save Changes</button></div>
+                  </form>
+                </section>
+
+                <section class="card" aria-labelledby="profile-history-heading">
+                  <h2 id="profile-history-heading">Recent Treatment History</h2>
+                  <div class="table-scroll mt-3">
+                    <table class="data-table">
+                      <thead><tr><th>Date</th><th>Service Rendered</th><th>Dentist</th><th>Status</th></tr></thead>
+                      <tbody id="profile-history-tbody"><tr><td colspan="4" class="empty-cell">Loading appointments…</td></tr></tbody>
+                    </table>
+                  </div>
+                </section>
+              </div>
+
               <div class="patient-profile-side-column">
                 <section class="card" aria-labelledby="patient-summary-heading"><h2 id="patient-summary-heading">Patient Summary</h2><div class="patient-summary-row"><span>Completed appointments</span><strong id="profile-completed-count">—</strong></div><div class="patient-summary-next"><span class="text-sub">Next appointment</span><strong id="profile-next-appointment">—</strong><span id="profile-next-service" class="text-sub"></span></div><button type="button" class="btn btn-soft mt-3" data-navigate="patient-appointments">View appointments</button></section>
                 <section class="card" aria-labelledby="patient-health-heading"><h2 id="patient-health-heading">Health Information</h2><p class="text-sub">No patient-provided allergies, conditions, or medication information is stored in your account yet. Your professional treatment history is available in Dental Records.</p><button type="button" class="btn btn-outline mt-2" data-navigate="patient-records">View Dental Records</button></section>
@@ -229,7 +246,7 @@
           </div>
           <div id="patient-profile-error" class="card form-error-state hidden" role="alert"><p>We couldn’t load your profile right now.</p><button type="button" class="btn btn-outline" id="profile-retry-button">Try again</button></div>
         </section>
-
+        
         <!-- PATIENT: SETTINGS -->
         <section id="view-patient-settings" class="page-view">
           <div class="page-header"><h1>Settings</h1><p>Manage your account security and in-app preferences.</p></div>

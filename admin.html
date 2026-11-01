@@ -9,7 +9,7 @@
   <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <meta name="theme-color" content="#0F766E">
-  <link rel="stylesheet" href="style.css?v=24">
+  <link rel="stylesheet" href="style.css?v=36">
 </head>
 <body>
   <a class="skip-link" href="#views-viewport">Skip to main content</a>
@@ -435,6 +435,30 @@
                 <button type="submit" class="btn btn-primary">Save Operating Hours</button>
               </form>
             </section>
+            <section class="card form-card-narrow" aria-labelledby="admin-ip-heading">
+              <h2 id="admin-ip-heading">Administrator Access</h2>
+              <p class="text-sub">
+                Optionally restrict administrator sign-in to approved networks.
+                While the list is empty, administrators can sign in from anywhere.
+              </p>
+
+              <p class="text-sub" id="admin-ip-status">Checking allowlist...</p>
+
+              <div id="admin-ip-list" class="admin-ip-list"></div>
+
+              <form id="admin-ip-form">
+                <div class="form-group">
+                  <label for="admin-ip-address">IP Address or Network</label>
+                  <input type="text" id="admin-ip-address" maxlength="64" placeholder="203.0.113.7 or 203.0.113.0/24">
+                </div>
+                <div class="form-group">
+                  <label for="admin-ip-label">Label <span class="text-sub">(optional)</span></label>
+                  <input type="text" id="admin-ip-label" maxlength="100" placeholder="Clinic office">
+                </div>
+                <button type="submit" class="btn btn-primary">Add Address</button>
+                <button type="button" class="btn btn-secondary" id="btn-admin-ip-add-current">Add My Current Address</button>
+              </form>
+            </section>
           </div>
         </section>
 
@@ -522,6 +546,6 @@
   <script type="module" src="scripts/api.js?v=8"></script>
   <script type="module" src="scripts/modal.js?v=8"></script>
   <script type="module" src="scripts/toast.js?v=5"></script>
-  <script type="module" src="scripts/portal.js?v=46"></script>
+  <script type="module" src="scripts/portal.js?v=47"></script>
 </body>
 </html>

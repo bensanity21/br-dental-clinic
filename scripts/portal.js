@@ -1486,6 +1486,64 @@ async function renderAdminSettings() {
     if (days) days.value = scheduleRes.data.operating_days || '';
     if (hours) hours.value = scheduleRes.data.operating_hours || '';
   }
+  await renderAdminIpList();
+}
+
+// ---------- Administrator IP allowlist -----------------------------------
+// Only a super-admin sees this card; the endpoint enforces that too.
+async function renderAdminIpList() {
+  const list = document.getElementById('admin-ip-list');
+  const status = document.getElementById('admin-ip-status');
+  if (!list || !status) return;
+
+  const res = await api.get('settings/admin-ip.php');
+  if (!res.success) {
+    status.textContent = res.message || 'Could not load the allowlist.';
+    list.innerHTML = '';
+    return;
+  }
+
+  const { entries, current_ip: currentIp, enforced, current_allowed: currentAllowed } = res.data;
+
+  if (!enforced) {
+    status.textContent = `No addresses are restricted, so administrators can sign in from anywhere. Your current address is ${currentIp}.`;
+  } else if (currentAllowed) {
+    status.textContent = `Administrator sign-in is restricted to the addresses below. Your current address ${currentIp} is allowed.`;
+  } else {
+    status.textContent = `Warning: your current address ${currentIp} is not on the list, so you cannot sign in as an administrator from here.`;
+  }
+
+  if (!entries.length) {
+    list.innerHTML = '<p class="text-sub">No addresses added yet.</p>';
+    return;
+  }
+
+  list.innerHTML = entries.map((entry) => `
+    <div class="admin-ip-row">
+      <div>
+        <strong>${escapeHtml(entry.ip_address)}</strong>
+        ${entry.label ? `<span class="text-sub"> - ${escapeHtml(entry.label)}</span>` : ''}
+        ${Number(entry.is_active) === 1 ? '' : '<span class="badge badge-inactive">Disabled</span>'}
+      </div>
+      <div class="admin-ip-actions">
+        <button type="button" class="btn btn-small btn-secondary"
+                data-ip-toggle="${entry.id}" data-ip-active="${Number(entry.is_active) === 1 ? 1 : 0}">
+          ${Number(entry.is_active) === 1 ? 'Disable' : 'Enable'}
+        </button>
+        <button type="button" class="btn btn-small btn-danger" data-ip-remove="${entry.id}">Remove</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function submitAdminIp(address, label) {
+  const res = await api.post('settings/admin-ip.php', { ip_address: address, label: label || '' });
+  if (res.success) {
+    showToast('Address added to the allowlist.', 'success');
+    await renderAdminIpList();
+  } else {
+    showToast(res.message || 'Could not add that address.', 'error');
+  }
 }
 // The dentists page is rendered by the availability manager above, which
 // loads the dentist list and then that dentist's working hours.
@@ -1815,6 +1873,89 @@ function bindEvents() {
   let searchTimer;
   const scheduleForm = document.getElementById('schedule-settings-form');
   const clinicInfoForm = document.getElementById('admin-clinic-info-form');
+
+  // Administrator IP allowlist card.
+  const adminIpForm = document.getElementById('admin-ip-form');
+  const adminIpAddCurrent = document.getElementById('btn-admin-ip-add-current');
+  if (adminIpForm) {
+    adminIpForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const addressInput = document.getElementById('admin-ip-address');
+      const labelInput = document.getElementById('admin-ip-label');
+      const address = (addressInput?.value || '').trim();
+      if (!address) {
+        showToast('Enter an IP address or network first.', 'error');
+        return;
+      }
+      const confirmed = await confirmModal({
+        title: 'Add this address?',
+        message: `Administrator sign-in will only be allowed from ${address} once any entry exists. Make sure it covers the network you actually use.`,
+        confirmLabel: 'Add Address',
+      });
+      if (!confirmed) return;
+      await submitAdminIp(address, (labelInput?.value || '').trim());
+      if (addressInput) addressInput.value = '';
+      if (labelInput) labelInput.value = '';
+    });
+  }
+  if (adminIpAddCurrent) {
+    adminIpAddCurrent.addEventListener('click', async () => {
+      const confirmed = await confirmModal({
+        title: 'Add your current address?',
+        message: 'This adds the address you are connected from right now. It is the safest way to enable the allowlist without locking yourself out.',
+        confirmLabel: 'Add My Address',
+      });
+      if (!confirmed) return;
+      await submitAdminIp('auto', 'Added from this browser');
+    });
+  }
+  const adminIpList = document.getElementById('admin-ip-list');
+  if (adminIpList) {
+    adminIpList.addEventListener('click', async (event) => {
+      const toggleButton = event.target.closest('[data-ip-toggle]');
+      const removeButton = event.target.closest('[data-ip-remove]');
+
+      if (toggleButton) {
+        const id = Number(toggleButton.dataset.ipToggle);
+        const isActive = Number(toggleButton.dataset.ipActive) === 1;
+        const confirmed = await confirmModal({
+          title: isActive ? 'Disable this address?' : 'Enable this address?',
+          message: isActive
+            ? 'Administrators will no longer be able to sign in from this address.'
+            : 'Administrators will be able to sign in from this address again.',
+          confirmLabel: isActive ? 'Disable' : 'Enable',
+        });
+        if (!confirmed) return;
+        const res = await api.patch('settings/admin-ip.php', { id, is_active: !isActive });
+        if (res.success) {
+          showToast(isActive ? 'Address disabled.' : 'Address enabled.', 'success');
+          await renderAdminIpList();
+        } else {
+          showToast(res.message || 'Could not update that address.', 'error');
+        }
+        return;
+      }
+
+      if (removeButton) {
+        const id = Number(removeButton.dataset.ipRemove);
+        const confirmed = await confirmModal({
+          title: 'Remove this address?',
+          message: 'Administrators will no longer be able to sign in from this address.',
+          confirmLabel: 'Remove',
+          danger: true,
+        });
+        if (!confirmed) return;
+        const res = await api.delete('settings/admin-ip.php', { id });
+        if (res.success) {
+          showToast('Address removed.', 'success');
+          await renderAdminIpList();
+        } else {
+          showToast(res.message || 'Could not remove that address.', 'error');
+        }
+      }
+    });
+  }
+
   const addServiceButton = document.getElementById('btn-modal-service');
   if (addServiceButton) addServiceButton.addEventListener('click', () => openServiceForm());
   if (el.adminAppointmentFilter) el.adminAppointmentFilter.addEventListener('change', renderAdminAppointments);

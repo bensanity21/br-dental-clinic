@@ -451,6 +451,94 @@ try {
         $t->ok($after < $before, 'logout removes the stored session row');
     }
 
+    // ---------------------------------------------------------- admin IP list
+    if ($only === null || $only === 'adminip') {
+        $t->suite('Administrator IP allowlist');
+
+        $pdo = testPdoFor(TEST_DB);
+        $pdo->exec("DELETE FROM admin_ip_allowlist");
+
+        testClearRateLimits();
+        $admin = new TestClient('ipAdmin');
+        [$s, $r] = $admin->login('admin@brdental.com', 'TestPass123!');
+        $t->eq(true, $r['success'] ?? null, 'an empty allowlist lets an administrator sign in (feature off)');
+
+        [$s, $r] = $admin->get('api/settings/admin-ip.php');
+        $t->eq(false, $r['data']['enforced'] ?? null, 'the endpoint reports the feature as not enforced');
+
+        // A patient must not be able to manage the list.
+        testClearRateLimits();
+        $patient = new TestClient('ipPatient');
+        $patient->login('jane@test.com', 'TestPass123!');
+        [$s, $r] = $patient->get('api/settings/admin-ip.php');
+        $t->eq(403, $s, 'a patient cannot read the allowlist');
+
+        // Invalid entries are refused.
+        [$s, $r] = $admin->post('api/settings/admin-ip.php', ['ip_address' => 'not-an-ip']);
+        $t->ok(($r['success'] ?? true) === false, 'a malformed address is refused');
+
+        [$s, $r] = $admin->post('api/settings/admin-ip.php', ['ip_address' => '10.0.0.0/99']);
+        $t->ok(($r['success'] ?? true) === false, 'an out-of-range CIDR prefix is refused');
+
+        // Adding a network that excludes the caller as the FIRST entry is
+        // refused, because it would lock them out immediately.
+        $pdo->exec("DELETE FROM admin_ip_allowlist");
+        [$s, $r] = $admin->post('api/settings/admin-ip.php', ['ip_address' => '203.0.113.0/24']);
+        $t->ok(($r['success'] ?? true) === false, 'a first entry that excludes the caller is refused');
+
+        // 'auto' always works and includes the caller.
+        [$s, $r] = $admin->post('api/settings/admin-ip.php', ['ip_address' => 'auto', 'label' => 'test']);
+        $t->eq(true, $r['success'] ?? null, 'the current address can be added with "auto"');
+
+        [$s, $r] = $admin->get('api/settings/admin-ip.php');
+        $t->eq(true, $r['data']['enforced'] ?? null, 'the feature reports as enforced once an entry exists');
+        $t->eq(true, $r['data']['current_allowed'] ?? null, 'the current address is still allowed');
+
+        // Duplicate is refused.
+        [$s, $r] = $admin->post('api/settings/admin-ip.php', ['ip_address' => 'auto']);
+        $t->ok(($r['success'] ?? true) === false, 'a duplicate address is refused');
+
+        // Now enforce a network that does NOT include the caller and confirm
+        // administrator sign-in is blocked while a patient is unaffected.
+        $pdo->exec("DELETE FROM admin_ip_allowlist");
+        $pdo->exec("INSERT INTO admin_ip_allowlist (ip_address, label, is_active) VALUES ('203.0.113.0/24','office',1)");
+
+        testClearRateLimits();
+        $blocked = new TestClient('ipBlocked');
+        [$s, $r] = $blocked->login('admin@brdental.com', 'TestPass123!');
+        $t->eq(false, $r['success'] ?? null, 'an administrator outside the allowlist is refused');
+        $t->eq(403, $s, 'the refusal is a 403');
+
+        testClearRateLimits();
+        $patient2 = new TestClient('ipPatient2');
+        [$s, $r] = $patient2->login('jane@test.com', 'TestPass123!');
+        $t->eq(true, $r['success'] ?? null, 'a patient is never affected by the allowlist');
+
+        // The blocked attempt is audited.
+        $count = (int)$pdo->query(
+            "SELECT COUNT(*) FROM activity_logs WHERE action = 'auth.login_blocked_ip'"
+        )->fetchColumn();
+        $t->ok($count > 0, 'a blocked administrator sign-in is written to the activity log');
+
+        // Recovery: clearing the table restores access.
+        $pdo->exec("DELETE FROM admin_ip_allowlist");
+        testClearRateLimits();
+        $recovered = new TestClient('ipRecovered');
+        [$s, $r] = $recovered->login('admin@brdental.com', 'TestPass123!');
+        $t->eq(true, $r['success'] ?? null, 'clearing the allowlist restores administrator access');
+
+        // Unit checks on the matching logic, including CIDR and IPv6.
+        require_once testProjectRoot() . '/includes/admin_ip.php';
+        $t->eq(true, ipMatchesRule('10.5.6.7', '10.0.0.0/8'), 'CIDR /8 matches inside');
+        $t->eq(false, ipMatchesRule('11.5.6.7', '10.0.0.0/8'), 'CIDR /8 rejects outside');
+        $t->eq(true, ipMatchesRule('192.168.1.5', '192.168.1.0/24'), 'CIDR /24 matches inside');
+        $t->eq(false, ipMatchesRule('192.168.2.5', '192.168.1.0/24'), 'CIDR /24 rejects outside');
+        $t->eq(true, ipMatchesRule('2001:db8::5', '2001:db8::/32'), 'IPv6 CIDR matches inside');
+        $t->eq(false, ipMatchesRule('2001:db9::5', '2001:db8::/32'), 'IPv6 CIDR rejects outside');
+        $t->eq(false, ipMatchesRule('127.0.0.1', 'not-an-ip'), 'a garbage rule matches nothing');
+        $t->eq(false, ipMatchesRule('127.0.0.1', ''), 'an empty rule matches nothing');
+    }
+
     // --------------------------------------------------------- regression
     if ($only === null || $only === 'regression') {
         $t->suite('Regression (public site and CSRF)');

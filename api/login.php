@@ -5,6 +5,7 @@ header("Content-Type: application/json");
 require_once "../config/config.php";
 require_once "../includes/session.php";
 require_once "../connectdb.php";
+require_once "../includes/admin_ip.php";
 
 const LOGIN_MAX_ATTEMPTS   = 5;   // failures allowed before lockout
 const LOGIN_WINDOW_MINUTES = 15;  // how far back we count failures
@@ -61,6 +62,37 @@ $stmt->execute([$email]);
 $user = $stmt->fetch();
 
 if ($user && password_verify($password, $user['password_hash'])) {
+    // Administrator accounts may be restricted to a list of allowed networks.
+    // Patients are never checked, and the feature is off unless an admin has
+    // added an entry. See includes/admin_ip.php.
+    if (ipAllowlistAppliesTo((string)$user['role'])) {
+        $ipCheck = checkAdminIpAccess($pdo);
+
+        if (!$ipCheck['allowed']) {
+            // Wrong place, right credentials. Record it and refuse without
+            // revealing that the password was otherwise correct.
+            $pdo->prepare("INSERT INTO login_attempts (email, ip_address) VALUES (?, ?)")
+                ->execute([$email, $ip]);
+
+            require_once __DIR__ . '/../includes/activity.php';
+            logActivity(
+                $pdo,
+                'auth.login_blocked_ip',
+                'users',
+                (int)$user['id'],
+                'Administrator sign-in blocked by the IP allowlist.',
+                ['ip' => $ipCheck['ip']],
+                ['id' => $user['id'], 'name' => $user['full_name'], 'role' => $user['role']]
+            );
+
+            respond([
+                "success" => false,
+                "message" => "This account can only be used from an approved network.",
+                "data" => null,
+            ], 403);
+        }
+    }
+
     // Successful login clears this pair's failure history.
     $pdo->prepare("DELETE FROM login_attempts WHERE email = ? AND ip_address = ?")->execute([$email, $ip]);
 

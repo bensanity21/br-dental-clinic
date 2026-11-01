@@ -919,6 +919,68 @@ try {
         $pdo->prepare("DELETE FROM users WHERE email = ?")->execute([$email]);
     }
 
+    // ------------------------------------------------------- key integrity
+    if ($only === null || $only === 'key') {
+        $t->suite('Encryption key and recovery');
+
+        $root = testProjectRoot();
+        $php  = 'C:\xampp\php\php.exe';
+
+        // The configured key must decrypt the encrypted rows that exist.
+        exec(sprintf('"%s" %s 2>&1', $php, escapeshellarg(str_replace('/', '\\', $root . '/tools/check-key.php'))), $out, $code);
+        $output = implode("\n", $out);
+        $t->eq(0, $code, 'check-key.php reports the key decrypts live data', trim(substr($output, -200)));
+        $t->ok(str_contains($output, 'VERIFIED'), 'check-key.php prints VERIFIED');
+
+        // A key file containing the active key must verify.
+        $keyFile = sys_get_temp_dir() . '/br_key_verify.txt';
+        exec(sprintf('"%s" %s --to=%s 2>&1', $php,
+            escapeshellarg(str_replace('/', '\\', $root . '/tools/export-key.php')),
+            escapeshellarg(str_replace('/', '\\', $keyFile))
+        ), $exportOut, $exportCode);
+        $t->eq(0, $exportCode, 'export-key.php writes a key file');
+
+        if (is_file($keyFile)) {
+            exec(sprintf('"%s" %s %s 2>&1', $php,
+                escapeshellarg(str_replace('/', '\\', $root . '/tools/verify-key-backup.php')),
+                escapeshellarg(str_replace('/', '\\', $keyFile))
+            ), $verifyOut, $verifyCode);
+            $t->eq(0, $verifyCode, 'the exported key file verifies against the live key');
+
+            // A file with a different key must be rejected.
+            $wrong = file_get_contents($keyFile);
+            $wrong = preg_replace('/[a-f0-9]{64}/i', str_repeat('ab', 32), $wrong);
+            $wrongFile = sys_get_temp_dir() . '/br_key_wrong.txt';
+            file_put_contents($wrongFile, $wrong);
+
+            exec(sprintf('"%s" %s %s 2>&1', $php,
+                escapeshellarg(str_replace('/', '\\', $root . '/tools/verify-key-backup.php')),
+                escapeshellarg(str_replace('/', '\\', $wrongFile))
+            ), $badOut, $badCode);
+            $t->ok($badCode !== 0, 'a file with the wrong key is rejected');
+
+            @unlink($keyFile);
+            @unlink($wrongFile);
+        }
+
+        // The database backup must NOT contain the encryption key.
+        $backups = glob($root . '/backups/backup_*.sql');
+        if ($backups) {
+            sort($backups);
+            $newest = end($backups);
+            $dump = (string)file_get_contents($newest);
+            require_once $root . '/config/config.php';
+            $t->ok(
+                !str_contains($dump, ENCRYPTION_KEY),
+                'the database backup does not contain the encryption key'
+            );
+            $t->ok(
+                str_contains($dump, 'v2:'),
+                'the backup does contain encrypted values, so the key is genuinely required'
+            );
+        }
+    }
+
     // --------------------------------------------------------- regression
     if ($only === null || $only === 'regression') {
         $t->suite('Regression (public site and CSRF)');

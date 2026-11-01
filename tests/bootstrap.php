@@ -147,6 +147,11 @@ function testServerEnsure(): void
 {
     if (testServerUp()) return;
 
+    // A port can be LISTENING while the process behind it is dead or wedged, in
+    // which case every request hangs. Kill anything stale before starting.
+    testStopServer();
+    usleep(400000);
+
     $root = testProjectRoot();
 
     // Launch PHP directly, not through cmd. Wrapping in 'cmd /C start' waits for
@@ -176,12 +181,16 @@ function testServerEnsure(): void
         throw new RuntimeException('Could not launch the test server process.');
     }
 
+    // Release the process handle immediately. Keeping it open makes PHP wait for
+    // the child at shutdown, which hangs the suite because the server never exits.
+    // The server itself keeps running; tests/stop-server.php shuts it down by port.
+    unset($proc);
+
     for ($i = 0; $i < 80; $i++) {
         usleep(250000);
         if (testServerUp()) return;
     }
 
-    @proc_terminate($proc);
     $err = @file_get_contents(sys_get_temp_dir() . '/br_test_server.err') ?: '';
 
     throw new RuntimeException(
@@ -193,12 +202,32 @@ function testServerEnsure(): void
     );
 }
 
+/**
+ * Check the server is not merely listening but actually answering HTTP.
+ * A TCP connect alone is not enough: a half-dead process still accepts
+ * connections, so every subsequent request would hang.
+ */
 function testServerUp(): bool
 {
-    $fp = @fsockopen('127.0.0.1', TEST_PORT, $errno, $errstr, 0.4);
-    if (!$fp) return false;
-    fclose($fp);
-    return true;
+    $ch = @curl_init('http://127.0.0.1:' . TEST_PORT . '/api/settings/public.php');
+    if ($ch === false) {
+        // No curl in this build: fall back to a plain socket check.
+        $fp = @fsockopen('127.0.0.1', TEST_PORT, $errno, $errstr, 0.4);
+        if (!$fp) return false;
+        fclose($fp);
+        return true;
+    }
+
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 5,
+        CURLOPT_CONNECTTIMEOUT => 2,
+    ]);
+    curl_exec($ch);
+    $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    return $code > 0;
 }
 
 function testStopServer(): void

@@ -5,8 +5,13 @@
 # No directory listings.
 Options -Indexes
 
-# Never serve database dumps, environment files, logs or backups.
-<FilesMatch "(?i)\.(sql|sqlite|env|log|bak|old|ini)$">
+# Never serve database dumps, environment files, logs, backups or source dumps.
+<FilesMatch "(?i)\.(sql|sqlite|env|log|bak|old|ini|md|txt)$">
+    Require all denied
+</FilesMatch>
+
+# Development-only artefacts that must never be downloadable.
+<FilesMatch "^(full_codebase\.txt|SECURITY_SETUP\.md|\.gitignore)$">
     Require all denied
 </FilesMatch>
 

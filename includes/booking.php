@@ -45,7 +45,14 @@ function slotHasPassed(DateTimeImmutable $date, string $slot): bool {
 }
 
 function takenSlots(PDO $pdo, int $dentistId, string $date): array {
-    $stmt = $pdo->prepare("SELECT time_slot FROM appointments WHERE dentist_id = ? AND appointment_date = ? AND status != 'Cancelled'");
+    // Keep this list in step with the slot_key generated column: a Cancelled or
+    // No-show appointment frees its time slot for someone else.
+    $stmt = $pdo->prepare("
+        SELECT time_slot
+        FROM appointments
+        WHERE dentist_id = ? AND appointment_date = ?
+          AND status IN ('Pending','Approved','Rescheduled','Completed')
+    ");
     $stmt->execute([$dentistId, $date]);
     return $stmt->fetchAll(PDO::FETCH_COLUMN);
 }

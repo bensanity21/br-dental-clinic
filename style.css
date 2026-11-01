@@ -859,6 +859,8 @@ input:focus, select:focus, textarea:focus {
 .status-approved    { background: var(--success-bg); color: var(--success); }
 .status-cancelled   { background: var(--danger-bg);  color: var(--danger); }
 .status-rescheduled { background: var(--teal-light); color: var(--teal-dark); }
+/* A no-show frees the slot but stays on record. */
+.status-no-show { background: var(--danger-bg); color: var(--danger); border: 1px dashed currentColor; }
 
 
 /* 12. KPI CARDS & REPORTS ------------------------------------------------- */

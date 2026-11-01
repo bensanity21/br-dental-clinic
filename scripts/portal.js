@@ -5,7 +5,7 @@
 import { api, setCsrfToken } from './api.js?v=8';
 import { confirmModal, openModal, closeModal } from './modal.js?v=9';
 import { showToast } from './toast.js';
-import { setLanguage, t } from './i18n.js?v=4';
+import { setLanguage, t } from './i18n.js?v=5';
 
 let currentUser = null;
 let role = '';
@@ -462,14 +462,20 @@ async function renderAdminAppointments() {
       const checkIcon = '<path d="m5 12 4 4L19 6"></path>';
       const cancelIcon = '<path d="m6 6 12 12M18 6 6 18"></path>';
       const trashIcon = '<path d="M3 6h18M8 6V4h8v2m3 0-.9 14H5.9L5 6m4 4v6m6-6v6"></path>';
+      // A person with a diagonal slash: the patient did not arrive.
+      const noShowIcon = '<circle cx="12" cy="8" r="4"></circle><path d="M4 21v-1a8 8 0 0 1 13.3-6"></path><path d="m16 19 5-5M21 19l-5-5"></path>';
       el.adminAppointmentsTbody.innerHTML = visibleAppointments.map((a) => {
-        const statusClass = 'status-' + (a.status || 'Pending').toLowerCase();
+        const statusClass = 'status-' + (a.status || 'Pending').toLowerCase().replace(/[^a-z-]/g, '');
         let actions;
         if (a.status === 'Pending') {
           actions = iconButton(a, 'approve', 'Approve', checkIcon, 'icon-action-success') +
                     iconButton(a, 'cancel', 'Cancel', cancelIcon, 'icon-action-neutral');
         } else if (a.status === 'Approved') {
           actions = iconButton(a, 'complete', 'Complete', checkIcon, 'icon-action-success') +
+                    iconButton(a, 'no-show', 'Mark as no-show', noShowIcon, 'icon-action-neutral') +
+                    iconButton(a, 'cancel', 'Cancel', cancelIcon, 'icon-action-neutral');
+        } else if (a.status === 'Rescheduled') {
+          actions = iconButton(a, 'approve', 'Approve', checkIcon, 'icon-action-success') +
                     iconButton(a, 'cancel', 'Cancel', cancelIcon, 'icon-action-neutral');
         } else {
           actions = '';
@@ -1754,14 +1760,24 @@ function bindEvents() {
         await renderDashboardIfRoleAdminOrDoctor();
         return;
       }
-      const statusMap = { approve: 'Approved', complete: 'Completed', cancel: 'Cancelled' };
+      const statusMap = { approve: 'Approved', complete: 'Completed', cancel: 'Cancelled', 'no-show': 'No-show' };
       const newStatus = statusMap[action];
       if (!newStatus) return;
-      const confirmed = await confirmModal({ title: 'Confirm Status Change', message: 'Change appointment to "' + newStatus + '"?', danger: action === 'cancel' });
+      const messages = {
+        Approved: 'Approve this appointment?',
+        Completed: 'Mark this appointment as completed?',
+        Cancelled: 'Cancel this appointment?',
+        'No-show': 'Mark this appointment as a no-show? The patient did not arrive. This releases the time slot.',
+      };
+      const confirmed = await confirmModal({
+        title: 'Confirm Status Change',
+        message: messages[newStatus] || ('Change appointment to "' + newStatus + '"?'),
+        danger: action === 'cancel',
+      });
       if (!confirmed) return;
       const res = await api.patch('appointments/status.php', { id: parseInt(id), status: newStatus });
       if (res.success) {
-        showToast('Appointment ' + newStatus.toLowerCase() + '.');
+        showToast(newStatus === 'No-show' ? 'Appointment marked as no-show.' : 'Appointment ' + newStatus.toLowerCase() + '.');
         await renderPatientAppointments();
         await renderAdminAppointments();
         await renderDashboardIfRoleAdminOrDoctor();

@@ -67,6 +67,7 @@ const filipino = {
   'Emergency Contact Person': 'Taong Makokontak sa Emergency',
   'Emergency Contact Phone': 'Telepono sa Emergency',
   'Complete Address': 'Kumpletong Address',
+  'Date of Birth': 'Petsa ng Kapanganakan',
   'Date of Birth / Age': 'Petsa ng Kapanganakan / Edad',
   'Recent Treatment History': 'Kamakailang Kasaysayan ng Paggamot',
   'Service Rendered': 'Serbisyong Naibigay',
@@ -164,6 +165,7 @@ const filipino = {
   'Pending': 'Nakabinbin',
   'Approved': 'Naaprubahan',
   'Rescheduled': 'Muling itinakda',
+  'No-show': 'Hindi sumipot',
   'Cancelled': 'Kinansela',
   'Completed': 'Nakumpleto',
   'pending': 'nakabinbin',
@@ -288,7 +290,7 @@ function translateNotification(text) {
   if (match) return `May ${match[1]} bagong notipikasyon ka.`;
   match = text.match(/^Book an appointment for (.+)$/);
   if (match) return `Magpa-appointment para sa ${match[1]}`;
-  match = text.match(/^(.+) · (Pending|Approved|Rescheduled|Cancelled|Completed)$/i);
+  match = text.match(/^(.+) · (Pending|Approved|Rescheduled|Cancelled|Completed|No-show)$/i);
   if (match) return `${match[1]} · ${translateText(match[2].charAt(0).toUpperCase() + match[2].slice(1).toLowerCase())}`;
   match = text.match(/^Appointment booked for (.+) is pending approval\.$/);
   if (match) return `Naghihintay ng pag-apruba ang appointment sa ${match[1]}.`;

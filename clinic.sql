@@ -38,7 +38,7 @@ CREATE TABLE `appointments` (
   `appointment_date` date NOT NULL,
   `time_slot` varchar(50) NOT NULL,
   `notes` text DEFAULT NULL,
-  `status` enum('Pending','Approved','Completed','Cancelled','Rescheduled') NOT NULL DEFAULT 'Pending',
+  `status` enum('Pending','Approved','Completed','Cancelled','Rescheduled','No-show') NOT NULL DEFAULT 'Pending',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `slot_key` varchar(120) GENERATED ALWAYS AS (case when `status` in ('Pending','Approved','Rescheduled','Completed') then concat(`dentist_id`,'|',`appointment_date`,'|',`time_slot`) else NULL end) STORED,
@@ -50,7 +50,7 @@ CREATE TABLE `appointments` (
   CONSTRAINT `fk_appointments_dentist` FOREIGN KEY (`dentist_id`) REFERENCES `dentists` (`id`),
   CONSTRAINT `fk_appointments_patient` FOREIGN KEY (`patient_id`) REFERENCES `users` (`id`),
   CONSTRAINT `fk_appointments_service` FOREIGN KEY (`service_id`) REFERENCES `services` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `archives`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -153,7 +153,7 @@ CREATE TABLE `notifications` (
   PRIMARY KEY (`id`),
   KEY `fk_notifications_user` (`user_id`),
   CONSTRAINT `fk_notifications_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=61 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=75 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `patient_notification_preferences`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;

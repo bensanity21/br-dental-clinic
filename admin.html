@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BR Dental Clinic - Admin Portal</title>
   <meta name="description" content="BR Dental Clinic master admin portal.">
-  <link rel="stylesheet" href="style.css?v=20">
+  <link rel="stylesheet" href="style.css?v=21">
 </head>
 <body>
   <a class="skip-link" href="#views-viewport">Skip to main content</a>
@@ -112,6 +112,7 @@
                 <option value="Approved">Approved</option>
                 <option value="Rescheduled">Rescheduled</option>
                 <option value="Cancelled">Cancelled</option>
+                <option value="No-show">No-show</option>
               </select>
             </div>
           </div>
@@ -280,6 +281,9 @@
                 <select id="report-type">
                   <option value="appointments">Appointments Log</option>
                   <option value="patients">Patient Registrations</option>
+                  <option value="services">Appointments per Service</option>
+                  <option value="dentists">Appointments per Dentist</option>
+                  <option value="cancellations">Cancelled / No-show</option>
                 </select>
               </div>
               <button type="button" class="btn btn-secondary btn-align-bottom" id="btn-run-report">Filter Report</button>
@@ -425,6 +429,6 @@
   <script type="module" src="scripts/api.js?v=8"></script>
   <script type="module" src="scripts/modal.js?v=8"></script>
   <script type="module" src="scripts/toast.js?v=5"></script>
-  <script type="module" src="scripts/portal.js?v=39"></script>
+  <script type="module" src="scripts/portal.js?v=40"></script>
 </body>
 </html>

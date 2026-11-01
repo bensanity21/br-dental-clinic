@@ -156,13 +156,31 @@ function testServerEnsure(): void
         '"C:\xampp\php\php.exe" -S 127.0.0.1:' . TEST_PORT . ' -t "' . str_replace('/', '\\', $root) . '"',
     ]));
 
-    // STYLE: fully detached - the suite must not block on the server.
-    exec('cmd /C start "" /B "' . $launcher . '" > NUL 2>&1');
+    // proc_open with a detached process group is used instead of
+    // 'cmd /C start /B', which blocks the calling shell on Windows whenever no
+    // console window is available (the suite would hang instead of starting).
+    $pipes = [];
+    $proc = @proc_open(
+        'cmd /C "' . $launcher . '"',
+        [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
+        $pipes
+    );
+
+    if (!is_resource($proc)) {
+        throw new RuntimeException('Could not launch the test server.');
+    }
+
+    // Do not wait on the child: read nothing, close our handles immediately.
+    foreach ($pipes as $pipe) {
+        if (is_resource($pipe)) @fclose($pipe);
+    }
 
     for ($i = 0; $i < 80; $i++) {
         usleep(250000);
         if (testServerUp()) return;
     }
+
+    @proc_terminate($proc);
 
     throw new RuntimeException(
         'Test server is not answering on port ' . TEST_PORT . ".\n" .

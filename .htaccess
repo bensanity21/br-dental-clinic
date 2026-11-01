@@ -23,7 +23,7 @@ Options -Indexes
 # Command-line only directories: nothing in them is meant to be requested.
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteRule ^(tools|database)/ - [F,L]
+    RewriteRule ^(tools|database|backups|docs)/ - [F,L]
 </IfModule>
 
 # Block direct access to the git metadata.

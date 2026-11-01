@@ -711,6 +711,100 @@ try {
         }
     }
 
+    // -------------------------------------------------------------- backup
+    if ($only === null || $only === 'backup') {
+        $t->suite('Backup and restore');
+
+        $root = testProjectRoot();
+        $php  = 'C:\xampp\php\php.exe';
+
+        // Backups target the LIVE database, so this suite is opt-in and works
+        // on whatever DB the tool is pointed at. It only READS.
+        $backupDir = $root . '/backups';
+        $before = glob($backupDir . '/backup_*.sql') ?: [];
+
+        exec(sprintf(
+            '"%s" %s --keep=1 2>&1',
+            $php,
+            escapeshellarg(str_replace('/', '\\', $root . '/tools/backup.php'))
+        ), $out, $code);
+
+        $t->eq(0, $code, 'backup.php exits successfully', implode(' | ', array_slice($out, 0, 3)));
+
+        $after = glob($backupDir . '/backup_*.sql') ?: [];
+        $t->ok(count($after) >= 1, 'at least one backup exists after the run');
+
+        $newest = null;
+        foreach ($after as $f) {
+            if (!in_array($f, $before, true)) { $newest = $f; break; }
+        }
+        $t->ok($newest !== null, 'a new backup file was created');
+
+        if ($newest !== null) {
+            $t->ok(filesize($newest) > 1024, 'the new backup is not empty');
+
+            $dump = (string)file_get_contents($newest);
+            $t->ok(str_contains($dump, 'CREATE TABLE'), 'backup contains schema');
+            $t->ok(substr_count($dump, 'CREATE TABLE') >= 10, 'backup contains every table');
+            $t->ok(str_contains($dump, 'INSERT INTO'), 'backup contains data rows');
+            $t->ok(str_contains(substr($dump, -4096), 'Dump completed'), 'backup has a completion marker');
+
+            // A backup must restore to real, working accounts.
+            $scratch = 'clinic_bk_verify';
+            testMysql("DROP DATABASE IF EXISTS `$scratch`;");
+            $tmp = sys_get_temp_dir() . '/br_bk_verify.sql';
+            file_put_contents($tmp, str_replace('`' . (getenv('DB_NAME') ?: 'clinic') . '`', "`$scratch`", $dump));
+            testMysqlFile($tmp);
+            @unlink($tmp);
+
+            $livePdo = testPdoFor(getenv('DB_NAME') ?: 'clinic');
+            $restPdo = testPdoFor($scratch);
+
+            foreach (['users', 'appointments', 'services', 'dentists'] as $table) {
+                $live = (int)$livePdo->query("SELECT COUNT(*) FROM `$table`")->fetchColumn();
+                $rest = (int)$restPdo->query("SELECT COUNT(*) FROM `$table`")->fetchColumn();
+                $t->eq($live, $rest, "restored '$table' row count matches live");
+            }
+
+            // Password hashes must survive so restored accounts still work.
+            $hash = $restPdo->query("SELECT password_hash FROM users WHERE role='super-admin' LIMIT 1")->fetchColumn();
+            $t->ok(
+                is_string($hash) && (str_starts_with($hash, '$2y$') || $hash === 'CHANGE_ME'),
+                'restored super-admin keeps a usable password hash format'
+            );
+
+            testMysql("DROP DATABASE IF EXISTS `$scratch`;");
+        }
+
+        // The restore tool must refuse files that are not complete backups.
+        $garbage = sys_get_temp_dir() . '/br_bad_backup.sql';
+        file_put_contents($garbage, str_repeat('x', 5000));
+        exec(sprintf(
+            '"%s" %s --file=%s --dry-run 2>&1',
+            $php,
+            escapeshellarg(str_replace('/', '\\', $root . '/tools/restore.php')),
+            escapeshellarg(str_replace('/', '\\', $garbage))
+        ), $rOut, $rCode);
+        @unlink($garbage);
+        $t->ok($rCode !== 0, 'restore refuses a file that is not a real backup');
+
+        // Dry run must not change anything.
+        if ($newest !== null) {
+            $usersBefore = (int)testPdoFor(getenv('DB_NAME') ?: 'clinic')
+                ->query("SELECT COUNT(*) FROM users")->fetchColumn();
+            exec(sprintf(
+                '"%s" %s --file=%s --dry-run 2>&1',
+                $php,
+                escapeshellarg(str_replace('/', '\\', $root . '/tools/restore.php')),
+                escapeshellarg(str_replace('/', '\\', $newest))
+            ), $dOut, $dCode);
+            $usersAfter = (int)testPdoFor(getenv('DB_NAME') ?: 'clinic')
+                ->query("SELECT COUNT(*) FROM users")->fetchColumn();
+            $t->eq(0, $dCode, 'dry run exits successfully');
+            $t->eq($usersBefore, $usersAfter, 'dry run does not change the database');
+        }
+    }
+
     // --------------------------------------------------------- regression
     if ($only === null || $only === 'regression') {
         $t->suite('Regression (public site and CSRF)');

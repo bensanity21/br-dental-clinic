@@ -19,3 +19,9 @@ slots_resp.txt
 full_codebase.txt
 # Test scratch
 /tests/*.tmp
+
+# Database backups contain password hashes and encrypted patient data.
+# Never commit them.
+/backups/
+*.sql.gz
+encryption-key_*.txt

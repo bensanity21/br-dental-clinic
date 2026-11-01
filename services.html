@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Services and Prices - BR Dental Clinic</title>
+  <meta name="description" content="Dental services at BR Dental Clinic, Dasmari&ntilde;as City: cleaning, fluoride, fillings, extraction, dentures, crowns and orthodontic treatment with prices.">
+  <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="theme-color" content="#0F766E">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Services and Prices - BR Dental Clinic">
+  <meta property="og:description" content="Nine dental treatments with prices shown upfront.">
+  <meta property="og:image" content="icon-512.png">
+  <link rel="stylesheet" href="style.css?v=25">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-nav">
+    <div class="site-nav-inner">
+      <a class="site-brand" href="index.html">
+        <img src="brand-icon.png" alt="">
+        <span data-clinic="name">BR Dental Clinic</span>
+      </a>
+      <button type="button" class="site-nav-toggle" id="site-nav-toggle"
+              aria-expanded="false" aria-controls="site-nav-links" aria-label="Toggle navigation">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+      <nav class="site-nav-links" id="site-nav-links" aria-label="Main">
+        <a href="index.html">Home</a>
+        <a href="services.html" aria-current="page">Services</a>
+        <a href="dentists.html">Dentists</a>
+        <a href="about.html">About &amp; Contact</a>
+      </nav>
+      <div class="site-nav-actions">
+        <a class="btn btn-outline" href="login.html">Sign in</a>
+        <a class="btn btn-primary" href="signup.html">Book now</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="site-section" aria-labelledby="services-title">
+      <div class="site-section-head">
+        <p class="site-eyebrow">Treatments</p>
+        <h2 id="services-title">Services and prices</h2>
+        <p>Every treatment currently offered at the clinic. The estimated duration helps you
+          plan your visit; the exact time depends on your dentist's assessment.</p>
+      </div>
+
+      <div class="site-grid site-grid--3" id="services-list">
+        <p class="text-sub">Loading services…</p>
+      </div>
+
+      <p class="text-sub" style="text-align:center;margin-top:2.5rem;max-width:38rem;margin-inline:auto;">
+        Prices may change without notice. Please confirm the final cost with the clinic
+        before treatment. Booked appointments are reviewed and approved by the dentist.
+      </p>
+    </section>
+
+    <section class="site-cta" aria-labelledby="cta-title">
+      <h2 id="cta-title">Ready to book?</h2>
+      <p>Create an account, choose a treatment and pick a free time slot.</p>
+      <div class="site-cta-actions">
+        <a class="btn btn-primary" href="signup.html">Create an account</a>
+        <a class="btn btn-outline" href="dentists.html">Meet the dentists</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <span>&copy; <span data-year>2026</span> <span data-clinic="name">BR Dental Clinic</span>. All rights reserved.</span>
+      <nav class="site-footer-links" aria-label="Footer">
+        <a href="services.html">Services</a>
+        <a href="dentists.html">Dentists</a>
+        <a href="about.html">About &amp; Contact</a>
+        <a href="login.html">Sign in</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script type="module" src="scripts/site-services.js?v=1"></script>
+</body>
+</html>

@@ -37,7 +37,7 @@ async function apiRequest(path, options = {}) {
     // Session expired -> redirect to login
     if (res.status === 401) {
       sessionStorage.removeItem('br-dental-clinic-session');
-      window.location.replace(new URL('./index.html', document.baseURI).href);
+      window.location.replace(new URL('./login.html', document.baseURI).href);
       return { success: false, message: 'Session expired', data: null };
     }
 

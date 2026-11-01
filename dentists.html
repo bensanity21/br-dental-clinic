@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Our Dentists - BR Dental Clinic</title>
+  <meta name="description" content="Meet the dentists at BR Dental Clinic in Dasmari&ntilde;as City, Cavite, and see which days they are available.">
+  <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="theme-color" content="#0F766E">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Our Dentists - BR Dental Clinic">
+  <meta property="og:description" content="Meet the dental team and check their available days.">
+  <meta property="og:image" content="icon-512.png">
+  <link rel="stylesheet" href="style.css?v=25">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-nav">
+    <div class="site-nav-inner">
+      <a class="site-brand" href="index.html">
+        <img src="brand-icon.png" alt="">
+        <span data-clinic="name">BR Dental Clinic</span>
+      </a>
+      <button type="button" class="site-nav-toggle" id="site-nav-toggle"
+              aria-expanded="false" aria-controls="site-nav-links" aria-label="Toggle navigation">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+      <nav class="site-nav-links" id="site-nav-links" aria-label="Main">
+        <a href="index.html">Home</a>
+        <a href="services.html">Services</a>
+        <a href="dentists.html" aria-current="page">Dentists</a>
+        <a href="about.html">About &amp; Contact</a>
+      </nav>
+      <div class="site-nav-actions">
+        <a class="btn btn-outline" href="login.html">Sign in</a>
+        <a class="btn btn-primary" href="signup.html">Book now</a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="site-section" aria-labelledby="dentists-title">
+      <div class="site-section-head">
+        <p class="site-eyebrow">Our team</p>
+        <h2 id="dentists-title">Meet your dentist</h2>
+        <p>Every appointment is with a named dentist, so you know exactly who will be treating you.</p>
+      </div>
+      <div class="site-grid site-grid--2" id="dentists-list">
+        <p class="text-sub">Loading dentists…</p>
+      </div>
+    </section>
+
+    <section class="site-section" style="padding-top:0;" aria-labelledby="hours-title">
+      <div class="site-section-head">
+        <h2 id="hours-title">Clinic hours</h2>
+        <p>Availability differs per dentist. Booked appointments are confirmed by the clinic before your visit.</p>
+      </div>
+      <div class="site-grid site-grid--2">
+        <article class="site-card">
+          <h3>Opening hours</h3>
+          <p style="margin-top:0.75rem;"><strong data-clinic="hours-days">Monday to Saturday</strong><br>
+            <span data-clinic="hours">8:00 AM - 5:00 PM</span></p>
+          <p style="margin-top:1rem;">Appointments are scheduled hourly within these hours.</p>
+        </article>
+        <article class="site-card">
+          <h3>Need a specific day?</h3>
+          <p style="margin-top:0.75rem;">Sign in to see live free slots for the dentist you choose — only times
+            they actually work are offered.</p>
+          <p style="margin-top:1rem;">
+            <a class="btn btn-outline btn-sm" href="login.html">Sign in to book</a>
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="site-cta" aria-labelledby="cta-title">
+      <h2 id="cta-title">Book with your dentist</h2>
+      <p>Create an account and choose the dentist you would like to see.</p>
+      <div class="site-cta-actions">
+        <a class="btn btn-primary" href="signup.html">Create an account</a>
+        <a class="btn btn-outline" href="services.html">See treatments</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <span>&copy; <span data-year>2026</span> <span data-clinic="name">BR Dental Clinic</span>. All rights reserved.</span>
+      <nav class="site-footer-links" aria-label="Footer">
+        <a href="services.html">Services</a>
+        <a href="dentists.html">Dentists</a>
+        <a href="about.html">About &amp; Contact</a>
+        <a href="login.html">Sign in</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script type="module" src="scripts/site-dentists.js?v=1"></script>
+</body>
+</html>

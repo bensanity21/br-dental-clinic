@@ -33,7 +33,7 @@ if (form) {
       if (res.success) {
         showToast("Account created! You can now sign in.");
         form.reset();
-        window.location.assign(new URL("./index.html", document.baseURI).href);
+        window.location.assign(new URL("./login.html", document.baseURI).href);
       } else {
         setAuthAlert(res.message || "Failed to create account.", "danger");
       }

@@ -1454,4 +1454,239 @@ input:focus, select:focus, textarea:focus {
 
 @media (max-width: 1200px) { #view-patient-profile .profile-detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 900px)  { #view-patient-profile .patient-profile-grid { grid-template-columns: minmax(0, 1fr); } }
-@media (max-width: 540px)  { #view-patient-profile .profile-detail-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 540px)  { #view-patient-profile .profile-detail-grid { grid-template-columns: minmax(0, 1fr); } }/* ============================================================
+   20. PUBLIC WEBSITE
+   Shared by the landing page, services, dentists and about.
+   Reuses the portal's teal palette so the site feels like one product.
+   ============================================================ */
+
+.site-nav {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid var(--border-color);
+  backdrop-filter: blur(6px);
+}
+.site-nav-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0.85rem 1.25rem;
+}
+.site-brand { display: flex; align-items: center; gap: 0.65rem; font-weight: 800; color: var(--text-main); text-decoration: none; }
+.site-brand img { width: 34px; height: 34px; border-radius: 8px; object-fit: cover; }
+.site-nav-links { display: flex; align-items: center; gap: 0.35rem; }
+.site-nav-links a {
+  padding: 0.5rem 0.8rem;
+  border-radius: 7px;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.94rem;
+  text-decoration: none;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+.site-nav-links a:hover { color: var(--teal-dark); background: var(--teal-light); }
+.site-nav-links a[aria-current="page"] { color: var(--teal-dark); background: var(--teal-light); }
+.site-nav-actions { display: flex; align-items: center; gap: 0.5rem; }
+.site-nav-toggle {
+  display: none;
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--text-main);
+  cursor: pointer;
+}
+.site-nav-toggle:focus-visible { outline: 2px solid var(--teal-dark); outline-offset: 2px; }
+
+/* Hero ------------------------------------------------------------------- */
+.site-hero { background: linear-gradient(180deg, var(--teal-light) 0%, var(--bg-main) 100%); }
+.site-hero-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  align-items: center;
+  gap: 3rem;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 4rem 1.25rem 4.5rem;
+}
+.site-eyebrow {
+  margin: 0 0 0.85rem;
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.site-hero h1 {
+  margin: 0 0 1rem;
+  font-size: clamp(1.85rem, 4vw, 2.85rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.site-hero-lead { margin: 0 0 1.75rem; max-width: 34rem; color: var(--text-muted); font-size: 1.06rem; line-height: 1.65; }
+.site-hero-actions { display: flex; flex-wrap: wrap; gap: 0.7rem; }
+.site-hero-actions .btn { min-height: 46px; padding-inline: 1.35rem; }
+.site-hero-note { margin: 1.4rem 0 0; color: var(--text-muted); font-size: 0.9rem; }
+.site-hero-note a { color: var(--teal-dark); font-weight: 600; }
+
+.site-hero-card {
+  padding: 1.6rem;
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  box-shadow: var(--shadow-md);
+}
+.site-hero-card h2 { margin: 0 0 1rem; font-size: 1.05rem; }
+.site-hero-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.85rem; }
+.site-hero-list li { display: flex; gap: 0.7rem; align-items: flex-start; font-size: 0.94rem; line-height: 1.5; }
+.site-hero-list svg { flex: 0 0 18px; width: 18px; height: 18px; margin-top: 2px; color: var(--teal-dark); }
+
+/* Sections --------------------------------------------------------------- */
+.site-section { max-width: 1120px; margin: 0 auto; padding: 3.5rem 1.25rem; }
+.site-section--tint { background: var(--bg-main); }
+.site-section-head { max-width: 44rem; margin: 0 auto 2.25rem; text-align: center; }
+.site-section-head h2 { margin: 0 0 0.6rem; font-size: clamp(1.4rem, 2.6vw, 1.95rem); letter-spacing: -0.015em; }
+.site-section-head p { margin: 0; color: var(--text-muted); line-height: 1.65; }
+
+.site-grid { display: grid; gap: 1.15rem; }
+.site-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.site-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.site-card {
+  padding: 1.5rem;
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.site-card:hover { border-color: var(--teal); box-shadow: var(--shadow-sm); }
+.site-card h3 { margin: 0 0 0.5rem; font-size: 1.05rem; }
+.site-card p { margin: 0; color: var(--text-muted); line-height: 1.6; font-size: 0.94rem; }
+.site-card-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 0.9rem;
+  border-radius: 10px;
+  background: var(--teal-light);
+  color: var(--teal-dark);
+}
+.site-card-icon svg { width: 21px; height: 21px; }
+
+/* Service cards on the public site share the portal illustration style. */
+.site-service-card { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.site-service-card img { width: 100%; height: 132px; object-fit: cover; background: var(--teal-light); }
+.site-service-body { display: flex; flex: 1; flex-direction: column; padding: 1.15rem 1.25rem 1.25rem; }
+.site-service-body h3 { margin: 0 0 0.45rem; font-size: 1rem; }
+.site-service-body p { flex: 1; }
+.site-service-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--border-color);
+}
+.site-service-price { color: var(--teal-dark); font-weight: 800; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.site-service-duration { color: var(--text-muted); font-size: 0.85rem; }
+
+/* Dentist cards ---------------------------------------------------------- */
+.site-dentist-card { display: flex; gap: 1.1rem; align-items: flex-start; }
+.site-dentist-avatar {
+  display: grid;
+  flex: 0 0 60px;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--teal-light);
+  color: var(--teal-dark);
+  font-weight: 800;
+  font-size: 1.15rem;
+}
+.site-dentist-card h3 { margin: 0 0 0.2rem; }
+.site-dentist-role { margin: 0 0 0.6rem; color: var(--teal-dark); font-weight: 600; font-size: 0.9rem; }
+
+/* Info rows -------------------------------------------------------------- */
+.site-info-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 1rem; }
+.site-info-list li { display: flex; gap: 0.8rem; align-items: flex-start; }
+.site-info-list svg { flex: 0 0 20px; width: 20px; height: 20px; margin-top: 2px; color: var(--teal-dark); }
+.site-info-label { display: block; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
+.site-info-value { display: block; margin-top: 0.15rem; font-weight: 600; line-height: 1.5; }
+.site-info-value a { color: var(--teal-dark); }
+
+/* Call to action --------------------------------------------------------- */
+.site-cta {
+  max-width: 1120px;
+  margin: 0 auto 3.5rem;
+  padding: 2.75rem 1.5rem;
+  text-align: center;
+  background: var(--teal-light);
+  border-radius: 16px;
+}
+.site-cta h2 { margin: 0 0 0.6rem; font-size: clamp(1.3rem, 2.4vw, 1.75rem); }
+.site-cta p { margin: 0 auto 1.6rem; max-width: 32rem; color: var(--text-muted); line-height: 1.6; }
+.site-cta-actions { display: flex; flex-wrap: wrap; gap: 0.7rem; justify-content: center; }
+.site-cta-actions .btn { min-height: 46px; padding-inline: 1.35rem; }
+
+/* Footer ----------------------------------------------------------------- */
+.site-footer { border-top: 1px solid var(--border-color); background: #fff; }
+.site-footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 1.75rem 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+.site-footer-links { display: flex; flex-wrap: wrap; gap: 1.1rem; }
+.site-footer-links a { color: var(--text-muted); text-decoration: none; }
+.site-footer-links a:hover { color: var(--teal-dark); text-decoration: underline; }
+
+/* Map embed -------------------------------------------------------------- */
+.site-map {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--teal-light);
+}
+.site-map iframe { display: block; width: 100%; height: 100%; border: 0; }
+
+/* Responsive ------------------------------------------------------------- */
+@media (max-width: 960px) {
+  .site-hero-inner { grid-template-columns: minmax(0, 1fr); gap: 2.25rem; padding-top: 2.75rem; }
+  .site-grid--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 780px) {
+  .site-nav-toggle { display: inline-flex; }
+  .site-nav-links {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.15rem;
+    padding: 0.6rem 1rem 1rem;
+    background: #fff;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .site-nav-links.is-open { display: flex; }
+  .site-nav-links a { padding: 0.7rem 0.6rem; }
+  .site-grid--3, .site-grid--2 { grid-template-columns: minmax(0, 1fr); }
+  .site-hero-inner { padding-bottom: 3rem; }
+}

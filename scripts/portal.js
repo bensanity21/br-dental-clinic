@@ -80,7 +80,7 @@ async function initApp() {
     const ok = await loadSession();
        if (!ok) {
       // Session invalid or expired -> redirect to login
-      window.location.replace(new URL('./index.html', document.baseURI).href);
+      window.location.replace(new URL('./login.html', document.baseURI).href);
       return;
     }
     const onPatientPage = Boolean(document.getElementById('view-patient-home'));
@@ -2054,7 +2054,7 @@ function bindEvents() {
       const confirmed = await confirmModal({ title: 'Log Out', message: 'Are you sure you want to log out?', danger: true });
       if (!confirmed) return;
       await api.post('auth/logout.php');
-      window.location.replace(new URL('./index.html', document.baseURI).href);
+      window.location.replace(new URL('./login.html', document.baseURI).href);
     });
   });
   if (btnProfileToggle) btnProfileToggle.addEventListener('click', (e) => {
@@ -2362,7 +2362,7 @@ window.addEventListener('pageshow', async (event) => {
     setCsrfToken(res.data.csrf_token);
     document.documentElement.style.visibility = '';
   } else {
-    window.location.replace(new URL('./index.html', document.baseURI).href);
+    window.location.replace(new URL('./login.html', document.baseURI).href);
   }
 });
 

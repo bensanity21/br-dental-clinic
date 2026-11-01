@@ -46,10 +46,10 @@ operation against it.
 | `users` | listing, dentist creation, super-admin creation refused, duplicate email, signup forces patient |
 | `reports` | all five report types, date validation, unknown type, CSV export permission |
 | `reset` | password reset request, single-use token, expiry, enumeration safety |
-| `sessions` | database-backed session storage, revocation, expiry |
 | `regression` | public endpoints, CSRF enforcement, HTTP method enforcement |
 
-`reset` and `sessions` are added alongside those features.
+`reset` is added alongside that feature. Suites restore any account they
+modify, so a full run can be repeated without side effects.
 
 ## Notes
 

@@ -266,6 +266,119 @@ try {
         $t->eq(403, $s, 'CSV export is forbidden to a patient');
     }
 
+    // --------------------------------------------------------- password reset
+    if ($only === null || $only === 'reset') {
+        $t->suite('Password reset');
+
+        testClearRateLimits();
+        $anon = new TestClient('anon');
+
+        // Requesting a reset for a real account returns the generic message.
+        [$s, $r] = $anon->post('api/auth/password-reset.php', ['email' => 'jane@test.com']);
+        $t->eq(true, $r['success'] ?? null, 'reset request for a real account succeeds');
+        $realMessage = (string)($r['message'] ?? '');
+
+        // Requesting for an unknown account must be indistinguishable.
+        testClearRateLimits();
+        [$s, $r] = $anon->post('api/auth/password-reset.php', ['email' => 'ghost-' . time() . '@test.local']);
+        $t->eq(true, $r['success'] ?? null, 'reset request for an unknown account also succeeds');
+        $t->eq($realMessage, (string)($r['message'] ?? ''), 'both replies are identical (no account enumeration)');
+
+        // A malformed address is rejected.
+        [$s, $r] = $anon->post('api/auth/password-reset.php', ['email' => 'not-an-email']);
+        $t->ok(($r['success'] ?? true) === false, 'a malformed email is rejected');
+
+        // Only the hash is stored, never the token.
+        $row = testPdoFor(TEST_DB)->query(
+            "SELECT token_hash FROM password_resets ORDER BY id DESC LIMIT 1"
+        )->fetch();
+        $t->ok(preg_match('/^[a-f0-9]{64}$/', (string)($row['token_hash'] ?? '')) === 1, 'only a 64-char SHA-256 hash is stored');
+
+        // Drive a full reset through the helper layer (the token is only ever
+        // returned to the caller, never stored, so fetch it via the API).
+        testClearRateLimits();
+        $pdo = testPdoFor(TEST_DB);
+        require_once testProjectRoot() . '/includes/password_reset.php';
+        $janeId = (int)$pdo->query("SELECT id FROM users WHERE email = 'jane@test.com'")->fetchColumn();
+        $raw = createPasswordReset($pdo, $janeId, '127.0.0.1');
+
+        // A token of the wrong shape is refused without touching the database.
+        [$s, $r] = $anon->post('api/auth/password-reset-confirm.php', [
+            'token' => 'nope',
+            'new_password' => 'NewSecret123!',
+        ]);
+        $t->ok(($r['success'] ?? true) === false, 'a malformed token is refused');
+
+        // Mismatched confirmation is refused.
+        [$s, $r] = $anon->post('api/auth/password-reset-confirm.php', [
+            'token' => $raw,
+            'new_password' => 'NewSecret123!',
+            'confirm_password' => 'different',
+        ]);
+        $t->ok(($r['success'] ?? true) === false, 'mismatched confirmation is refused');
+
+        // A short password is refused.
+        [$s, $r] = $anon->post('api/auth/password-reset-confirm.php', [
+            'token' => $raw,
+            'new_password' => 'short',
+        ]);
+        $t->ok(($r['success'] ?? true) === false, 'a password under 8 characters is refused');
+
+        // A freshly requested reset succeeds.
+        [$s, $r] = $anon->post('api/auth/password-reset-confirm.php', [
+            'token' => $raw,
+            'new_password' => 'BrandNewPass123!',
+            'confirm_password' => 'BrandNewPass123!',
+        ]);
+        $t->eq(true, $r['success'] ?? null, 'a valid token changes the password', (string)($r['message'] ?? ''));
+
+        // The same token cannot be used twice.
+        [$s, $r] = $anon->post('api/auth/password-reset-confirm.php', [
+            'token' => $raw,
+            'new_password' => 'AnotherPass123!',
+            'confirm_password' => 'AnotherPass123!',
+        ]);
+        $t->ok(($r['success'] ?? true) === false, 'the same token cannot be reused');
+
+        // The new password actually works at login.
+        testClearRateLimits();
+        $login = new TestClient('relogin');
+        [$s, $r] = $login->login('jane@test.com', 'BrandNewPass123!');
+        $t->eq(true, $r['success'] ?? null, 'login works with the new password');
+
+        // The old password does not.
+        testClearRateLimits();
+        $old = new TestClient('oldpass');
+        [$s, $r] = $old->login('jane@test.com', 'TestPass123!');
+        $t->ok(($r['success'] ?? true) === false, 'the old password no longer works');
+
+        // An expired token is refused.
+        $rawExpired = createPasswordReset($pdo, $janeId, '127.0.0.1');
+        $pdo->prepare("UPDATE password_resets SET expires_at = (NOW() - INTERVAL 1 MINUTE) WHERE token_hash = ?")
+            ->execute([hash('sha256', $rawExpired)]);
+        [$s, $r] = $anon->post('api/auth/password-reset-confirm.php', [
+            'token' => $rawExpired,
+            'new_password' => 'ExpiredPass123!',
+            'confirm_password' => 'ExpiredPass123!',
+        ]);
+        $t->ok(($r['success'] ?? true) === false, 'an expired token is refused');
+
+        // Requesting a new link invalidates the previous one.
+        $first = createPasswordReset($pdo, $janeId, '127.0.0.1');
+        $second = createPasswordReset($pdo, $janeId, '127.0.0.1');
+        [$s, $r] = $anon->post('api/auth/password-reset-confirm.php', [
+            'token' => $first,
+            'new_password' => 'ShouldFail123!',
+            'confirm_password' => 'ShouldFail123!',
+        ]);
+        $t->ok(($r['success'] ?? true) === false, 'requesting a newer link invalidates the older one');
+
+        // Leave Jane with the standard test password so later suites can log in.
+        $pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ?")
+            ->execute([testHash('TestPass123!'), $janeId]);
+        testClearRateLimits();
+    }
+
     // --------------------------------------------------------- regression
     if ($only === null || $only === 'regression') {
         $t->suite('Regression (public site and CSRF)');

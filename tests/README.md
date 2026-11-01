@@ -12,11 +12,13 @@ php tests/run.php authz
 php tests/run.php appointments
 php tests/run.php users
 php tests/run.php reports
-php tests/run.php reset
-php tests/run.php sessions
+php tests/run.php backup
+php tests/run.php phone
 php tests/run.php regression
 
 php tests/check-htaccess.php   # Apache-level file protection
+php tests/tools/phone-index.php  # blind index behaviour
+php tests/tools/smtp-matrix.php  # SMTP transports (mock server)
 php tests/stop-server.php      # stop the test server
 ```
 
@@ -46,6 +48,7 @@ operation against it.
 | `users` | listing, dentist creation, super-admin creation refused, duplicate email, signup forces patient |
 | `reports` | all five report types, date validation, unknown type, CSV export permission |
 | `reset` | password reset request, single-use token, expiry, enumeration safety |
+| `phone` | phone encryption, blind-index matching, reindexing on update, archive snapshots |
 | `regression` | public endpoints, CSRF enforcement, HTTP method enforcement |
 
 `reset` is added alongside that feature. Suites restore any account they

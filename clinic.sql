@@ -154,11 +154,13 @@ CREATE TABLE `dental_records` (
   `clinical_notes` text DEFAULT NULL,
   `record_date` date NOT NULL,
   `record_time` time DEFAULT NULL,
-  `patient_contact` varchar(40) DEFAULT NULL,
+  `patient_contact` varchar(255) DEFAULT NULL COMMENT 'AES-256-GCM ciphertext (v2:...) or legacy plain text',
+  `patient_contact_index` char(64) DEFAULT NULL COMMENT 'HMAC-SHA256 blind index for patient_contact; matching only',
   `status` enum('In Progress','Completed') NOT NULL DEFAULT 'In Progress',
   PRIMARY KEY (`id`),
   KEY `fk_dental_records_dentist` (`dentist_id`),
   KEY `idx_records_patient_date` (`patient_id`,`record_date`),
+  KEY `idx_records_contact_index` (`patient_contact_index`),
   CONSTRAINT `fk_dental_records_dentist` FOREIGN KEY (`dentist_id`) REFERENCES `dentists` (`id`),
   CONSTRAINT `fk_dental_records_patient` FOREIGN KEY (`patient_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -298,7 +300,8 @@ CREATE TABLE `users` (
   `full_name` varchar(100) NOT NULL,
   `email` varchar(150) NOT NULL,
   `password_hash` varchar(255) NOT NULL,
-  `phone_number` varchar(20) DEFAULT NULL,
+  `phone_number` varchar(255) DEFAULT NULL COMMENT 'AES-256-GCM ciphertext (v2:...) or legacy plain text',
+  `phone_number_hash` char(64) DEFAULT NULL COMMENT 'HMAC-SHA256 blind index for phone_number; matching only',
   `emergency_contact` text DEFAULT NULL,
   `home_address` text DEFAULT NULL,
   `date_of_birth` text DEFAULT NULL,
@@ -306,7 +309,8 @@ CREATE TABLE `users` (
   `role` enum('patient','super-admin','clinic_admin','master_admin','doctor') NOT NULL DEFAULT 'patient',
   `created_at` timestamp NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
-  UNIQUE KEY `email` (`email`)
+  UNIQUE KEY `email` (`email`),
+  KEY `idx_users_phone_hash` (`phone_number_hash`)
 ) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;

@@ -5,6 +5,7 @@ require_once '../../includes/auth.php';
 require_once '../../includes/response.php';
 require_once '../../includes/db.php';
 require_once '../../includes/encrypt.php';
+require_once '../../includes/phone.php';
 
 requireLogin();
 requireRole(['patient', 'doctor', 'super-admin']);
@@ -59,10 +60,14 @@ if ($user['role'] === 'patient') {
 }
 
 $records = $stmt->fetchAll();
-// Decrypt clinical notes for authorized viewers
+// Decrypt clinical notes for authorized viewers, and the contact number, which
+// may come from either the record itself or the patient's account.
 foreach ($records as &$r) {
     if ($r['clinical_notes'] !== null) {
         $r['clinical_notes'] = decryptData($r['clinical_notes']);
+    }
+    if (array_key_exists('patient_contact', $r) && $r['patient_contact'] !== null) {
+        $r['patient_contact'] = phoneForDisplay($r['patient_contact']);
     }
 }
 unset($r);

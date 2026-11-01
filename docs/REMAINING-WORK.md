@@ -24,9 +24,9 @@ An honest, ordered list. Nothing here is claimed as done.
 |---|---|---|
 | 10 | Test a **restore on the target server** before real patients use it | the drill is verified locally; prove it where it matters |
 | 11 | `expose_php = Off`, `display_errors = Off` on the live host | php.ini |
-| 12 | Decide on the **phone_number plaintext** question (see SECURITY-FINDINGS.md) | currently accepted, documented |
-| 13 | Change `Admin123!` / `Dentist123!` — they are in your Git history | see note below |
-| 14 | Write down the **key custody** procedure: who holds it, where | a clinic that loses the key loses records |
+| 12 | Change `Admin123!` / `Dentist123!` — they are in your Git history | see note below |
+| 13 | Write down the **key custody** procedure: who holds it, where | a clinic that loses the key loses records |
+| 14 | If you rotate the encryption key, run `php tools/reindex-phones.php` | or patients stop being findable by phone |
 
 ## Optional (nice to have, not blockers)
 
@@ -57,11 +57,14 @@ repository you should assume they are known.
 
 ## What is already done and verified
 
+- Phone numbers encrypted at rest with a keyed blind index, so patient matching
+  by name + phone still works; migration, backfill tool and reindex tool included
 - Backup and restore, with a restore drill proving byte-identical recovery
 - SMTP client with env-var credentials, mock-verified
 - No passwords in `clinic.sql`
 - Session storage in MySQL with hashed ids
 - Optional IP allowlist with lockout protection
-- 133 automated assertions
+- 166 automated assertions
 - 10 sensitive paths blocked at the web server
 - Three seeded accounts with no usable password until you set one
+- Setup guide (`SETUP.md`) and deployment guide (`DEPLOYMENT.md`)

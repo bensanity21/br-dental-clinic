@@ -9,29 +9,42 @@ How to take this project from XAMPP to a live server, and what must change first
 `clinic.sql` deliberately contains **no usable passwords**. Every seeded account
 has the placeholder `CHANGE_ME`, which `password_verify()` can never match.
 
-### On the command line (recommended)
+See `SETUP.md` steps 3-5 for the full sequence. In short:
 
 ```bash
+php -r "echo bin2hex(random_bytes(32));"          # 1. encryption key -> config/secrets.local.php
 php database/set-password.php admin@brdental.com --generate
-```
-
-It prints a strong password once, saves the hash, and signs out any existing
-session for that account. Repeat for the dentist accounts:
-
-```bash
 php database/set-password.php elena@brdental.com --generate
 php database/set-password.php smith@brdental.com --generate
 ```
 
-### In the browser (fresh install only)
+Each prints a strong password once, saves the hash, and signs out any existing
+session for that account.
 
-Open `setup.html`. It works **only** while the administrator still has the
-`CHANGE_ME` placeholder, and it closes permanently the first time a real password
-is saved. On a live site it reports "Setup already completed" and refuses every
-attempt to set a password.
+> The browser alternative is `setup.html`, which works **only** while the
+> administrator still has the `CHANGE_ME` placeholder and closes permanently
+> the first time a real password is saved.
 
-> It refuses `Admin123!`, anything containing `admin`, `password`, `changeme`,
-> and anything under 12 characters.
+---
+
+## 1a. Phone numbers are encrypted
+
+Patient phone numbers are stored as AES-256-GCM ciphertext, with a keyed
+HMAC-SHA256 blind index in `phone_number_hash` so staff can still find a
+patient by name + phone when adding a clinical record.
+
+Nothing to configure — it is automatic on every write path. If you import an
+older database that holds plain-text numbers, run:
+
+```bash
+php tools/encrypt-phones.php --dry-run   # preview
+php tools/encrypt-phones.php             # apply (takes a backup first)
+```
+
+The index is derived from the encryption key. **If you change
+`current_key` without keeping the old one as `previous_key`, existing blind
+indexes stop matching** and patients can no longer be found by phone. Rotate
+keys by adding `previous_key`, not by replacing it outright.
 
 ---
 

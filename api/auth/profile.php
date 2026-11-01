@@ -9,6 +9,7 @@ requireLogin();
 requireRole(['patient']);
 $user = currentUser();
 require_once '../../includes/encrypt.php';
+require_once '../../includes/phone.php';
 
 try {
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -18,6 +19,7 @@ try {
         if (!$profile) respondError('Your profile could not be found.', null, 404);
 
         // Sensitive fields are encrypted at rest; decrypt only for the owner.
+        $profile['phone_number']      = phoneForDisplay($profile['phone_number']);
         $profile['emergency_contact'] = $profile['emergency_contact'] !== null ? decryptData($profile['emergency_contact']) : null;
         $profile['home_address']      = $profile['home_address'] !== null ? decryptData($profile['home_address']) : null;
         $profile['date_of_birth']     = $profile['date_of_birth'] !== null ? decryptData($profile['date_of_birth']) : null;
@@ -81,10 +83,17 @@ try {
         }
     }
 
-    $stmt = $pdo->prepare("UPDATE users SET full_name = ?, phone_number = ?, emergency_contact = ?, home_address = ?, date_of_birth = ? WHERE id = ? AND role = 'patient'");
+    $stmt = $pdo->prepare("UPDATE users SET full_name = ?, phone_number = ?, phone_number_hash = ?, emergency_contact = ?, home_address = ?, date_of_birth = ? WHERE id = ? AND role = 'patient'");
+
+    // The phone number is personal data, so it is encrypted at rest. A separate
+    // keyed hash column keeps it searchable, because staff identify a patient by
+    // name + phone when adding a clinical record. See includes/phone.php.
+    $phoneStored = phoneForStorage($phone);
+
     $stmt->execute([
         $fullName,
-        $phone !== '' ? $phone : null,
+        $phoneStored['cipher'],
+        $phoneStored['hash'],
         $emergency !== '' ? encryptData($emergency) : null,
         $address !== '' ? encryptData($address) : null,
         $dob !== '' ? encryptData($dob) : null,

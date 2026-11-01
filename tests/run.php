@@ -805,6 +805,120 @@ try {
         }
     }
 
+    // ------------------------------------------------------- phone privacy
+    if ($only === null || $only === 'phone') {
+        $t->suite('Phone number encryption and matching');
+
+        require_once testProjectRoot() . '/includes/phone.php';
+
+        $pdo = testPdoFor(TEST_DB);
+
+        // --- the index is what keeps matching working ---------------------
+        $formats = ['09171234567', '0917 123 4567', '+639171234567', '0917-123-4567', '9171234567'];
+        $indexes = array_unique(array_map('phoneBlindIndex', $formats));
+        $t->eq(1, count($indexes), 'every format of one number produces the same index');
+
+        $t->ok(
+            phoneBlindIndex('09171234567') !== hash('sha256', '+639171234567'),
+            'the index is keyed (HMAC), not a bare hash'
+        );
+
+        // --- a new patient's number is stored encrypted -------------------
+        testClearRateLimits();
+        $admin = new TestClient('phoneAdmin');
+        $admin->login('admin@brdental.com', 'TestPass123!');
+
+        $email = 'phone' . time() . '@test.local';
+        [$s, $r] = $admin->post('api/users/create.php', [
+            'full_name' => 'Phone Probe',
+            'email'     => $email,
+            'password'  => 'TestPass123!',
+            'role'      => 'patient',
+            'phone_number' => '0917 555 0101',
+        ]);
+        $t->eq(true, $r['success'] ?? null, 'admin can create a patient with a phone');
+
+        $row = $pdo->prepare("SELECT id, phone_number, phone_number_hash FROM users WHERE email = ?");
+        $row->execute([$email]);
+        $created = $row->fetch();
+
+        $t->ok(str_starts_with((string)$created['phone_number'], 'v2:'), 'stored value is ciphertext');
+        $t->ok(!str_contains((string)$created['phone_number'], '555'), 'ciphertext does not contain the number');
+        $t->ok(strlen((string)$created['phone_number_hash']) === 64, 'blind index column is populated');
+        $t->eq('0917 555 0101', phoneForDisplay($created['phone_number']), 'decrypts back to what was typed');
+
+        // --- the staff list decrypts it -----------------------------------
+        [$s, $r] = $admin->get('api/users/list.php');
+        $found = null;
+        foreach (($r['data'] ?? []) as $u) {
+            if (($u['email'] ?? '') === $email) { $found = $u['phone_number'] ?? null; break; }
+        }
+        $t->eq('0917 555 0101', $found, 'the staff user list shows the decrypted number');
+
+        // --- a clinical record links by name + phone ----------------------
+        $serviceId = (int)$pdo->query("SELECT id FROM services WHERE is_active = 1 ORDER BY id LIMIT 1")->fetchColumn();
+        $dentistId = (int)$pdo->query("SELECT id FROM dentists ORDER BY id LIMIT 1")->fetchColumn();
+
+        [$s, $r] = $admin->post('api/records/add.php', [
+            'patient_name'     => 'Phone Probe',
+            'patient_contact'  => '0917-555-0101',   // different formatting on purpose
+            'dentist_id'       => $dentistId,
+            'service_id'       => $serviceId,
+            'clinical_notes'   => 'Automated test note.',
+            'record_date'      => date('Y-m-d'),
+            'record_time'      => '09:00',
+        ]);
+        $t->eq(true, $r['success'] ?? null, 'a clinical record can be added', (string)($r['message'] ?? ''));
+
+        $rec = $pdo->prepare("SELECT id, patient_id, patient_contact, patient_contact_index FROM dental_records WHERE id = ?");
+        $rec->execute([(int)($r['data']['id'] ?? 0)]);
+        $savedRecord = $rec->fetch();
+
+        $t->eq((int)$created['id'], (int)($savedRecord['patient_id'] ?? 0),
+            'the record linked to the right patient despite different phone formatting');
+        $t->ok(str_starts_with((string)($savedRecord['patient_contact'] ?? ''), 'v2:'),
+            'the record contact is stored encrypted');
+        $t->ok(!empty($savedRecord['patient_contact_index']),
+            'the record contact has a blind index');
+
+        $pdo->prepare("DELETE FROM dental_records WHERE id = ?")->execute([(int)($savedRecord['id'] ?? 0)]);
+
+        // --- updating a number reindexes it -------------------------------
+        testClearRateLimits();
+        $patient = new TestClient('phonePatient');
+        $patient->login($email, 'TestPass123!');
+        [$s, $r] = $patient->patch('api/auth/profile.php', [
+            'full_name'    => 'Phone Probe',
+            'phone_number' => '+63 917 555 0202',
+        ]);
+        $t->eq(true, $r['success'] ?? null, 'a patient can change their own phone number');
+
+        $row->execute([$email]);
+        $updated = $row->fetch();
+        $t->eq('+63 917 555 0202', phoneForDisplay($updated['phone_number']), 'new number decrypts correctly');
+        $t->eq(phoneBlindIndex('09175550202'), $updated['phone_number_hash'],
+            'the index follows the new number');
+
+        // --- the old number must no longer match --------------------------
+        $old = $pdo->prepare("SELECT COUNT(*) FROM users WHERE phone_number_hash = ?");
+        $old->execute([phoneBlindIndex('0917 555 0101')]);
+        $t->eq(0, (int)$old->fetchColumn(), 'the previous number no longer matches');
+
+        // --- clearing the number clears the index -------------------------
+        [$s, $r] = $patient->patch('api/auth/profile.php', [
+            'full_name'    => 'Phone Probe',
+            'phone_number' => '',
+        ]);
+        $row->execute([$email]);
+        $cleared = $row->fetch();
+        $t->ok($cleared['phone_number'] === null && $cleared['phone_number_hash'] === null,
+            'clearing the number clears both columns');
+
+        // --- cleanup (records reference the user, so remove them first) ----
+        $pdo->prepare("DELETE FROM dental_records WHERE patient_id = ?")->execute([(int)$created['id']]);
+        $pdo->prepare("DELETE FROM users WHERE email = ?")->execute([$email]);
+    }
+
     // --------------------------------------------------------- regression
     if ($only === null || $only === 'regression') {
         $t->suite('Regression (public site and CSRF)');

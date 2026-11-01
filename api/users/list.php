@@ -22,4 +22,11 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $users = $stmt->fetchAll();
 
+// Phone numbers are encrypted at rest; decrypt them for the staff-facing list.
+require_once '../../includes/phone.php';
+foreach ($users as &$listedUser) {
+    $listedUser['phone_number'] = phoneForDisplay($listedUser['phone_number']);
+}
+unset($listedUser);
+
 respondSuccess('Users retrieved', $users);

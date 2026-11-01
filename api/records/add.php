@@ -6,6 +6,7 @@ require_once '../../includes/response.php';
 require_once '../../includes/db.php';
 require_once '../../includes/activity.php';
 require_once '../../includes/encrypt.php';
+require_once '../../includes/phone.php';
 require_once '../../includes/notifications.php';
 
 requireLogin();
@@ -43,6 +44,11 @@ if (!is_string($time) || !preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $time)) {
 }
 
 $patientId = ($patientId === '' || $patientId === null) ? null : (int)$patientId;
+
+// Phone numbers are stored encrypted, so matching uses the keyed blind index
+// rather than the ciphertext (which differs on every save). See includes/phone.php.
+$contactIndex = phoneBlindIndex($contact);
+
 if ($patientId !== null) {
     $patientStmt = $pdo->prepare("SELECT id FROM users WHERE id = ? AND role = 'patient' LIMIT 1");
     $patientStmt->execute([$patientId]);
@@ -50,10 +56,17 @@ if ($patientId !== null) {
 } elseif ($user['role'] === 'super-admin' && $contact !== '') {
     // Link a matching registered patient only when name + phone identify one
     // account uniquely; otherwise preserve this as a standalone record.
-    $matchStmt = $pdo->prepare("SELECT id FROM users WHERE role = 'patient' AND full_name = ? AND phone_number = ? LIMIT 2");
-    $matchStmt->execute([$patientName, $contact]);
-    $matches = $matchStmt->fetchAll();
-    if (count($matches) === 1) $patientId = (int)$matches[0]['id'];
+    // If the phone cannot be indexed, name alone is never enough to link.
+    if ($contactIndex !== null) {
+        $matchStmt = $pdo->prepare(
+            "SELECT id FROM users
+             WHERE role = 'patient' AND full_name = ? AND phone_number_hash = ?
+             LIMIT 2"
+        );
+        $matchStmt->execute([$patientName, $contactIndex]);
+        $matches = $matchStmt->fetchAll();
+        if (count($matches) === 1) $patientId = (int)$matches[0]['id'];
+    }
 }
 
 $serviceStmt = $pdo->prepare('SELECT service_name FROM services WHERE id = ? LIMIT 1');
@@ -77,8 +90,8 @@ if ($user['role'] === 'doctor') {
 
     $patientStmt = $pdo->prepare("SELECT p.id FROM appointments a JOIN users p ON p.id = a.patient_id
         WHERE a.dentist_id = ? AND p.role = 'patient' AND p.full_name = ?
-          AND (? = '' OR p.phone_number = ?) LIMIT 1");
-    $patientStmt->execute([$assignedDentist['id'], $patientName, $contact, $contact]);
+          AND (? = '' OR p.phone_number_hash = ?) LIMIT 1");
+    $patientStmt->execute([$assignedDentist['id'], $patientName, $contact, (string)$contactIndex]);
     $matchedPatient = $patientStmt->fetch();
     if (!$matchedPatient || ($patientId !== null && $patientId !== (int)$matchedPatient['id'])) {
         respondError('You can only add records for patients assigned to you.', null, 403);
@@ -89,18 +102,26 @@ if ($user['role'] === 'doctor') {
 // Encrypt sensitive clinical notes before saving
 $encryptedNotes = $notes !== '' ? encryptData($notes) : null;
 
+// The contact captured on the record is personal data too, so it is encrypted
+// at rest and given a blind index so the record can still be matched later.
+$contactStored = phoneForStorage($contact);
+
 $stmt = $pdo->prepare("
-    INSERT INTO dental_records (patient_id, patient_name, dentist_id, treatment_procedure, clinical_notes, record_date, record_time, patient_contact, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'In Progress')
+    INSERT INTO dental_records (patient_id, patient_name, dentist_id, treatment_procedure, clinical_notes, record_date, record_time, patient_contact, patient_contact_index, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'In Progress')
 ");
-$stmt->execute([$patientId, $patientName, $dentistId, $treatment, $encryptedNotes, $date, $time, $contact !== '' ? $contact : null]);
+$stmt->execute([$patientId, $patientName, $dentistId, $treatment, $encryptedNotes, $date, $time, $contactStored['cipher'], $contactStored['hash']]);
+
+// Capture the new id immediately. Anything that inserts another row before
+// this point would overwrite lastInsertId(), and createInAppNotification()
+// below does exactly that.
+$newRecordId = (int)$pdo->lastInsertId();
 
 // Notify patient
 if ($patientId !== null) {
     createInAppNotification($pdo, (int)$patientId, "A new dental record was added on $date.");
 }
 
-$newRecordId = (int)$pdo->lastInsertId();
 logActivity($pdo, 'record.create', 'dental_records', $newRecordId,
     "Clinical record #$newRecordId added for patient #" . ($patientId ?? '?') . ".",
     ['patient_id' => $patientId]);

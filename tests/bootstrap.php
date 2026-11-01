@@ -148,31 +148,32 @@ function testServerEnsure(): void
     if (testServerUp()) return;
 
     $root = testProjectRoot();
-    $launcher = sys_get_temp_dir() . '/br_test_server_launch.bat';
-    file_put_contents($launcher, implode("\r\n", [
-        '@echo off',
-        'set DB_NAME=' . TEST_DB,
-        'set APP_ENV=testing',
-        '"C:\xampp\php\php.exe" -S 127.0.0.1:' . TEST_PORT . ' -t "' . str_replace('/', '\\', $root) . '"',
-    ]));
 
-    // proc_open with a detached process group is used instead of
-    // 'cmd /C start /B', which blocks the calling shell on Windows whenever no
-    // console window is available (the suite would hang instead of starting).
-    $pipes = [];
+    // Launch PHP directly, not through cmd. Wrapping in 'cmd /C start' waits for
+    // the child on Windows when there is no console, which hangs the suite.
+    $descriptors = [
+        0 => ['file', 'NUL', 'r'],
+        1 => ['file', sys_get_temp_dir() . '/br_test_server.out', 'a'],
+        2 => ['file', sys_get_temp_dir() . '/br_test_server.err', 'a'],
+    ];
+
+    $env = [
+        'DB_NAME'  => TEST_DB,
+        'APP_ENV'  => 'testing',
+        'PATH'     => getenv('PATH'),
+        'SystemRoot' => getenv('SystemRoot'),
+    ];
+
     $proc = @proc_open(
-        'cmd /C "' . $launcher . '"',
-        [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
-        $pipes
+        ['C:\xampp\php\php.exe', '-S', '127.0.0.1:' . TEST_PORT, '-t', $root],
+        $descriptors,
+        $pipes,
+        $root,
+        $env
     );
 
     if (!is_resource($proc)) {
-        throw new RuntimeException('Could not launch the test server.');
-    }
-
-    // Do not wait on the child: read nothing, close our handles immediately.
-    foreach ($pipes as $pipe) {
-        if (is_resource($pipe)) @fclose($pipe);
+        throw new RuntimeException('Could not launch the test server process.');
     }
 
     for ($i = 0; $i < 80; $i++) {
@@ -181,9 +182,11 @@ function testServerEnsure(): void
     }
 
     @proc_terminate($proc);
+    $err = @file_get_contents(sys_get_temp_dir() . '/br_test_server.err') ?: '';
 
     throw new RuntimeException(
         'Test server is not answering on port ' . TEST_PORT . ".\n" .
+        ($err !== '' ? "Server output:\n" . $err . "\n" : '') .
         'Start it manually in another terminal:' . "\n" .
         '  cd "' . $root . '"' . "\n" .
         '  DB_NAME=' . TEST_DB . ' APP_ENV=testing php -S 127.0.0.1:' . TEST_PORT . ' -t .'

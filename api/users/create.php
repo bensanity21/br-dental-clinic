@@ -35,10 +35,14 @@ if ($chk->fetch()) { respondError('Email already registered.', null, 409); }
 
 $hash = password_hash($password, PASSWORD_BCRYPT);
 
+// Encrypt the phone number at rest and keep a keyed index for matching.
+require_once '../../includes/phone.php';
+$phoneStored = phoneForStorage($phone);
+
 $pdo->beginTransaction();
 try {
-    $stmt = $pdo->prepare('INSERT INTO users (full_name, email, password_hash, phone_number, role) VALUES (?, ?, ?, ?, ?)');
-    $stmt->execute([$fullName, $email, $hash, $phone, $role]);
+    $stmt = $pdo->prepare('INSERT INTO users (full_name, email, password_hash, phone_number, phone_number_hash, role) VALUES (?, ?, ?, ?, ?, ?)');
+    $stmt->execute([$fullName, $email, $hash, $phoneStored['cipher'], $phoneStored['hash'], $role]);
     $userId = $pdo->lastInsertId();
 
     // If doctor, create linked dentist profile

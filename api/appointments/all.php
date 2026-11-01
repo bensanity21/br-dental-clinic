@@ -41,4 +41,15 @@ if ($user['role'] === 'doctor') {
 }
 
 $appointments = $stmt->fetchAll();
+
+// The stored phone number is ciphertext; decrypt it for staff looking at the
+// appointment list. Anything unencrypted (legacy) passes through unchanged.
+require_once '../../includes/phone.php';
+foreach ($appointments as &$appointment) {
+    if (array_key_exists('patient_phone', $appointment)) {
+        $appointment['patient_phone'] = phoneForDisplay($appointment['patient_phone']);
+    }
+}
+unset($appointment);
+
 respondSuccess('All appointments retrieved', $appointments);

@@ -27,11 +27,26 @@ if ($target['role'] === 'super-admin') {
     respondError('The Super Admin account cannot be modified from this page.', null, 403);
 }
 
-// Build dynamic update
+// Build dynamic update. phone_number is handled separately below because it is
+// encrypted at rest and carries a keyed index that must stay in step.
 $fields = []; $params = [];
-foreach (['full_name', 'email', 'phone_number', 'role'] as $f) {
+$plainFields = ['full_name', 'email', 'role'];
+if (!isset($data['phone_number'])) {
+    $plainFields[] = 'phone_number';
+}
+foreach ($plainFields as $f) {
     if (isset($data[$f])) { $fields[] = "$f = ?"; $params[] = $data[$f]; }
 }
+
+if (isset($data['phone_number'])) {
+    require_once '../../includes/phone.php';
+    $stored = phoneForStorage((string)$data['phone_number']);
+    $fields[] = 'phone_number = ?';
+    $params[]  = $stored['cipher'];
+    $fields[] = 'phone_number_hash = ?';
+    $params[]  = $stored['hash'];
+}
+
 if ($fields) {
     $params[] = $id;
     $pdo->prepare('UPDATE users SET ' . implode(', ', $fields) . ' WHERE id = ?')->execute($params);

@@ -2,73 +2,73 @@
 
 Everything below was tested on 2026-11-01 against the running XAMPP install.
 Confirmed problems are separated from optional improvements, and anything I
-could not verify is marked as such.
+could not verify is marked as unverified.
 
 ---
 
-## Confirmed problems
+## Resolved since the first review
 
-### 1. `users.phone_number` is stored in plain text (MEDIUM)
+### `users.phone_number` was stored in plain text — FIXED
 
-**Status: NOT fixed. Deliberate. Reasoning below.**
+Both phone columns now hold AES-256-GCM ciphertext, with a keyed blind index for
+matching:
 
-Every other sensitive patient field is encrypted before it is written:
+| Column | Before | Now |
+|---|---|---|
+| `users.phone_number` | plain text | `v2:<ciphertext>` |
+| `users.phone_number_hash` | — | HMAC-SHA256 blind index (new) |
+| `dental_records.patient_contact` | plain text | `v2:<ciphertext>` |
+| `dental_records.patient_contact_index` | — | HMAC-SHA256 blind index (new) |
+| `archives.record_data` (JSON snapshot) | plain text | ciphertext + index |
 
-| Column | Stored as |
-|---|---|
-| `home_address` | `v2:<ciphertext>` (AES-256-GCM) |
-| `date_of_birth` | `v2:<ciphertext>` |
-| `emergency_contact` | `v2:<ciphertext>` |
-| `clinical_notes` | `v2:<ciphertext>` |
-| **`phone_number`** | **plain text**, e.g. `09171234567` |
+Implementation: `includes/phone.php`. Migration:
+`database/migrate-phone-encryption.sql`. Data tool: `tools/encrypt-phones.php`.
 
-Verified: `api/auth/profile.php` line 84 writes `phone_number` without calling
-`encryptData()`, while lines 88-90 encrypt the three neighbouring fields.
+**Why a blind index rather than plain encryption.** Encryption uses a fresh
+random nonce per save, so the same number produces different ciphertext each
+time and `WHERE phone_number = ?` would never match again. Patient linking in
+`api/records/add.php` depends on that equality. `phone_number_hash` is a
+deterministic HMAC-SHA256 of the normalised number, so matching still works
+while the database alone cannot be brute-forced back to a phone number.
 
-**Why it was not simply encrypted**
+**Phone numbers are normalised** before hashing, so `09171234567`,
+`0917 123 4567`, `+639171234567` and `9171234567` all match the same patient.
 
-`phone_number` is not only displayed. It is used for **exact-match lookup**:
+**Verified end to end:** every format of a number resolves to the same patient;
+a clinical record created with differently-formatted input links to the right
+account; changing a number reindexes it and the old number stops matching;
+clearing it clears both columns; archive snapshots encrypt and still restore;
+and the operation is idempotent.
 
-- `api/records/add.php:53` — `WHERE full_name = ? AND phone_number = ?` to attach
-  a clinical record to the right patient account.
-- `api/records/add.php:80` — `AND (? = '' OR p.phone_number = ?)` to confirm a
-  doctor is recording against their own patient.
+### Blank `Cache-Control` / no leaked ciphertext to the UI — verified
 
-`encryptData()` uses a **random 12-byte nonce per call**, so encrypting the same
-number twice produces different ciphertext. A `WHERE phone_number = ?` compare
-would never match again, and patient linking would stop working — silently.
-That is a clinical-data error, which is worse than the exposure.
+No page or API response exposes `v2:` ciphertext; all read paths decrypt first.
 
-There were 2 non-null values in the live database at review time.
+---
 
-**Options, in order of preference**
+## Confirmed problems still open
 
-1. **Accept it.** This is a student thesis system on a local/clinic network. A
-   phone number is far less sensitive than a home address or clinical notes, and
-   the database is already protected by the app's authentication. Document the
-   decision. *Cost: none.*
-2. **Blind index.** Add a `phone_number_hash` column (`hash_hmac('sha256',
-   normalized, KEY)`) and match on that, keeping `phone_number` encrypted. This
-   preserves equality search with encryption at rest. *Cost: a migration, a
-   column, changes to 2 queries and 1 write path, plus a backfill.*
-3. **Deterministic encryption** of the phone column only. *Not recommended* —
-   a deterministic scheme weakens AES-GCM to ECB-like leakage.
-
-I did not implement 2 or 3 because they touch the records-linking path, which is
-the one place where a silent mistake corrupts clinical data. If you want it,
-say so and it will be done with its own tests and a restore drill first.
-
-### 2. `X-Powered-By: PHP/8.3.36` is exposed (LOW, server config)
+### 1. `X-Powered-By: PHP/8.3.36` is exposed (LOW, server config)
 
 `expose_php=On` in `php.ini`. Leaks only the PHP version. Not application code.
 
 Fix on the live host: `expose_php = Off`. On XAMPP it is harmless.
 
-### 3. `Strict-Transport-Security` is not sent (LOW, by design)
+### 2. `Strict-Transport-Security` is not sent (LOW, by design)
 
-It is deliberately absent. Sending HSTS over plain HTTP would pin the browser to
-HTTPS for the whole domain and break local development. Add it on the live host
-only after HTTPS is confirmed working.
+Deliberately absent. Sending HSTS over plain HTTP would pin the browser to HTTPS
+for the whole domain and break local development. Add it on the live host only
+after HTTPS is confirmed working.
+
+### 3. Blind indexes are key-dependent (INFO — operational, not a flaw)
+
+`phone_number_hash` is derived from `ENCRYPTION_KEY`. Rotating the key without
+keeping the old one as `previous_key` stops existing indexes matching. This is
+inherent to keyed blind indexes, not a defect.
+
+Mitigated by `tools/reindex-phones.php`, which rebuilds every index from the
+still-decryptable ciphertext and refuses to guess when a row cannot be decrypted.
+Verified by simulating a stale index set and repairing it.
 
 ---
 
@@ -83,7 +83,7 @@ only after HTTPS is confirmed working.
 | Session storage | ids stored as SHA-256; cookie differs from row | verified |
 | Password storage | bcrypt; `password_verify()` checked | verified |
 | Patient isolation | patient attempting to read another patient's records/profile/language | all confined to own `user_id` |
-| Doctor isolation | doctor attempting to modify another doctor's appointment | refused with "You can only modify your own appointments."; row unchanged |
+| Doctor isolation | doctor attempting to modify another doctor's appointment | refused; row unchanged |
 | Privilege escalation | doctor PATCHing `users/update.php` to `super-admin` | 403 |
 | Role-gated endpoints | 18 endpoints x 4 roles | matrix correct |
 | Doctor navigation | visible nav items in a real browser | 5 items; no Reports/Users/Archives/Settings |
@@ -93,6 +93,7 @@ only after HTTPS is confirmed working.
 | File exposure | 10 sensitive paths over HTTP | all 403 |
 | Backups over HTTP | `backups/*.sql` | 403 |
 | Secrets in Git | `git ls-files` | none; `secrets.local.php` ignored |
+| Phone data at rest | direct column inspection | ciphertext only; no plain numbers |
 
 ---
 
@@ -109,3 +110,6 @@ only after HTTPS is confirmed working.
    separate database with byte-identical results. A cross-machine restore also
    needs the encryption key in place.
 4. **Concurrent load.** No load testing was performed.
+5. **Encryption on a database with thousands of records.** Tested with the live
+   dataset only; the tool is per-row with a transaction and would be slower at
+   scale, though no less safe.

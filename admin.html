@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BR Dental Clinic - Admin Portal</title>
   <meta name="description" content="BR Dental Clinic master admin portal.">
-  <link rel="stylesheet" href="style.css?v=18">
+  <link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
   <a class="skip-link" href="#views-viewport">Skip to main content</a>
@@ -288,8 +288,8 @@
 
           <div id="printable-report" class="card">
             <div class="report-print-header">
-              <h2>BR Dental Clinic — Official Summary Report</h2>
-              <p>73 Nyugan Road, Paliparan 1, Dasmariñas City, Cavite | Phone: 09066636112</p>
+              <h2><span data-clinic="name">BR Dental Clinic</span> — Official Summary Report</h2>
+              <p><span data-clinic="address">73 Nyugan Road, Paliparan 1, Dasmariñas City, Cavite</span> | Phone: <span data-clinic="phone">09066636112</span></p>
               <hr class="divider">
             </div>
             <div id="report-results-body">
@@ -425,6 +425,6 @@
   <script type="module" src="scripts/api.js?v=8"></script>
   <script type="module" src="scripts/modal.js?v=8"></script>
   <script type="module" src="scripts/toast.js?v=5"></script>
-  <script type="module" src="scripts/portal.js?v=36"></script>
+  <script type="module" src="scripts/portal.js?v=39"></script>
 </body>
 </html>

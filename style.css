@@ -734,6 +734,11 @@ input:focus, select:focus, textarea:focus {
 .service-card-bottom { display: flex; flex: 1; flex-direction: column; justify-content: flex-end; gap: 1rem; margin-top: auto; }
 .service-card-price { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; padding-top: 0.85rem; border-top: 1px solid var(--border-color); color: var(--text-muted); }
 .service-card-price strong { color: var(--teal-dark); font-size: 1.15rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+/* Estimated duration, shown next to the price. */
+.service-card-duration { font-size: 0.85rem; color: var(--text-muted); white-space: nowrap; }
+/* Services an admin has switched off. */
+.service-card-inactive { opacity: 0.62; }
+.service-card-inactive .service-card-image { filter: grayscale(1); }
 .service-book-button { width: 100%; min-height: 44px; }
 .service-card-actions { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
 .service-card-actions .icon-action-button { margin: 0; }

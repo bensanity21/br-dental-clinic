@@ -67,7 +67,7 @@ CREATE TABLE `archives` (
   KEY `idx_record_id` (`record_id`),
   KEY `fk_archives_deleted_by` (`deleted_by`),
   CONSTRAINT `fk_archives_deleted_by` FOREIGN KEY (`deleted_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `clinic_schedules`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -139,7 +139,7 @@ CREATE TABLE `login_attempts` (
   PRIMARY KEY (`id`),
   KEY `idx_email_ip` (`email`,`ip_address`),
   KEY `idx_attempted_at` (`attempted_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `notifications`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -153,7 +153,7 @@ CREATE TABLE `notifications` (
   PRIMARY KEY (`id`),
   KEY `fk_notifications_user` (`user_id`),
   CONSTRAINT `fk_notifications_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=59 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=61 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `patient_notification_preferences`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -174,8 +174,11 @@ CREATE TABLE `services` (
   `service_name` varchar(100) NOT NULL,
   `description` text DEFAULT NULL,
   `price` decimal(10,2) DEFAULT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+  `duration_minutes` int(10) unsigned NOT NULL DEFAULT 60,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  KEY `idx_services_active` (`is_active`,`service_name`)
+) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `users`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -207,7 +210,6 @@ CREATE TABLE `users` (
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 
--- ============================================================
 -- Seed data
 -- ============================================================
 
@@ -223,16 +225,16 @@ INSERT INTO `dentists` (`id`, `user_id`, `full_name`, `specialization`, `phone_n
 (1, 2, 'Dr. Ma. Elena B. Retuerna', 'General Dentistry', '09066636112');
 
 -- Services
-INSERT INTO `services` (`service_name`, `description`, `price`) VALUES
-('Dental Cleaning (Prophylaxis)', 'Removal of plaque and tartar deposits. Professional cleaning and polishing.', 800.00),
-('Fluoride Application', 'Preventive fluoride treatment to strengthen tooth enamel.', 500.00),
-('Composite Filling', 'Tooth-colored restoration for cavities.', 1500.00),
-('Tooth Extraction', 'Safe removal of compromised teeth.', 1000.00),
-('Removal of Impacted Molar', 'Surgical removal of impacted wisdom teeth.', 5000.00),
-('Complete Dentures', 'Full set of removable artificial teeth.', 30000.00),
-('Partial Dentures', 'Removable partial artificial teeth.', 15000.00),
-('Dental Crowns', 'Custom-fitted caps for damaged teeth.', 8000.00),
-('Orthodontic Treatment', 'Braces and alignment correction.', 50000.00);
+INSERT INTO `services` (`service_name`, `description`, `price`, `duration_minutes`, `is_active`) VALUES
+('Dental Cleaning (Prophylaxis)', 'Removal of plaque and tartar deposits. Professional cleaning and polishing.', 800.00, 45, 1),
+('Fluoride Application', 'Preventive fluoride treatment to strengthen tooth enamel.', 500.00, 30, 1),
+('Composite Filling', 'Tooth-colored restoration for cavities.', 1500.00, 60, 1),
+('Tooth Extraction', 'Safe removal of compromised teeth.', 1000.00, 45, 1),
+('Removal of Impacted Molar', 'Surgical removal of impacted wisdom teeth.', 5000.00, 90, 1),
+('Complete Dentures', 'Full set of removable artificial teeth.', 30000.00, 90, 1),
+('Partial Dentures', 'Removable partial artificial teeth.', 15000.00, 60, 1),
+('Dental Crowns', 'Custom-fitted caps for damaged teeth.', 8000.00, 90, 1),
+('Orthodontic Treatment', 'Braces and alignment correction.', 50000.00, 60, 1);
 
 -- Clinic details
 INSERT INTO `clinic_settings` (`id`, `clinic_name`, `phone_number`, `address`) VALUES

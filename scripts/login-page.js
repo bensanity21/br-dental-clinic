@@ -49,3 +49,6 @@ if (form) {
 
 // Remember me, Google/Facebook sign-in and password recovery are not implemented;
 // their buttons were removed from index.html rather than left dead.
+
+import { loadClinicInfo } from './clinic-info.js?v=1';
+loadClinicInfo();

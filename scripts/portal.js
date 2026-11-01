@@ -334,13 +334,19 @@ async function switchView(targetViewId, { push = true } = {}) {
 }
 
 async function renderServices() {
-  const res = await api.get('services/list.php');
+  // Admins see every service (including inactive); patients only see active ones.
+  const isAdminView = el.adminServiceCards !== null && el.adminServiceCards !== undefined;
+  const endpoint = isAdminView ? 'services/manage.php' : 'services/list.php';
+  const res = await api.get(endpoint);
   if (!res.success) { showToast('Failed to load services.', 'error'); return; }
   serviceCatalog = res.data || [];
   renderServiceCards();
   if (el.bookServiceSelect) {
+    // Never offer an inactive service in the booking form.
     el.bookServiceSelect.innerHTML = '<option value="">-- Choose a Service --</option>' +
-      serviceCatalog.map((s) => '<option value="' + Number(s.id) + '">' + escapeHtml(s.service_name) + '</option>').join('');
+      serviceCatalog
+        .filter((s) => !isAdminView || Number(s.is_active) !== 0)
+        .map((s) => '<option value="' + Number(s.id) + '">' + escapeHtml(s.service_name) + '</option>').join('');
   }
 }
 
@@ -374,16 +380,26 @@ function renderServiceCards() {
     container.innerHTML = serviceCatalog.map((service) => {
       const name = escapeHtml(service.service_name || 'Dental service');
       const image = service.image_url || service.image_path || serviceIllustration(service.service_name);
+      const minutes = Number(service.duration_minutes);
+      const durationText = Number.isFinite(minutes) && minutes > 0
+        ? (minutes >= 60
+            ? (minutes % 60 === 0 ? (minutes / 60) + ' hr' : Math.floor(minutes / 60) + ' hr ' + (minutes % 60) + ' min')
+            : minutes + ' min')
+        : '';
+      const inactive = admin && Number(service.is_active) === 0;
       const actions = admin
         ? '<div class="service-card-actions"><button type="button" class="btn btn-soft" data-service-edit="' + Number(service.id) + '">Edit</button>' +
           '<button type="button" class="icon-action-button icon-action-danger" data-service-delete="' + Number(service.id) + '" aria-label="Delete ' + name + '" title="Delete service"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2m3 0-.9 14H5.9L5 6m4 4v6m6-6v6"></path></svg></button></div>'
         : '<button type="button" class="btn btn-primary service-book-button" data-service-book="' + Number(service.id) + '" aria-label="Book an appointment for ' + name + '">Book an Appointment</button>';
-      return '<article class="service-card">' +
+      return '<article class="service-card' + (inactive ? ' service-card-inactive' : '') + '">' +
         '<img class="service-card-image" src="' + escapeHtml(image) + '" alt="Illustration for ' + name + '" loading="lazy">' +
         '<div class="service-card-content">' +
+        (inactive ? '<span class="status-tag status-cancelled">Inactive</span>' : '') +
         '<h2 class="service-card-title">' + name + '</h2>' +
         '<p class="service-card-description">' + escapeHtml(service.description || 'Ask the clinic for more information about this treatment.') + '</p>' +
-        '<div class="service-card-bottom"><div class="service-card-price"><span>Price</span><strong>' + formatServicePrice(service.price || 0) + '</strong></div>' + actions + '</div>' +
+        '<div class="service-card-bottom"><div class="service-card-price"><span>Price</span><strong>' + formatServicePrice(service.price || 0) + '</strong>' +
+        (durationText ? '<span class="service-card-duration">' + escapeHtml(durationText) + '</span>' : '') +
+        '</div>' + actions + '</div>' +
         '</div>' +
         '</article>';
     }).join('');
@@ -650,12 +666,16 @@ window.rescheduleApt = async (id, currentDate) => {
 };
 
 window.deleteService = async (id) => {
-  const confirmed = await confirmModal({ title: 'Archive Service', message: 'Move this service to the archive? You can restore it later.', danger: true });
+  const confirmed = await confirmModal({
+    title: 'Archive Service',
+    message: 'Move this service to the archive? If it is already used by appointments it will be set to inactive instead, so past records stay intact.',
+    danger: true,
+  });
   if (!confirmed) return;
-  const res = await api.del('users/delete.php', { id, table: 'services' });
-  if (res.success) { showToast('Service moved to archive.'); await renderServices(); }
+  const res = await api.del('services/manage.php', { id });
+  if (res.success) { showToast(res.message || 'Service removed.'); await renderServices(); }
   else { showToast(res.message || 'Failed to archive service.', 'error'); }
-}
+};
 
 async function openServiceForm(service = null) {
   const isEdit = Boolean(service);
@@ -664,24 +684,44 @@ async function openServiceForm(service = null) {
     '<div class="form-group"><label for="m-service-name">Service Name</label><input id="m-service-name" type="text" maxlength="100" required></div>' +
     '<div class="form-group"><label for="m-service-description">Description</label><textarea id="m-service-description" rows="3" required></textarea></div>' +
     '<div class="form-group"><label for="m-service-price">Price (₱)</label><input id="m-service-price" type="number" min="0" step="0.01" required></div>' +
+    '<div class="form-group"><label for="m-service-duration">Estimated duration (minutes)</label>' +
+    '<input id="m-service-duration" type="number" min="15" max="480" step="15" value="60" required>' +
+    '<span class="field-hint">Used to plan how long the appointment needs.</span></div>' +
+    '<div class="form-group"><label for="m-service-active">Status</label>' +
+    '<select id="m-service-active"><option value="1">Active — shown to patients</option>' +
+    '<option value="0">Inactive — hidden from patients</option></select></div>' +
     '</form>', [
       { text: 'Cancel', class: 'btn-outline', value: false },
       { text: 'Confirm', class: 'btn-primary', value: () => ({
         service_name: document.getElementById('m-service-name').value.trim(),
         description: document.getElementById('m-service-description').value.trim(),
         price: document.getElementById('m-service-price').value,
+        duration_minutes: document.getElementById('m-service-duration').value,
+        is_active: Number(document.getElementById('m-service-active').value),
       }) },
     ]);
   document.getElementById('m-service-name').value = service?.service_name || '';
   document.getElementById('m-service-description').value = service?.description || '';
   document.getElementById('m-service-price').value = service?.price ?? '';
+  document.getElementById('m-service-duration').value = service?.duration_minutes ?? 60;
+  document.getElementById('m-service-active').value = String(service && Number(service.is_active) === 0 ? 0 : 1);
   const values = await resultPromise;
   if (!values) return;
   if (!values.service_name || !values.description || values.price === '' || !Number.isFinite(Number(values.price)) || Number(values.price) < 0) {
     showToast('Enter a service name, description, and valid non-negative price.', 'error');
     return;
   }
-  const payload = { ...values, price: Number(values.price) };
+  const duration = Number(values.duration_minutes);
+  if (!Number.isFinite(duration) || duration < 15 || duration > 480) {
+    showToast('Duration must be between 15 and 480 minutes.', 'error');
+    return;
+  }
+  const payload = {
+    ...values,
+    price: Number(values.price),
+    duration_minutes: duration,
+    is_active: Number(values.is_active) === 0 ? 0 : 1,
+  };
   const response = isEdit
     ? await api.patch('services/manage.php', { id: Number(service.id), ...payload })
     : await api.post('services/manage.php', payload);
@@ -1842,4 +1882,6 @@ window.addEventListener('pageshow', async (event) => {
   }
 });
 
-initApp();
+// Load clinic details for the public-facing blocks on the patient pages.
+import { loadClinicInfo } from './clinic-info.js?v=1';
+loadClinicInfo();

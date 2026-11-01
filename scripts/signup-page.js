@@ -53,3 +53,7 @@ document.getElementById("btn-oauth-facebook")?.addEventListener("click", () => {
 document.getElementById("btn-forgot-password")?.addEventListener("click", () => {
   setAuthAlert("Password recovery emails require an SMTP backend.", "danger");
 });
+
+// Clinic address under the sign-up panel comes from the database.
+import { loadClinicInfo } from './clinic-info.js?v=1';
+loadClinicInfo();

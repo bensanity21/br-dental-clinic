@@ -1,73 +1,48 @@
 <?php
-// api/reports/generate.php - Admin reports by date range
+// api/reports/generate.php - Admin reports by date range (JSON)
 // GET: ?from=YYYY-MM-DD&to=YYYY-MM-DD&type=appointments|services|dentists|patients|cancellations
 require_once '../../includes/auth.php';
 require_once '../../includes/response.php';
 require_once '../../includes/db.php';
+require_once '../../includes/reports.php';
 
 requireLogin();
 requireRole(['super-admin']);
 
 $from = $_GET['from'] ?? date('Y-m-01');
-$to = $_GET['to'] ?? date('Y-m-d');
+$to   = $_GET['to'] ?? date('Y-m-d');
 $type = $_GET['type'] ?? 'appointments';
 
-if ($type === 'appointments') {
-    $stmt = $pdo->prepare("
-        SELECT status, COUNT(*) as total
-        FROM appointments
-        WHERE appointment_date BETWEEN ? AND ?
-        GROUP BY status
-    ");
-    $stmt->execute([$from, $to]);
-    $data = $stmt->fetchAll();
-    $title = 'Appointments Summary by Status';
-} elseif ($type === 'services') {
-    $stmt = $pdo->prepare("
-        SELECT s.service_name, COUNT(a.id) as total
-        FROM services s
-        LEFT JOIN appointments a ON a.service_id = s.id AND a.appointment_date BETWEEN ? AND ?
-        WHERE a.id IS NOT NULL
-        GROUP BY s.id
-        ORDER BY total DESC
-    ");
-    $stmt->execute([$from, $to]);
-    $data = $stmt->fetchAll();
-    $title = 'Appointments per Service';
-} elseif ($type === 'dentists') {
-    $stmt = $pdo->prepare("
-        SELECT d.full_name, COUNT(a.id) as total
-        FROM dentists d
-        LEFT JOIN appointments a ON a.dentist_id = d.id AND a.appointment_date BETWEEN ? AND ?
-        WHERE a.id IS NOT NULL
-        GROUP BY d.id
-        ORDER BY total DESC
-    ");
-    $stmt->execute([$from, $to]);
-    $data = $stmt->fetchAll();
-    $title = 'Appointments per Dentist';
-} elseif ($type === 'patients') {
-    $stmt = $pdo->prepare("
-        SELECT id, full_name, email, created_at
-        FROM users
-        WHERE role = 'patient' AND DATE(created_at) BETWEEN ? AND ?
-        ORDER BY created_at DESC
-    ");
-    $stmt->execute([$from, $to]);
-    $data = $stmt->fetchAll();
-    $title = 'New Patients Registered';
-} elseif ($type === 'cancellations') {
-    $stmt = $pdo->prepare("
-        SELECT status, COUNT(*) as total
-        FROM appointments
-        WHERE appointment_date BETWEEN ? AND ? AND status IN ('Cancelled', 'No-show')
-        GROUP BY status
-    ");
-    $stmt->execute([$from, $to]);
-    $data = $stmt->fetchAll();
-    $title = 'Cancelled / No-show Appointments';
-} else {
+// Validate the dates before they reach a query.
+$fromDate = DateTime::createFromFormat('Y-m-d', $from);
+$toDate   = DateTime::createFromFormat('Y-m-d', $to);
+if (!$fromDate || $fromDate->format('Y-m-d') !== $from || !$toDate || $toDate->format('Y-m-d') !== $to) {
+    respondError('Enter the date range as YYYY-MM-DD.', null, 400);
+}
+if ($from > $to) {
+    respondError('The start date must be on or before the end date.', null, 400);
+}
+
+if (!array_key_exists($type, REPORT_TYPES)) {
     respondError('Invalid report type.', null, 400);
 }
 
-respondSuccess("$title ($from to $to)", ['type' => $type, 'from' => $from, 'to' => $to, 'data' => $data]);
+try {
+    $report = buildReport($pdo, $type, $from, $to);
+} catch (Throwable $e) {
+    error_log('Report failed: ' . $e->getMessage());
+    respondError('Could not build this report.', null, 500);
+}
+
+respondSuccess(
+    $report['title'] . " ($from to $to)",
+    [
+        'type'    => $type,
+        'from'    => $from,
+        'to'      => $to,
+        'title'   => $report['title'],
+        'headers' => $report['headers'],
+        'data'    => $report['rows'],
+        'totals'  => $report['totals'],
+    ]
+);

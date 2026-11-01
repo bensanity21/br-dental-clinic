@@ -72,10 +72,10 @@ export function closeModal(result = false) {
 }
 
 // Confirmation dialog: returns true if confirmed, false if cancelled
-export function confirmModal({ title = 'Confirm action', message = 'Are you sure?', danger = false } = {}) {
+export function confirmModal({ title = 'Confirm action', message = 'Are you sure?', danger = false, confirmLabel = 'Confirm', cancelLabel = 'Cancel' } = {}) {
   return openModal(title, `<p style="margin:0 0 1rem 0">${message}</p>`, [
-    { text: 'Cancel', class: 'btn-outline', value: false },
-    { text: 'Confirm', class: 'btn-primary', value: true, danger },
+    { text: cancelLabel, class: 'btn-outline', value: false },
+    { text: confirmLabel, class: 'btn-primary', value: true, danger },
   ]);
 }
 

@@ -3,7 +3,7 @@
 // All mutations require confirmModal + go through API endpoints (PDO, prepared statements).
 
 import { api, setCsrfToken } from './api.js?v=8';
-import { confirmModal, openModal, closeModal } from './modal.js?v=9';
+import { confirmModal, openModal, closeModal } from './modal.js?v=10';
 import { showToast } from './toast.js';
 import { setLanguage, t } from './i18n.js?v=5';
 
@@ -1126,28 +1126,61 @@ async function renderReport() {
     const res = await api.get('reports/generate.php?' + query.toString());
     if (!res.success) { showToast(res.message || 'Failed to generate report.', 'error'); return; }
 
+    const headers = res.data?.headers || [];
     const rows = res.data?.data || [];
-    let headers;
-    let rowHtml;
-    if (type === 'patients') {
-      headers = ['ID', 'Patient', 'Email', 'Registered'];
-      rowHtml = rows.map((row) => '<tr><td>' + escapeHtml(row.id) + '</td><td>' + escapeHtml(row.full_name) + '</td><td>' + escapeHtml(row.email) + '</td><td>' + escapeHtml(row.created_at) + '</td></tr>');
-    } else if (type === 'services') {
-      headers = ['Service', 'Appointments'];
-      rowHtml = rows.map((row) => '<tr><td>' + escapeHtml(row.service_name) + '</td><td>' + escapeHtml(row.total) + '</td></tr>');
-    } else if (type === 'dentists') {
-      headers = ['Dentist', 'Appointments'];
-      rowHtml = rows.map((row) => '<tr><td>' + escapeHtml(row.full_name) + '</td><td>' + escapeHtml(row.total) + '</td></tr>');
-    } else {
-      headers = ['Status', 'Appointments'];
-      rowHtml = rows.map((row) => '<tr><td>' + escapeHtml(row.status) + '</td><td>' + escapeHtml(row.total) + '</td></tr>');
+    const totals = res.data?.totals || null;
+    const title = res.data?.title || 'Report';
+
+    // Each report has its own column names, so map values in header order.
+    const keys = headers.map((header) => {
+      const map = {
+        'Status': 'status',
+        'Appointments': 'total',
+        'Service': 'service_name',
+        'Dentist': 'full_name',
+        'Patient ID': 'id',
+        'Full Name': 'full_name',
+        'Email': 'email',
+        'Registered': 'created_at',
+      };
+      return map[header] || header.toLowerCase().replace(/\s+/g, '_');
+    });
+
+    const bodyHtml = rows.map((row) => '<tr>' +
+      keys.map((key) => '<td>' + escapeHtml(row[key] ?? '') + '</td>').join('') +
+      '</tr>').join('');
+
+    // A totals row makes the summary verifiable on paper, not just on screen.
+    let totalsHtml = '';
+    if (totals && rows.length) {
+      let value = '';
+      if (totals.column) {
+        value = String(rows.reduce((sum, row) => sum + Number(row[totals.column] || 0), 0));
+      } else if (totals.count !== undefined) {
+        value = String(totals.count);
+      }
+      if (value !== '') {
+        totalsHtml = '<tr class="report-total-row">' +
+          '<td>' + escapeHtml(totals.label) + '</td>' +
+          '<td>' + escapeHtml(value) + '</td>' +
+          keys.slice(2).map(() => '<td></td>').join('') +
+          '</tr>';
+      }
     }
 
     if (results) {
-      results.innerHTML = '<h3 class="mb-3">' + escapeHtml(res.message) + '</h3>' +
-        (rowHtml.length
-          ? '<div class="table-scroll"><table class="data-table"><thead><tr>' + headers.map((header) => '<th>' + header + '</th>').join('') + '</tr></thead><tbody>' + rowHtml.join('') + '</tbody></table></div>'
-          : '<p class="text-sub text-center">No records found for the selected dates.</p>');
+      results.innerHTML =
+        '<div class="report-block">' +
+          '<h3 class="report-block-title">' + escapeHtml(title) + '</h3>' +
+          '<p class="report-block-period">' + escapeHtml(from) + ' to ' + escapeHtml(to) + '</p>' +
+          (rows.length
+            ? '<div class="table-scroll"><table class="data-table report-table">' +
+                '<thead><tr>' + headers.map((header) => '<th>' + escapeHtml(header) + '</th>').join('') + '</tr></thead>' +
+                '<tbody>' + bodyHtml + totalsHtml + '</tbody>' +
+              '</table></div>'
+            : '<p class="text-sub text-center">No records found for the selected dates.</p>') +
+          '<p class="report-generated-note">Generated ' + escapeHtml(new Date().toLocaleString()) + '</p>' +
+        '</div>';
     }
   } finally {
     if (button) button.disabled = false;
@@ -1549,6 +1582,32 @@ function bindEvents() {
       message: 'This opens your browser print dialog for the report currently shown.',
       confirmLabel: 'Print',
     }).then((ok) => { if (ok) window.print(); });
+  });
+  const exportCsvButton = document.getElementById('btn-export-csv');
+  if (exportCsvButton) exportCsvButton.addEventListener('click', () => {
+    const from = document.getElementById('report-from')?.value || '';
+    const to = document.getElementById('report-to')?.value || '';
+    const type = document.getElementById('report-type')?.value || 'appointments';
+    if (!from || !to) { showToast('Choose both a start date and an end date.', 'error'); return; }
+    if (from > to) { showToast('The start date must be on or before the end date.', 'error'); return; }
+    confirmModal({
+      title: 'Export this report?',
+      message: 'A CSV file for ' + from + ' to ' + to + ' will be downloaded.',
+      confirmLabel: 'Download',
+    }).then((ok) => {
+      if (!ok) return;
+      const query = new URLSearchParams({ from, to, type });
+      // A temporary anchor is more reliable than location.assign: it never
+      // navigates away from the page and survives pop-blocking.
+      const link = document.createElement('a');
+      link.href = new URL('api/reports/export.php?' + query.toString(), document.baseURI).href;
+      link.setAttribute('download', '');
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      showToast('Your CSV download has started.');
+    });
   });
   const createUserButton = document.getElementById('btn-create-user');
   if (createUserButton) createUserButton.addEventListener('click', openCreateUserModal);

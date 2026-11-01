@@ -1247,17 +1247,66 @@ input:focus, select:focus, textarea:focus {
 }
 
 
-/* 18. PRINT & REDUCED MOTION ---------------------------------------------- */
+/* 18. REPORT BLOCKS ------------------------------------------------------- */
+.report-block-title { margin: 0 0 0.15rem; font-size: 1.15rem; }
+.report-block-period { margin: 0 0 1rem; color: var(--text-muted); font-size: 0.9rem; }
+.report-table { width: 100%; }
+.report-table th { white-space: nowrap; }
+/* Totals sit below a rule so they read as a summary, not another data row. */
+.report-total-row td { border-top: 2px solid var(--border-color); font-weight: 700; background: var(--teal-light); color: var(--teal-dark); }
+.report-generated-note { margin: 0.9rem 0 0; color: var(--text-muted); font-size: 0.8rem; }
+
+
+/* 18b. PRINT & REDUCED MOTION --------------------------------------------- */
 @media print {
+  /* Hide the app chrome but keep the report readable on paper. */
   body * { visibility: hidden; }
   #printable-report, #printable-report * { visibility: visible; }
   #printable-report {
     position: absolute;
     left: 0; top: 0;
     width: 100%;
+    padding: 0;
     border: none;
     box-shadow: none;
+    background: #fff;
+    color: #000;
   }
+
+  /* The site uses dark surfaces in places; force ink-friendly colours. */
+  #printable-report .data-table,
+  #printable-report .data-table th,
+  #printable-report .data-table td {
+    background: transparent !important;
+    color: #000 !important;
+    border-color: #999 !important;
+  }
+  #printable-report .data-table thead th {
+    border-bottom: 2px solid #000 !important;
+    font-weight: 700;
+  }
+  #printable-report .report-total-row td {
+    border-top: 2px solid #000 !important;
+    font-weight: 700;
+    background: transparent !important;
+  }
+  #printable-report .report-block-title { font-size: 16pt; }
+  #printable-report .report-block-period,
+  #printable-report .report-generated-note { color: #444 !important; }
+
+  /* Don't stretch the table off the page. */
+  #printable-report .table-scroll { overflow: visible !important; }
+  #printable-report table { width: 100% !important; table-layout: auto; }
+  #printable-report .text-sub { color: #444 !important; }
+
+  /* Page setup: no browser headers, sensible margins. */
+  @page { margin: 15mm 12mm; }
+}
+
+/* Keep rows from splitting across pages when a report is long. */
+@media print {
+  #printable-report tr { page-break-inside: avoid; }
+  #printable-report thead { display: table-header-group; }
 }
 
 @media (prefers-reduced-motion: reduce) {

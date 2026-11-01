@@ -17,3 +17,5 @@ slots_resp.txt
 /config/secrets.local.php
 
 full_codebase.txt
+# Test scratch
+/tests/*.tmp

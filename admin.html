@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BR Dental Clinic - Admin Portal</title>
   <meta name="description" content="BR Dental Clinic master admin portal.">
-  <link rel="stylesheet" href="style.css?v=23">
+  <link rel="stylesheet" href="style.css?v=24">
 </head>
 <body>
   <a class="skip-link" href="#views-viewport">Skip to main content</a>
@@ -154,6 +154,55 @@
                   <tr><td colspan="4" class="empty-cell">Loading archive...</td></tr>
                 </tbody>
               </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ADMIN: ACTIVITY LOG -->
+        <section id="view-admin-activity" class="page-view">
+          <div class="page-header">
+            <h1>Activity Log</h1>
+            <p>Every recorded change, who made it and when. Append-only.</p>
+          </div>
+
+          <div class="card mb-3">
+            <div class="activity-filters">
+              <div class="form-group">
+                <label for="activity-from">From</label>
+                <input type="date" id="activity-from">
+              </div>
+              <div class="form-group">
+                <label for="activity-to">To</label>
+                <input type="date" id="activity-to">
+              </div>
+              <div class="form-group">
+                <label for="activity-action">Action</label>
+                <select id="activity-action"><option value="">All actions</option></select>
+              </div>
+              <div class="form-group">
+                <label for="activity-search">Search</label>
+                <input type="search" id="activity-search" placeholder="Name or description">
+              </div>
+              <button type="button" class="btn btn-secondary btn-align-bottom" id="btn-filter-activity">Filter</button>
+              <button type="button" class="btn btn-outline btn-align-bottom" id="btn-clear-activity">Clear</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="table-scroll">
+              <table class="data-table">
+                <thead>
+                  <tr><th>When</th><th>Who</th><th>Action</th><th>Details</th><th>IP</th></tr>
+                </thead>
+                <tbody id="activity-tbody">
+                  <tr><td colspan="5" class="empty-cell">Loading activity…</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="activity-pager mt-3">
+              <button type="button" class="btn btn-sm btn-outline" id="btn-activity-prev">Previous</button>
+              <span id="activity-page-info" class="text-sub">—</span>
+              <button type="button" class="btn btn-sm btn-outline" id="btn-activity-next">Next</button>
             </div>
           </div>
         </section>
@@ -469,6 +518,6 @@
   <script type="module" src="scripts/api.js?v=8"></script>
   <script type="module" src="scripts/modal.js?v=8"></script>
   <script type="module" src="scripts/toast.js?v=5"></script>
-  <script type="module" src="scripts/portal.js?v=45"></script>
+  <script type="module" src="scripts/portal.js?v=46"></script>
 </body>
 </html>

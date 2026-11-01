@@ -4,6 +4,7 @@
 require_once '../../includes/auth.php';
 require_once '../../includes/response.php';
 require_once '../../includes/db.php';
+require_once '../../includes/activity.php';
 
 requireLogin();
 requireRole(['super-admin']);
@@ -22,4 +23,6 @@ $stmt->execute([$archiveId]);
 if (!$stmt->fetch()) { respondError('Archived record not found.', null, 404); }
 
 $pdo->prepare('DELETE FROM archives WHERE id = ?')->execute([$archiveId]);
+logActivity($pdo, 'archive.purge', 'archives', (int)$archiveId,
+    "Archived record #$archiveId permanently deleted.", ['permanent' => true]);
 respondSuccess('Record permanently deleted');

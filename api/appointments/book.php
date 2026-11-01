@@ -7,6 +7,7 @@ require_once '../../includes/db.php';
 require_once '../../includes/encrypt.php';
 require_once '../../includes/notifications.php';
 require_once '../../includes/booking.php';
+require_once '../../includes/activity.php';
 
 requireLogin();
 requireRole(['patient']);
@@ -114,5 +115,14 @@ $admin = $stmt->fetch();
 if ($admin) {
     createInAppNotification($pdo, (int)$admin['id'], "New appointment booking requested by {$user['full_name']} for $date at $timeSlot.");
 }
+
+logActivity(
+    $pdo,
+    'appointment.create',
+    'appointments',
+    (int)$appointmentId,
+    "{$user['full_name']} booked appointment #$appointmentId for $date at $timeSlot.",
+    ['dentist_id' => (int)$dentistId, 'service_id' => (int)$serviceId]
+);
 
 respondSuccess('Appointment booked successfully', ['id' => $appointmentId, 'status' => 'Pending'], 201);

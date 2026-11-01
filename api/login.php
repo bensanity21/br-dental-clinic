@@ -73,6 +73,10 @@ if ($user && password_verify($password, $user['password_hash'])) {
     $_SESSION['last_activity'] = time();
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
+    // Audit the sign-in, now that the session identifies who it was.
+    require_once "../includes/activity.php";
+    logActivity($pdo, 'auth.login', 'users', (int)$user['id'], $user['full_name'] . ' signed in.');
+
     echo json_encode([
         "success" => true,
         "message" => "Login successful",

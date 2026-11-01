@@ -3,6 +3,7 @@
 require_once '../../includes/auth.php';
 require_once '../../includes/response.php';
 require_once '../../includes/db.php';
+require_once '../../includes/activity.php';
 
 requireLogin();
 requireRole(['super-admin']);
@@ -38,5 +39,9 @@ if ($exists) {
     $pdo->prepare('INSERT INTO clinic_settings (id, clinic_name, phone_number, address) VALUES (1, ?, ?, ?)')
         ->execute([CLINIC_NAME, $phone, $address]);
 }
+
+logActivity($pdo, 'settings.update', 'clinic_settings', 1,
+    'Clinic contact details updated.',
+    ['phone_number' => $phone, 'address' => $address]);
 
 respondSuccess('Clinic details updated');

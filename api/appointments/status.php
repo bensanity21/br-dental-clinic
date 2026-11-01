@@ -5,6 +5,7 @@ require_once '../../includes/auth.php';
 require_once '../../includes/response.php';
 require_once '../../includes/db.php';
 require_once '../../includes/notifications.php';
+require_once '../../includes/activity.php';
 
 requireLogin();
 $user = currentUser();
@@ -73,6 +74,15 @@ if ($user['role'] === 'patient') {
 
 $stmt = $pdo->prepare("UPDATE appointments SET status = ? WHERE id = ?");
 $stmt->execute([$newStatus, $appointmentId]);
+
+logActivity(
+    $pdo,
+    'appointment.status',
+    'appointments',
+    (int)$appointmentId,
+    "Appointment #$appointmentId ({$apt['patient_name']}, {$apt['appointment_date']}) changed from {$from} to {$newStatus}.",
+    ['from' => $from, 'to' => $newStatus]
+);
 
 $when = "{$apt['appointment_date']} at {$apt['time_slot']}";
 

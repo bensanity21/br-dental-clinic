@@ -1281,7 +1281,30 @@ input:focus, select:focus, textarea:focus {
   .days-off-add { grid-template-columns: 1fr; }
 }
 
-/* 19. REPORT BLOCKS ------------------------------------------------------- */
+/* 19. ACTIVITY LOG -------------------------------------------------------- */
+.activity-filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto auto; gap: 0.85rem; align-items: end; }
+.activity-filters .form-group { margin-bottom: 0; min-width: 0; }
+.activity-badge { display: inline-block; padding: 0.2rem 0.55rem; border-radius: 999px; font-size: 0.78rem; font-weight: 600; white-space: nowrap; }
+.activity-success { background: var(--success-bg); color: var(--success); }
+.activity-danger  { background: var(--danger-bg);  color: var(--danger); }
+.activity-info    { background: var(--teal-light); color: var(--teal-dark); }
+.activity-neutral { background: var(--gray-100, #f3f4f6); color: var(--text-muted); }
+.activity-when { white-space: nowrap; font-variant-numeric: tabular-nums; font-size: 0.88rem; }
+.activity-role { font-size: 0.78rem; }
+.activity-description { max-width: 34rem; }
+.activity-ip { font-size: 0.8rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.activity-pager { display: flex; align-items: center; gap: 1rem; justify-content: flex-end; }
+.activity-pager .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+@media (max-width: 900px) {
+  .activity-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .activity-filters { grid-template-columns: 1fr; }
+  .activity-description { max-width: none; }
+}
+
+/* 19b. REPORT BLOCKS ------------------------------------------------------ */
 .report-block-title { margin: 0 0 0.15rem; font-size: 1.15rem; }
 .report-block-period { margin: 0 0 1rem; color: var(--text-muted); font-size: 0.9rem; }
 .report-table { width: 100%; }

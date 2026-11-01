@@ -219,6 +219,12 @@ function renderNavigation() {
               <span>Archive</span>
             </a>
           </li>
+          <li>
+            <a href="#" class="nav-link" data-view="admin-activity">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+              <span>Activity Log</span>
+            </a>
+          </li>
           ` : ''}
         </ul>
       </nav>
@@ -364,6 +370,7 @@ async function switchView(targetViewId, { push = true } = {}) {
     case 'admin-settings': await renderAdminSettings(); break;
     case 'admin-users': await renderAdminUsers(); break;
     case 'admin-reports': await renderAdminReports(); break;
+    case 'admin-activity': await renderActivityLog(); break;
   }
 }
 
@@ -1179,6 +1186,98 @@ async function renderAdminDentists() {
   select.value = String(keep ? previous : Number(dentists[0].id));
   await loadDentistAvailability(select.value);
 }
+// ---------- Activity log -------------------------------------------------
+let activityState = { page: 1, pages: 0, filters: {} };
+
+// Readable labels for the dotted action names.
+const ACTIVITY_LABELS = {
+  'auth.login': 'Signed in',
+  'auth.logout': 'Signed out',
+  'appointment.create': 'Booked appointment',
+  'appointment.status': 'Changed appointment status',
+  'appointment.reschedule': 'Rescheduled appointment',
+  'service.create': 'Created service',
+  'service.update': 'Updated service',
+  'service.deactivate': 'Deactivated service',
+  'service.archive': 'Archived service',
+  'user.create': 'Created account',
+  'user.update': 'Updated account',
+  'record.create': 'Added clinical record',
+  'record.complete': 'Completed clinical record',
+  'record.archive': 'Archived record',
+  'archive.restore': 'Restored record',
+  'archive.purge': 'Permanently deleted record',
+  'settings.update': 'Updated clinic details',
+  'schedule.update': 'Updated clinic hours',
+  'availability.update': 'Updated availability',
+};
+
+function activityTone(action) {
+  if (action === 'archive.purge' || action === 'service.archive' || action === 'record.archive') return 'danger';
+  if (action.includes('create') || action.includes('restore')) return 'success';
+  if (action.startsWith('auth.')) return 'neutral';
+  return 'info';
+}
+
+async function renderActivityLog() {
+  const tbody = document.getElementById('activity-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">Loading activity…</td></tr>';
+
+  const query = new URLSearchParams({ page: String(activityState.page), per_page: '25' });
+  Object.entries(activityState.filters).forEach(([key, value]) => {
+    if (value) query.set(key, value);
+  });
+
+  const res = await api.get('activity/list.php?' + query.toString());
+  if (!res.success) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">Could not load the activity log.</td></tr>';
+    showToast(res.message || 'Could not load the activity log.', 'error');
+    return;
+  }
+
+  const { rows, total, page, pages, actions } = res.data;
+
+  // Keep the action filter in step with what actually exists in the log.
+  const actionSelect = document.getElementById('activity-action');
+  if (actionSelect && actions) {
+    const current = actionSelect.value;
+    actionSelect.innerHTML = '<option value="">All actions</option>' +
+      actions.map((a) => '<option value="' + escapeHtml(a) + '">' +
+        escapeHtml(ACTIVITY_LABELS[a] || a) + '</option>').join('');
+    actionSelect.value = current;
+  }
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">No activity matches these filters.</td></tr>';
+  } else {
+    tbody.innerHTML = rows.map((row) => {
+      const when = String(row.created_at || '').replace('T', ' ');
+      const label = ACTIVITY_LABELS[row.action] || row.action;
+      return '<tr>' +
+        '<td class="activity-when">' + escapeHtml(when) + '</td>' +
+        '<td>' + escapeHtml(row.user_name || 'System') +
+          '<br><span class="text-sub activity-role">' + escapeHtml(row.user_role || '') + '</span></td>' +
+        '<td><span class="activity-badge activity-' + activityTone(row.action) + '">' + escapeHtml(label) + '</span></td>' +
+        '<td class="activity-description">' + escapeHtml(row.description || '') + '</td>' +
+        '<td class="activity-ip">' + escapeHtml(row.ip_address || '') + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  activityState.pages = pages || 0;
+  const info = document.getElementById('activity-page-info');
+  if (info) {
+    info.textContent = total === 0
+      ? 'No entries'
+      : 'Page ' + page + ' of ' + pages + ' · ' + total + ' entr' + (total === 1 ? 'y' : 'ies');
+  }
+  const prev = document.getElementById('btn-activity-prev');
+  const next = document.getElementById('btn-activity-next');
+  if (prev) prev.disabled = page <= 1;
+  if (next) next.disabled = page >= pages;
+}
+
 async function renderArchives() {
   const tbody = document.getElementById('admin-archives-tbody');
   if (!tbody) return;
@@ -1779,6 +1878,37 @@ function bindEvents() {
   });
   const createUserButton = document.getElementById('btn-create-user');
   if (createUserButton) createUserButton.addEventListener('click', openCreateUserModal);
+
+  // ---- Activity log page ----
+  const filterActivity = () => {
+    activityState.page = 1;
+    activityState.filters = {
+      from: document.getElementById('activity-from')?.value || '',
+      to: document.getElementById('activity-to')?.value || '',
+      action: document.getElementById('activity-action')?.value || '',
+      q: (document.getElementById('activity-search')?.value || '').trim(),
+    };
+    renderActivityLog();
+  };
+  document.getElementById('btn-filter-activity')?.addEventListener('click', filterActivity);
+  document.getElementById('activity-search')?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') { event.preventDefault(); filterActivity(); }
+  });
+  document.getElementById('btn-clear-activity')?.addEventListener('click', () => {
+    ['activity-from', 'activity-to', 'activity-action', 'activity-search'].forEach((id) => {
+      const field = document.getElementById(id);
+      if (field) field.value = '';
+    });
+    activityState.filters = {};
+    activityState.page = 1;
+    renderActivityLog();
+  });
+  document.getElementById('btn-activity-prev')?.addEventListener('click', () => {
+    if (activityState.page > 1) { activityState.page -= 1; renderActivityLog(); }
+  });
+  document.getElementById('btn-activity-next')?.addEventListener('click', () => {
+    if (activityState.page < activityState.pages) { activityState.page += 1; renderActivityLog(); }
+  });
 
   // ---- Dentist availability page ----
   const availSelect = document.getElementById('avail-dentist-select');

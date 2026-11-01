@@ -3,6 +3,7 @@
 require_once '../../includes/auth.php';
 require_once '../../includes/response.php';
 require_once '../../includes/db.php';
+require_once '../../includes/activity.php';
 
 requireLogin();
 requireRole(['super-admin']);
@@ -23,5 +24,8 @@ if ($stmt->rowCount() === 0) {
     if (!$record) respondError('Dental record not found.', null, 404);
     if ($record['status'] !== 'Completed') respondError('Could not update dental record status.', null, 500);
 }
+
+logActivity($pdo, 'record.complete', 'dental_records', (int)$id,
+    "Clinical record #$id marked complete.");
 
 respondSuccess('Dental record marked complete.', ['id' => $id, 'status' => 'Completed']);

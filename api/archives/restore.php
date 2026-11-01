@@ -4,6 +4,7 @@
 require_once '../../includes/auth.php';
 require_once '../../includes/response.php';
 require_once '../../includes/db.php';
+require_once '../../includes/activity.php';
 
 requireLogin();
 requireRole(['super-admin']);
@@ -39,5 +40,8 @@ try {
     $pdo->rollBack();
     respondError('Failed to restore record.', null, 500);
 }
+
+logActivity($pdo, 'archive.restore', 'archives', (int)$archiveId,
+    "Archived record #$archiveId restored.");
 
 respondSuccess('Record restored from archive');

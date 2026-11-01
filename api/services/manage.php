@@ -5,6 +5,7 @@
 require_once '../../includes/auth.php';
 require_once '../../includes/response.php';
 require_once '../../includes/db.php';
+require_once '../../includes/activity.php';
 
 requireLogin();
 requireRole(['super-admin']);
@@ -83,7 +84,10 @@ if ($method === 'POST') {
         VALUES (?, ?, ?, ?, ?)
     ');
     $stmt->execute([$v['service_name'], $v['description'], $v['price'], $v['duration_minutes'], $v['is_active']]);
-    respondSuccess('Service created', ['id' => (int)$pdo->lastInsertId()], 201);
+    $newServiceId = (int)$pdo->lastInsertId();
+    logActivity($pdo, 'service.create', 'services', $newServiceId,
+        "Service \"{$v['service_name']}\" created (₱{$v['price']}, {$v['duration_minutes']} min).");
+    respondSuccess('Service created', ['id' => $newServiceId], 201);
 }
 
 if ($method === 'PATCH') {
@@ -107,6 +111,10 @@ if ($method === 'PATCH') {
 
     $params[] = $id;
     $pdo->prepare('UPDATE services SET ' . implode(', ', $fields) . ' WHERE id = ?')->execute($params);
+    $changedFields = array_map(fn($f) => str_replace(' = ?', '', $f), $fields);
+    logActivity($pdo, 'service.update', 'services', (int)$id,
+        'Service #' . (int)$id . ' updated (' . implode(', ', $changedFields) . ').',
+        ['changed' => $changedFields]);
     respondSuccess('Service updated');
 }
 
@@ -129,6 +137,9 @@ if ($method === 'DELETE') {
         // Still referenced by appointments: deactivate instead of archiving,
         // so those appointments keep a valid service row.
         $pdo->prepare('UPDATE services SET is_active = 0 WHERE id = ?')->execute([$id]);
+        logActivity($pdo, 'service.deactivate', 'services', (int)$id,
+            "Service \"{$service['service_name']}\" set inactive because $inUse appointment(s) use it.",
+            ['appointments' => $inUse]);
         respondSuccess('This service is used by ' . $inUse . ' appointment(s), so it was set to inactive instead of being archived.');
     }
 
@@ -143,6 +154,9 @@ if ($method === 'DELETE') {
         error_log('Service archive failed: ' . $e->getMessage());
         respondError('Could not archive this service.', null, 500);
     }
+    logActivity($pdo, 'service.archive', 'services', (int)$id,
+        "Service \"{$service['service_name']}\" archived.",
+        ['record' => $service]);
     respondSuccess('Service moved to the archive.');
 }
 

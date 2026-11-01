@@ -8,6 +8,7 @@
 require_once '../../includes/auth.php';
 require_once '../../includes/response.php';
 require_once '../../includes/db.php';
+require_once '../../includes/activity.php';
 require_once '../../includes/booking.php';
 
 requireLogin();
@@ -186,6 +187,10 @@ try {
     error_log('Availability save failed: ' . $e->getMessage());
     respondError('Could not save your availability. Please try again.', null, 500);
 }
+
+logActivity($pdo, 'availability.update', 'dentist_availability', $dentistId,
+    'Availability saved: ' . count($cleanAvailability) . ' working day(s), ' . count($cleanDaysOff) . ' day(s) off.',
+    ['working_days' => count($cleanAvailability), 'days_off' => count($cleanDaysOff)]);
 
 respondSuccess('Availability saved', [
     'dentist_id'  => $dentistId,

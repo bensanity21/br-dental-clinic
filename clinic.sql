@@ -27,6 +27,29 @@ USE `clinic`;
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+DROP TABLE IF EXISTS `activity_logs`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `activity_logs` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int(10) unsigned DEFAULT NULL,
+  `user_name` varchar(100) NOT NULL DEFAULT '',
+  `user_role` varchar(30) NOT NULL DEFAULT '',
+  `action` varchar(60) NOT NULL,
+  `entity` varchar(40) NOT NULL DEFAULT '',
+  `entity_id` int(10) unsigned DEFAULT NULL,
+  `description` varchar(255) NOT NULL DEFAULT '',
+  `details` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`details`)),
+  `ip_address` varchar(45) NOT NULL DEFAULT '',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_activity_created` (`created_at`),
+  KEY `idx_activity_user` (`user_id`),
+  KEY `idx_activity_action` (`action`),
+  KEY `idx_activity_entity` (`entity`,`entity_id`),
+  CONSTRAINT `fk_activity_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `appointments`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
@@ -50,7 +73,7 @@ CREATE TABLE `appointments` (
   CONSTRAINT `fk_appointments_dentist` FOREIGN KEY (`dentist_id`) REFERENCES `dentists` (`id`),
   CONSTRAINT `fk_appointments_patient` FOREIGN KEY (`patient_id`) REFERENCES `users` (`id`),
   CONSTRAINT `fk_appointments_service` FOREIGN KEY (`service_id`) REFERENCES `services` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `archives`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -67,7 +90,7 @@ CREATE TABLE `archives` (
   KEY `idx_record_id` (`record_id`),
   KEY `fk_archives_deleted_by` (`deleted_by`),
   CONSTRAINT `fk_archives_deleted_by` FOREIGN KEY (`deleted_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `clinic_schedules`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -130,7 +153,7 @@ CREATE TABLE `dentist_availability` (
   CONSTRAINT `fk_availability_dentist` FOREIGN KEY (`dentist_id`) REFERENCES `dentists` (`id`) ON DELETE CASCADE,
   CONSTRAINT `chk_weekday` CHECK (`weekday` between 1 and 7),
   CONSTRAINT `chk_minutes` CHECK (`end_minute` > `start_minute`)
-) ENGINE=InnoDB AUTO_INCREMENT=35 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=41 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `dentist_days_off`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -172,7 +195,7 @@ CREATE TABLE `login_attempts` (
   PRIMARY KEY (`id`),
   KEY `idx_email_ip` (`email`,`ip_address`),
   KEY `idx_attempted_at` (`attempted_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `notifications`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -186,7 +209,7 @@ CREATE TABLE `notifications` (
   PRIMARY KEY (`id`),
   KEY `fk_notifications_user` (`user_id`),
   CONSTRAINT `fk_notifications_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=80 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=86 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `patient_notification_preferences`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -211,7 +234,7 @@ CREATE TABLE `services` (
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`),
   KEY `idx_services_active` (`is_active`,`service_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `users`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -254,8 +277,13 @@ INSERT INTO `users` (`id`, `full_name`, `email`, `password_hash`, `role`) VALUES
 INSERT INTO `users` (`id`, `full_name`, `email`, `password_hash`, `role`) VALUES
 (2, 'Dr. Ma. Elena B. Retuerna', 'elena@brdental.com', '$2y$10$ggAa7deLVT.tSoQOT2RPB.9O6hf/MziSXOJpxqd6VOF1O7weRboP2', 'doctor');
 
+-- Dentist account for Dr. John Smith
+INSERT INTO `users` (`id`, `full_name`, `email`, `password_hash`, `role`) VALUES
+(3, 'Dr. John Smith', 'smith@brdental.com', '$2y$10$R8fXwDtn3NEA88SdLtAi6O7Fv3CmrO7FMTDU9HNR324iup.yVHveq', 'doctor');
+
 INSERT INTO `dentists` (`id`, `user_id`, `full_name`, `specialization`, `phone_number`) VALUES
-(1, 2, 'Dr. Ma. Elena B. Retuerna', 'General Dentistry', '09066636112');
+(1, 2, 'Dr. Ma. Elena B. Retuerna', 'General Dentistry', '09066636112'),
+(2, 3, 'Dr. John Smith', 'Oral Surgery', '0917999888');
 
 -- Services
 INSERT INTO `services` (`service_name`, `description`, `price`, `duration_minutes`, `is_active`) VALUES
@@ -281,4 +309,6 @@ INSERT INTO `clinic_schedules` (`id`, `operating_days`, `operating_hours`) VALUE
 -- (minute 480 = 08:00, minute 1020 = 17:00)
 INSERT INTO `dentist_availability` (`dentist_id`, `weekday`, `start_minute`, `end_minute`) VALUES
 (1, 1, 480, 1020), (1, 2, 480, 1020), (1, 3, 480, 1020),
-(1, 4, 480, 1020), (1, 5, 480, 1020), (1, 6, 480, 1020);
+(1, 4, 480, 1020), (1, 5, 480, 1020), (1, 6, 480, 1020),
+(2, 1, 480, 1020), (2, 2, 480, 1020), (2, 3, 480, 1020),
+(2, 4, 480, 1020), (2, 5, 480, 1020), (2, 6, 480, 1020);

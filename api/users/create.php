@@ -5,6 +5,7 @@
 require_once '../../includes/auth.php';
 require_once '../../includes/response.php';
 require_once '../../includes/db.php';
+require_once '../../includes/activity.php';
 require_once '../../includes/encrypt.php';
 
 requireLogin();
@@ -50,5 +51,9 @@ try {
     $pdo->rollBack();
     respondError('Failed to create account.', null, 500);
 }
+
+logActivity($pdo, 'user.create', 'users', $userId,
+    "$role account created for $fullName ($email).",
+    ['role' => $role]);
 
 respondSuccess("$role account created successfully", ['user_id' => $userId, 'role' => $role], 201);

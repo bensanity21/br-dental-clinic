@@ -4,6 +4,7 @@
 require_once '../../includes/auth.php';
 require_once '../../includes/response.php';
 require_once '../../includes/db.php';
+require_once '../../includes/activity.php';
 require_once '../../includes/encrypt.php';
 require_once '../../includes/notifications.php';
 
@@ -99,4 +100,9 @@ if ($patientId !== null) {
     createInAppNotification($pdo, (int)$patientId, "A new dental record was added on $date.");
 }
 
-respondSuccess('Dental record added', ['id' => $pdo->lastInsertId()], 201);
+$newRecordId = (int)$pdo->lastInsertId();
+logActivity($pdo, 'record.create', 'dental_records', $newRecordId,
+    "Clinical record #$newRecordId added for patient #" . ($patientId ?? '?') . ".",
+    ['patient_id' => $patientId]);
+
+respondSuccess('Dental record added', ['id' => $newRecordId], 201);

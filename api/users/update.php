@@ -4,6 +4,7 @@
 require_once '../../includes/auth.php';
 require_once '../../includes/response.php';
 require_once '../../includes/db.php';
+require_once '../../includes/activity.php';
 
 requireLogin();
 requireRole(['super-admin']);
@@ -35,6 +36,10 @@ if ($fields) {
     $params[] = $id;
     $pdo->prepare('UPDATE users SET ' . implode(', ', $fields) . ' WHERE id = ?')->execute($params);
 }
+
+logActivity($pdo, 'user.update', 'users', (int)$id,
+    'Account #' . (int)$id . ' updated (' . implode(', ', array_map(fn($f) => str_replace(' = ?', '', $f), $fields)) . ').',
+    ['changed' => array_map(fn($f) => str_replace(' = ?', '', $f), $fields)]);
 
 // Deactivate/reactivate (soft flag via role or a status column; here we use role change to indicate)
 // Since there's no is_active column, we handle archive separately. Just respond success.

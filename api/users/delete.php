@@ -4,6 +4,7 @@
 require_once '../../includes/auth.php';
 require_once '../../includes/response.php';
 require_once '../../includes/db.php';
+require_once '../../includes/activity.php';
 
 requireLogin();
 requireRole(['super-admin']);
@@ -40,5 +41,9 @@ try {
     if ($pdo->inTransaction()) $pdo->rollBack();
     respondError('Could not archive this record.', null, 500);
 }
+
+logActivity($pdo, 'record.archive', $table, (int)$id,
+    ucfirst(str_replace('_', ' ', $table)) . " record #$id archived.",
+    ['table' => $table]);
 
 respondSuccess("$table record archived (soft deleted)");

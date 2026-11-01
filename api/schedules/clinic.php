@@ -2,6 +2,7 @@
 // api/schedules/clinic.php - Clinic operating days/hours (settings)
 // GET: read | POST/PATCH: update (super-admin only)
 require_once '../../includes/db.php';
+require_once '../../includes/activity.php';
 require_once '../../includes/response.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -32,4 +33,7 @@ if ($exists) {
     $pdo->prepare('INSERT INTO clinic_schedules (id, operating_days, operating_hours) VALUES (1, ?, ?)')
         ->execute([$days, $hours]);
 }
+logActivity($pdo, 'schedule.update', 'clinic_schedules', 1,
+    "Clinic hours set to \"$days, $hours\".",
+    ['operating_days' => $days, 'operating_hours' => $hours]);
 respondSuccess('Schedule updated');

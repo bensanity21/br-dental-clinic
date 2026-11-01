@@ -5,6 +5,7 @@ require_once '../../includes/auth.php';
 require_once '../../includes/response.php';
 require_once '../../includes/db.php';
 require_once '../../includes/booking.php';
+require_once '../../includes/activity.php';
 require_once '../../includes/notifications.php';
 
 requireLogin();
@@ -98,5 +99,14 @@ $admin = $pdo->query("SELECT id FROM users WHERE role = 'super-admin' LIMIT 1")-
 if ($admin) {
     createInAppNotification($pdo, (int)$admin['id'], "Appointment #$appointmentId was rescheduled by {$user['full_name']} to $date at $timeSlot.");
 }
+
+logActivity(
+    $pdo,
+    'appointment.reschedule',
+    'appointments',
+    (int)$appointmentId,
+    "Appointment #$appointmentId moved from {$apt['appointment_date']} {$apt['time_slot']} to {$dateObj->format('Y-m-d')} $timeSlot.",
+    ['from' => $apt['appointment_date'] . ' ' . $apt['time_slot'], 'to' => $dateObj->format('Y-m-d') . ' ' . $timeSlot]
+);
 
 respondSuccess('Appointment rescheduled', ['id' => (int)$appointmentId, 'appointment_date' => $dateObj->format('Y-m-d'), 'time_slot' => $timeSlot, 'status' => 'Pending']);

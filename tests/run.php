@@ -379,6 +379,78 @@ try {
         testClearRateLimits();
     }
 
+    // ------------------------------------------------------------- sessions
+    if ($only === null || $only === 'sessions') {
+        $t->suite('Database-backed sessions');
+
+        testClearRateLimits();
+        $a = new TestClient('sessionA');
+        [$s, $r] = $a->login('jane@test.com', 'TestPass123!');
+        $t->eq(true, $r['success'] ?? null, 'login works with database session storage');
+
+        [$s, $r] = $a->get('api/auth/me.php');
+        $t->eq(true, $r['success'] ?? null, 'the database session is read back on the next request');
+
+        // A session row must exist, and its id must not be the raw cookie value.
+        $rows = testPdoFor(TEST_DB)->query("SELECT id, data FROM sessions")->fetchAll();
+        $t->ok(count($rows) > 0, 'at least one session row is stored in the database');
+        $storedHashes = array_column($rows, 'id');
+        $allHashed = true;
+        foreach ($storedHashes as $hash) {
+            if (preg_match('/^[a-f0-9]{64}$/', $hash) !== 1) $allHashed = false;
+        }
+        $t->ok($allHashed, 'stored session ids are 64-char SHA-256 hashes, not raw cookie ids');
+
+        // Two logins get separate sessions.
+        testClearRateLimits();
+        $b = new TestClient('sessionB');
+        [$s, $r] = $b->login('cagurol2benedict1@gmail.com', 'TestPass123!');
+        $t->eq(true, $r['success'] ?? null, 'a second user can log in at the same time');
+
+        [$s, $meA] = $a->get('api/auth/me.php');
+        [$s, $meB] = $b->get('api/auth/me.php');
+        $t->eq('jane@test.com', $meA['data']['user']['email'] ?? null, 'first session still belongs to its own user');
+        $t->eq('cagurol2benedict1@gmail.com', $meB['data']['user']['email'] ?? null, 'second session belongs to its own user');
+
+        // Revoking a session logs that user out without touching the other one.
+        // Find the exact row by hashing this client's own cookie value, so
+        // earlier suites' leftover rows cannot confuse the assertion.
+        $rawId = $a->sessionId();
+        $t->ok($rawId !== null, 'the first client exposes its session cookie');
+
+        if ($rawId !== null) {
+            $janeHash = hash('sha256', $rawId);
+
+            [$s, $r] = $a->get('api/auth/me.php');
+            $t->eq(true, $r['success'] ?? null, 'the session is valid before revocation');
+
+            testPdoFor(TEST_DB)->prepare("DELETE FROM sessions WHERE id = ?")->execute([$janeHash]);
+
+            [$s, $r] = $a->get('api/auth/me.php');
+            $t->eq(false, $r['success'] ?? null, 'deleting the session row logs that user out immediately');
+
+            [$s, $r] = $b->get('api/auth/me.php');
+            $t->eq(true, $r['success'] ?? null, 'the other user is unaffected by that revocation');
+        }
+
+        // An idle session past the lifetime is treated as gone.
+        testClearRateLimits();
+        $c = new TestClient('sessionC');
+        $c->login('jane@test.com', 'TestPass123!');
+        testPdoFor(TEST_DB)->query("UPDATE sessions SET last_activity = 0")->execute();
+        [$s, $r] = $c->get('api/auth/me.php');
+        $t->eq(false, $r['success'] ?? null, 'a session idle past its lifetime is rejected');
+
+        // Logout destroys the stored row.
+        testClearRateLimits();
+        $d = new TestClient('sessionD');
+        $d->login('jane@test.com', 'TestPass123!');
+        $before = (int)testPdoFor(TEST_DB)->query("SELECT COUNT(*) FROM sessions")->fetchColumn();
+        $d->post('api/auth/logout.php');
+        $after = (int)testPdoFor(TEST_DB)->query("SELECT COUNT(*) FROM sessions")->fetchColumn();
+        $t->ok($after < $before, 'logout removes the stored session row');
+    }
+
     // --------------------------------------------------------- regression
     if ($only === null || $only === 'regression') {
         $t->suite('Regression (public site and CSRF)');

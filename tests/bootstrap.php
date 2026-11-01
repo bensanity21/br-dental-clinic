@@ -12,6 +12,7 @@
 const TEST_DB = 'clinic_test';
 const TEST_PORT = 8099;
 const TEST_BASE = 'http://127.0.0.1:8099';
+const SESSION_COOKIE_NAME = 'br_dental_session';
 
 // ---------------------------------------------------------------- environment
 
@@ -242,6 +243,22 @@ final class TestClient
 
         $decoded = json_decode($raw, true);
         return [$status, is_array($decoded) ? $decoded : null, $raw];
+    }
+
+    /** Read this client's session cookie value from its jar. */
+    public function sessionId(): ?string
+    {
+        $lines = @file($this->jar, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
+        foreach ($lines as $line) {
+            // Curl prefixes HttpOnly cookies with "#HttpOnly_", so a plain
+            // "#" skip would discard the very line we need.
+            if (str_contains($line, SESSION_COOKIE_NAME)) {
+                $parts = preg_split('/\s+/', trim($line));
+                $value = end($parts);
+                return $value !== false && $value !== '' ? $value : null;
+            }
+        }
+        return null;
     }
 
     public function get(string $path): array   { return $this->request('GET', $path); }

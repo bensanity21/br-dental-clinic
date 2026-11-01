@@ -35,4 +35,13 @@ if (!$row || !password_verify($currentPassword, $row['password_hash'])) {
 $hash = password_hash($newPassword, PASSWORD_DEFAULT);
 $pdo->prepare('UPDATE users SET password_hash = ? WHERE id = ?')->execute([$hash, $user['id']]);
 
+// Changing a password must invalidate every other open session for that
+// account, so a person who changed it because someone else knew the old
+// password actually gets that person out. The current session is kept.
+require_once '../../includes/session_handler.php';
+$currentId = session_id();
+$pdo->prepare(
+    "DELETE FROM sessions WHERE data LIKE ? AND id <> ?"
+)->execute(['%user_id|i:' . (int)$user['id'] . ';%', hash('sha256', $currentId)]);
+
 respondSuccess('Password changed successfully');

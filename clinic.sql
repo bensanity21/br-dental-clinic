@@ -243,6 +243,17 @@ CREATE TABLE `password_resets` (
 DROP TABLE IF EXISTS `services`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `sessions` (
+  `id` char(64) NOT NULL COMMENT 'SHA-256 of the PHP session id',
+  `data` mediumtext DEFAULT NULL COMMENT 'PHP-serialised session payload',
+  `last_activity` int(10) unsigned NOT NULL DEFAULT 0 COMMENT 'UNIX timestamp of last write',
+  PRIMARY KEY (`id`),
+  KEY `idx_sessions_activity` (`last_activity`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `services`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `services` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `service_name` varchar(100) NOT NULL,

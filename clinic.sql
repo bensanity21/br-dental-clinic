@@ -48,7 +48,7 @@ CREATE TABLE `activity_logs` (
   KEY `idx_activity_action` (`action`),
   KEY `idx_activity_entity` (`entity`,`entity_id`),
   CONSTRAINT `fk_activity_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `appointments`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -67,9 +67,10 @@ CREATE TABLE `appointments` (
   `slot_key` varchar(120) GENERATED ALWAYS AS (case when `status` in ('Pending','Approved','Rescheduled','Completed') then concat(`dentist_id`,'|',`appointment_date`,'|',`time_slot`) else NULL end) STORED,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_appointments_active_slot` (`slot_key`),
-  KEY `fk_appointments_patient` (`patient_id`),
-  KEY `fk_appointments_dentist` (`dentist_id`),
   KEY `fk_appointments_service` (`service_id`),
+  KEY `idx_appt_date_status` (`appointment_date`,`status`),
+  KEY `idx_appt_dentist_date` (`dentist_id`,`appointment_date`),
+  KEY `idx_appt_patient_date` (`patient_id`,`appointment_date`),
   CONSTRAINT `fk_appointments_dentist` FOREIGN KEY (`dentist_id`) REFERENCES `dentists` (`id`),
   CONSTRAINT `fk_appointments_patient` FOREIGN KEY (`patient_id`) REFERENCES `users` (`id`),
   CONSTRAINT `fk_appointments_service` FOREIGN KEY (`service_id`) REFERENCES `services` (`id`)
@@ -131,8 +132,8 @@ CREATE TABLE `dental_records` (
   `patient_contact` varchar(40) DEFAULT NULL,
   `status` enum('In Progress','Completed') NOT NULL DEFAULT 'In Progress',
   PRIMARY KEY (`id`),
-  KEY `fk_dental_records_patient` (`patient_id`),
   KEY `fk_dental_records_dentist` (`dentist_id`),
+  KEY `idx_records_patient_date` (`patient_id`,`record_date`),
   CONSTRAINT `fk_dental_records_dentist` FOREIGN KEY (`dentist_id`) REFERENCES `dentists` (`id`),
   CONSTRAINT `fk_dental_records_patient` FOREIGN KEY (`patient_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -195,7 +196,7 @@ CREATE TABLE `login_attempts` (
   PRIMARY KEY (`id`),
   KEY `idx_email_ip` (`email`,`ip_address`),
   KEY `idx_attempted_at` (`attempted_at`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `notifications`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -207,7 +208,7 @@ CREATE TABLE `notifications` (
   `is_read` tinyint(1) DEFAULT 0,
   `created_at` timestamp NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
-  KEY `fk_notifications_user` (`user_id`),
+  KEY `idx_notif_user_read` (`user_id`,`is_read`,`created_at`),
   CONSTRAINT `fk_notifications_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=86 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -253,7 +254,7 @@ CREATE TABLE `users` (
   `created_at` timestamp NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 

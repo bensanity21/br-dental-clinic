@@ -1,10 +1,66 @@
+# BR Dental Clinic - Apache configuration
+# ============================================================
+# Applies to everything served from this directory.
+
+# No directory listings.
 Options -Indexes
 
-<FilesMatch "(?i)\.(sql|sqlite|env|log|bak|old)$">
+# Never serve database dumps, environment files, logs or backups.
+<FilesMatch "(?i)\.(sql|sqlite|env|log|bak|old|ini)$">
     Require all denied
 </FilesMatch>
 
+# Block direct access to the git metadata.
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteRule (^|/)\.git(/|$) - [F,L]
+
+    # Friendly not-found page for normal page requests only.
+    # /api/ is excluded so a mistyped endpoint still returns a real 404 that
+    # the frontend's fetch helper can recognise, instead of an HTML page.
+    RewriteCond %{REQUEST_URI} !^/draft%20for%20clinic/api/
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ - [R=404,L]
+</IfModule>
+
+# Serve the friendly page with the correct 404 status for page requests.
+ErrorDocument 404 /draft%20for%20clinic/404.html
+
+# ------------------------------------------------------------
+# Security headers
+# ------------------------------------------------------------
+<IfModule mod_headers.c>
+    # Only ever send the hostname to other sites.
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+    # Stop browsers guessing a different content type than the one we send.
+    Header always set X-Content-Type-Options "nosniff"
+
+    # This application must never be framed by another site (clickjacking).
+    Header always set X-Frame-Options "DENY"
+
+    # No camera, microphone, geolocation or payments needed anywhere here.
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+
+    # Content-Security-Policy
+    # 'unsafe-inline' is only granted to styles, because the modal sets a
+    # style="" attribute and the report uses inline styles. Scripts stay
+    # locked to same-origin files, so no inline <script> can run.
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; form-action 'self'; frame-src 'self' https://www.google.com https://maps.google.com; frame-ancestors 'none'; base-uri 'self'; object-src 'none'"
+</IfModule>
+
+# ------------------------------------------------------------
+# Static asset caching
+# ------------------------------------------------------------
+# mod_expires is not enabled in this XAMPP build, so Cache-Control is set
+# directly with mod_headers instead. Only the assets below are cached;
+# HTML pages and API responses set their own no-store headers from PHP.
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js)$">
+        Header set Cache-Control "public, max-age=604800"
+    </FilesMatch>
+    <FilesMatch "\.(png|jpe?g|svg|webp|ico|gif|woff2?)$">
+        Header set Cache-Control "public, max-age=2592000"
+    </FilesMatch>
 </IfModule>

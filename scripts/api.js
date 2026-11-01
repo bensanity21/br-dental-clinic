@@ -41,6 +41,21 @@ async function apiRequest(path, options = {}) {
       return { success: false, message: 'Session expired', data: null };
     }
 
+    // A missing endpoint or a server crash returns HTML, not JSON. Report the
+    // real status instead of failing with a confusing parse error.
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      console.error('API returned non-JSON:', res.status, url);
+      return {
+        success: false,
+        message: res.status === 404
+          ? 'This feature is unavailable (endpoint not found).'
+          : 'The server returned an unexpected response.',
+        data: null,
+        status: res.status,
+      };
+    }
+
     const data = await res.json();
     return data;
   } catch (err) {

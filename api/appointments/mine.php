@@ -11,7 +11,7 @@ requireRole(['patient', 'doctor', 'super-admin']);
 $user = currentUser();
 
 $stmt = $pdo->prepare("
-    SELECT a.id, a.appointment_date, a.time_slot, a.notes, a.status, a.created_at, a.updated_at,
+    SELECT a.id, a.patient_id, a.dentist_id, a.service_id, a.appointment_date, a.time_slot, a.notes, a.status, a.created_at, a.updated_at,
            s.service_name, s.description, s.price,
            d.full_name AS dentist_name, d.specialization,
            u.full_name AS patient_name

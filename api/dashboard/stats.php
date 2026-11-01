@@ -11,38 +11,51 @@ $user = currentUser();
 $today = date('Y-m-d');
 $startMonth = date('Y-m-01');
 
+/** Run a prepared COUNT query and return it as an int. */
+function countQuery(PDO $pdo, string $sql, array $params = []): int {
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    return (int)$stmt->fetchColumn();
+}
+
 if ($user['role'] === 'super-admin') {
-    $totalPatients = (int)$pdo->query("SELECT COUNT(*) FROM users WHERE role = 'patient'")->fetchColumn();
-    $todayAppts = (int)$pdo->query("SELECT COUNT(*) FROM appointments WHERE appointment_date = '$today'")->fetchColumn();
-    $pending = (int)$pdo->query("SELECT COUNT(*) FROM appointments WHERE status = 'Pending'")->fetchColumn();
-    $activeDentists = (int)$pdo->query("SELECT COUNT(*) FROM dentists")->fetchColumn();
-    $completedMonth = (int)$pdo->query("SELECT COUNT(*) FROM appointments WHERE status = 'Completed' AND appointment_date >= '$startMonth'")->fetchColumn();
-    $upcoming = $pdo->query("
+    $totalPatients = countQuery($pdo, "SELECT COUNT(*) FROM users WHERE role = 'patient'");
+    $todayAppts = countQuery($pdo, 'SELECT COUNT(*) FROM appointments WHERE appointment_date = ?', [$today]);
+    $pending = countQuery($pdo, "SELECT COUNT(*) FROM appointments WHERE status = 'Pending'");
+    $activeDentists = countQuery($pdo, 'SELECT COUNT(*) FROM dentists');
+    $completedMonth = countQuery($pdo, "SELECT COUNT(*) FROM appointments WHERE status = 'Completed' AND appointment_date >= ?", [$startMonth]);
+    $stmt = $pdo->prepare("
         SELECT a.id, a.appointment_date, a.time_slot, a.status, u.full_name AS patient_name, s.service_name
         FROM appointments a
         LEFT JOIN users u ON a.patient_id = u.id
         LEFT JOIN services s ON a.service_id = s.id
-        WHERE a.appointment_date >= '$today' AND a.status IN ('Pending','Approved')
+        WHERE a.appointment_date >= ? AND a.status IN ('Pending','Approved')
         ORDER BY a.appointment_date ASC, a.time_slot ASC
         LIMIT 10
-    ")->fetchAll();
+    ");
+    $stmt->execute([$today]);
+    $upcoming = $stmt->fetchAll();
 } elseif ($user['role'] === 'doctor') {
-    $dentist = $pdo->query("SELECT id FROM dentists WHERE user_id = {$user['id']} LIMIT 1")->fetch();
+    $stmt = $pdo->prepare('SELECT id FROM dentists WHERE user_id = ? LIMIT 1');
+    $stmt->execute([$user['id']]);
+    $dentist = $stmt->fetch();
     $dId = $dentist ? (int)$dentist['id'] : 0;
-    $totalPatients = (int)$pdo->query("SELECT COUNT(DISTINCT patient_id) FROM appointments WHERE dentist_id = $dId")->fetchColumn();
-    $todayAppts = (int)$pdo->query("SELECT COUNT(*) FROM appointments WHERE appointment_date = '$today' AND dentist_id = $dId")->fetchColumn();
-    $pending = (int)$pdo->query("SELECT COUNT(*) FROM appointments WHERE status = 'Pending' AND dentist_id = $dId")->fetchColumn();
+    $totalPatients = countQuery($pdo, 'SELECT COUNT(DISTINCT patient_id) FROM appointments WHERE dentist_id = ?', [$dId]);
+    $todayAppts = countQuery($pdo, 'SELECT COUNT(*) FROM appointments WHERE appointment_date = ? AND dentist_id = ?', [$today, $dId]);
+    $pending = countQuery($pdo, "SELECT COUNT(*) FROM appointments WHERE status = 'Pending' AND dentist_id = ?", [$dId]);
     $activeDentists = 1;
-    $completedMonth = (int)$pdo->query("SELECT COUNT(*) FROM appointments WHERE status = 'Completed' AND appointment_date >= '$startMonth' AND dentist_id = $dId")->fetchColumn();
-    $upcoming = $pdo->query("
+    $completedMonth = countQuery($pdo, "SELECT COUNT(*) FROM appointments WHERE status = 'Completed' AND appointment_date >= ? AND dentist_id = ?", [$startMonth, $dId]);
+    $stmt = $pdo->prepare("
         SELECT a.id, a.appointment_date, a.time_slot, a.status, u.full_name AS patient_name, s.service_name
         FROM appointments a
         LEFT JOIN users u ON a.patient_id = u.id
         LEFT JOIN services s ON a.service_id = s.id
-        WHERE a.dentist_id = $dId AND a.appointment_date >= '$today' AND a.status IN ('Pending','Approved')
+        WHERE a.dentist_id = ? AND a.appointment_date >= ? AND a.status IN ('Pending','Approved')
         ORDER BY a.appointment_date ASC, a.time_slot ASC
         LIMIT 10
-    ")->fetchAll();
+    ");
+    $stmt->execute([$dId, $today]);
+    $upcoming = $stmt->fetchAll();
 } else {
     // patient
     $totalPatients = 1;
@@ -52,17 +65,17 @@ if ($user['role'] === 'super-admin') {
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM appointments WHERE status = 'Pending' AND patient_id = ?");
     $stmt->execute([$user['id']]);
     $pending = (int)$stmt->fetchColumn();
-    $activeDentists = (int)$pdo->query('SELECT COUNT(*) FROM dentists')->fetchColumn();
+    $activeDentists = countQuery($pdo, 'SELECT COUNT(*) FROM dentists');
     $completedMonth = 0;
     $stmt = $pdo->prepare("
         SELECT a.id, a.appointment_date, a.time_slot, a.status, s.service_name
         FROM appointments a
         LEFT JOIN services s ON a.service_id = s.id
-        WHERE a.patient_id = ? AND a.appointment_date >= '$today' AND a.status IN ('Pending','Approved')
+        WHERE a.patient_id = ? AND a.appointment_date >= ? AND a.status IN ('Pending','Approved')
         ORDER BY a.appointment_date ASC, a.time_slot ASC
         LIMIT 10
     ");
-    $stmt->execute([$user['id']]);
+    $stmt->execute([$user['id'], $today]);
     $upcoming = $stmt->fetchAll();
 }
 

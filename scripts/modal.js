@@ -28,9 +28,23 @@ export function openModal(title, bodyHTML, actions = []) {
       btn.className = `btn ${act.class || 'btn-outline'}`;
       if (act.danger) btn.className += ' btn-danger';
       btn.textContent = act.text;
-      btn.addEventListener('click', () => {
-        const result = typeof act.value === 'function' ? act.value() : act.value;
-        closeModal(result);
+      btn.addEventListener('click', async () => {
+        if (typeof act.value !== 'function') {
+          closeModal(act.value);
+          return;
+        }
+        // Await async actions (e.g. an API call) so the modal is not torn down
+        // before that work finishes and the dialog has exactly one backdrop.
+        btn.disabled = true;
+        try {
+          const result = await act.value();
+          closeModal(result === undefined ? false : result);
+        } catch (err) {
+          console.error('Modal action failed:', err);
+          closeModal(false);
+        } finally {
+          btn.disabled = false;
+        }
       });
       modalFooter.appendChild(btn);
     });

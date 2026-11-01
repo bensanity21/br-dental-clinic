@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BR Dental Clinic - Master Admin Portal</title>
+  <title>BR Dental Clinic - Admin Portal</title>
   <meta name="description" content="BR Dental Clinic master admin portal.">
   <link rel="stylesheet" href="style.css?v=18">
 </head>
@@ -50,7 +50,7 @@
         <!-- ADMIN: DASHBOARD -->
         <section id="view-admin-dashboard" class="page-view active">
           <div class="page-header">
-            <h1>Master Admin Dashboard</h1>
+            <h1>Admin Dashboard</h1>
             <p>Clinic overview and today's appointment schedule.</p>
           </div>
 
@@ -358,19 +358,18 @@
                 <p class="section-kicker">ACCOUNT SETUP</p>
                 <h2 id="account-flow-title">Who creates each account</h2>
               </div>
-              <p class="flow-note">User accounts are created through public sign-up.</p>
+              <p class="flow-note">Patients sign up publicly; dentists are created by the Super Admin.</p>
             </div>
             <ol class="account-flow-list">
               <li>
                 <span class="flow-step-number">01</span>
-                <div><h3>Master Admin</h3><p>Creates and manages other master admin accounts.</p></div>
+                <div><h3>Super Admin</h3><p>Creates dentist accounts and manages all clinic records.</p></div>
               </li>
               <li>
                 <span class="flow-step-number">02</span>
-                <div><h3>User</h3><p>Registers and manages their own account.</p></div>
+                <div><h3>Patient</h3><p>Registers through public sign-up and books their own appointments.</p></div>
               </li>
             </ol>
-            <p class="account-setup-note">Master admin account entries are kept in this browser session only. Connect a secure identity service to create real logins and send invitations.</p>
           </section>
 
           <section class="role-permissions-section" aria-labelledby="role-permissions-title">
@@ -383,11 +382,11 @@
             <div id="role-permission-list" class="role-permission-list"></div>
           </section>
 
-          <section class="card staff-user-panel" aria-labelledby="master-admin-users-title">
+          <section class="card staff-user-panel" aria-labelledby="all-users-title">
             <div class="staff-user-heading">
               <div>
-                <h2 id="master-admin-users-title">Master Admin accounts</h2>
-                <p class="text-sub">New accounts appear here during this session.</p>
+                <h2 id="all-users-title">All accounts</h2>
+                <p class="text-sub">Patients register themselves. Dentist accounts are created here by the Super Admin.</p>
               </div>
             </div>
             <div class="table-scroll">
@@ -397,12 +396,12 @@
                     <th>Name</th>
                     <th>Email address</th>
                     <th>Role</th>
-                    <th>Status</th>
-                    <th>Created by</th>
+                    <th>Phone</th>
+                    <th>Registered</th>
                   </tr>
                 </thead>
-                <tbody id="staff-users-tbody">
-                  <tr><td colspan="5" class="empty-cell">No master admin accounts have been added in this session.</td></tr>
+                <tbody id="admin-users-body">
+                  <tr><td colspan="5" class="empty-cell">Loading accounts…</td></tr>
                 </tbody>
               </table>
             </div>
@@ -426,6 +425,6 @@
   <script type="module" src="scripts/api.js?v=8"></script>
   <script type="module" src="scripts/modal.js?v=8"></script>
   <script type="module" src="scripts/toast.js?v=5"></script>
-  <script type="module" src="scripts/portal.js?v=33"></script>
+  <script type="module" src="scripts/portal.js?v=36"></script>
 </body>
 </html>

@@ -29,7 +29,7 @@ $stmt->execute([$like, $like]);
 $results['dentists'] = $stmt->fetchAll();
 
 // Patient data is limited to the signed-in patient's own profile or all patients
-// for the Master Admin. Doctors find assigned patients through appointment results.
+// for the Super Admin. Doctors find assigned patients through appointment results.
 if ($user['role'] === 'super-admin') {
     $stmt = $pdo->prepare("SELECT id, full_name, email FROM users WHERE role = 'patient' AND (full_name LIKE ? OR email LIKE ?) LIMIT 20");
     $stmt->execute([$like, $like]);

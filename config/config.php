@@ -4,7 +4,7 @@
 // Clinic information
 define('CLINIC_NAME', 'BR Dental Clinic');
 define('CLINIC_PHONE', '09066636112');
-define('CLINIC_ADDRESS', '74 Nyugan Road, Paliparan 1, Dasmariñas, Cavite, Philippines');
+define('CLINIC_ADDRESS', '73 Nyugan Road, Paliparan 1, Dasmariñas City, Cavite');
 define('CLINIC_EMAIL', 'admin@brdental.com');
 define('CLINIC_HOURS', '8:00 AM - 6:00 PM');
 

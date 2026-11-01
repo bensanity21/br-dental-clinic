@@ -80,6 +80,10 @@ try {
     $pdo->commit();
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
+    // The unique index on slot_key is the final guard against a concurrent double booking.
+    if ($e instanceof PDOException && $e->getCode() === '23000') {
+        respondError('This time slot was just taken. Please choose another time.', null, 409);
+    }
     error_log('Booking failed: ' . $e->getMessage());
     respondError('Booking failed.', null, 500);
 }

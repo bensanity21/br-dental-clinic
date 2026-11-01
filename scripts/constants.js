@@ -1,7 +1,7 @@
 export const ROLE_DEFINITIONS = [
   {
     key: "super-admin",
-    name: "Master Admin",
+    name: "Super Admin",
     permissions: [
       "Manage users and roles",
       "Manage clinic settings",

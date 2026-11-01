@@ -7,7 +7,11 @@ Thumbs.db
 .idea/
 
 # Local session or temporary files
-*.logcookies.txt
+*.log
+cookies.txt
+login_resp.txt
+headers.txt
+slots_resp.txt
 
 # Local secrets must never be committed
 /config/secrets.local.php

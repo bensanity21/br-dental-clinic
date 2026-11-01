@@ -3,9 +3,9 @@
 // All mutations require confirmModal + go through API endpoints (PDO, prepared statements).
 
 import { api, setCsrfToken } from './api.js?v=8';
-import { confirmModal, openModal, closeModal } from './modal.js?v=8';
+import { confirmModal, openModal, closeModal } from './modal.js?v=9';
 import { showToast } from './toast.js';
-import { setLanguage, t } from './i18n.js?v=3';
+import { setLanguage, t } from './i18n.js?v=4';
 
 let currentUser = null;
 let role = '';
@@ -110,7 +110,7 @@ function renderNavigation() {
   const isAdmin = role === 'super-admin';
   const isDoctor = role === 'doctor';
   const searchPlaceholder = isAdmin
-    ? 'Search Master Admin sections...'
+    ? 'Search admin sections...'
     : isDoctor
       ? 'Search your clinic sections...'
       : 'Search your appointments and services...';
@@ -241,7 +241,7 @@ function renderNavigation() {
           <div id="profile-dropdown-panel" class="dropdown-panel dropdown-right profile-dropdown-card hidden" role="region" aria-label="Account options" aria-hidden="true">
             <div class="profile-dropdown-heading">
               <span class="profile-dropdown-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c.4-3.5 2.7-5.5 7-5.5s6.6 2 7 5.5"></path></svg></span>
-              <span class="profile-dropdown-identity"><strong>${escapeHtml(fullName)}</strong><span>${isAdmin ? 'Master Admin' : isDoctor ? 'Doctor' : 'Patient'}</span></span>
+              <span class="profile-dropdown-identity"><strong>${escapeHtml(fullName)}</strong><span>${isAdmin ? 'Super Admin' : isDoctor ? 'Doctor' : 'Patient'}</span></span>
             </div>
             <a href="#" class="profile-dropdown-item" data-view-target="profile"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c.5-4.2 3.2-6.5 8-6.5s7.5 2.3 8 6.5"></path></svg><span>View Profile</span></a>
             ${isAdmin
@@ -328,6 +328,8 @@ async function switchView(targetViewId, { push = true } = {}) {
     case 'admin-services': await renderAdminServices(); break;
     case 'admin-dentists': await renderAdminDentists(); break;
     case 'admin-settings': await renderAdminSettings(); break;
+    case 'admin-users': await renderAdminUsers(); break;
+    case 'admin-reports': await renderAdminReports(); break;
   }
 }
 
@@ -416,7 +418,10 @@ async function renderPatientAppointments() {
         '<td>' + escapeHtml(a.service_name || '') + '</td>' +
         '<td>' + escapeHtml(a.dentist_name || '') + '</td>' +
         '<td><span class="status-tag status-' + (a.status || 'Pending').toLowerCase() + '">' + a.status + '</span></td>' +
-        '<td>' + (a.status === 'Pending' ? '<button class="btn btn-sm btn-outline" onclick="cancelApt(' + a.id + ')">Cancel</button>' : '-') + '</td>' +
+        '<td>' + (a.status === 'Pending' || a.status === 'Approved'
+          ? '<button type="button" class="btn btn-sm btn-outline" onclick="rescheduleApt(' + Number(a.id) + ', \'' + escapeHtml(a.appointment_date) + '\')">Reschedule</button> ' +
+            '<button type="button" class="btn btn-sm btn-outline" onclick="cancelApt(' + Number(a.id) + ')">Cancel</button>'
+          : '-') + '</td>' +
         '</tr>'
       )).join('');
     }
@@ -571,6 +576,77 @@ window.cancelApt = async (id) => {
     await renderAdminAppointments();
     await renderNotifications();
   } else { showToast(res.message || 'Failed to cancel.', 'error'); }
+};
+
+// Patient reschedule: pick a new date, then a free slot for the same dentist.
+window.rescheduleApt = async (id, currentDate) => {
+  const body = '' +
+    '<div class="form-group"><label for="resched-date">New date</label>' +
+    '<input type="date" id="resched-date" value="' + escapeHtml(currentDate || '') + '" required></div>' +
+    '<div class="form-group"><label for="resched-slot">New time slot</label>' +
+    '<select id="resched-slot" required disabled><option value="">Choose a date first</option></select>' +
+    '<span class="field-hint" id="resched-hint"></span></div>';
+
+  openModal('Reschedule Appointment', body, [
+    { text: 'Cancel', value: false, class: 'btn-outline' },
+    {
+      text: 'Reschedule',
+      class: 'btn-primary',
+      value: async () => {
+        const newDate = document.getElementById('resched-date')?.value || '';
+        const newSlot = document.getElementById('resched-slot')?.value || '';
+        if (!newDate || !newSlot) {
+          showToast('Choose a new date and time slot.', 'error');
+          return false;
+        }
+        const res = await api.patch('appointments/reschedule.php', { id, appointment_date: newDate, time_slot: newSlot });
+        if (res.success) {
+          showToast('Appointment rescheduled. Awaiting approval.');
+          await renderPatientAppointments();
+          await renderNotifications();
+          return true;
+        }
+        showToast(res.message || 'Could not reschedule this appointment.', 'error');
+        return false;
+      },
+    },
+  ]);
+
+  // Load free slots whenever the date changes inside the modal.
+  const dateField = document.getElementById('resched-date');
+  const slotField = document.getElementById('resched-slot');
+  const hint = document.getElementById('resched-hint');
+  if (!dateField || !slotField) return;
+
+  const loadSlots = async () => {
+    const chosenDate = dateField.value;
+    if (!chosenDate) return;
+    slotField.disabled = true;
+    slotField.innerHTML = '<option value="">Loading…</option>';
+    if (hint) hint.textContent = '';
+    // Reuse the booking slots endpoint; it needs the dentist for this appointment.
+    const appts = await api.get('appointments/mine.php');
+    const mine = (appts.data || []).find((a) => Number(a.id) === Number(id));
+    const dentistId = mine?.dentist_id;
+    if (!dentistId) { slotField.innerHTML = '<option value="">Could not load slots</option>'; return; }
+    const res = await api.get('appointments/slots.php?date=' + encodeURIComponent(chosenDate) + '&dentist_id=' + encodeURIComponent(dentistId));
+    const slots = res.success ? (res.data?.slots || []) : [];
+    const free = slots.filter((s) => typeof s === 'object' ? s.available : true);
+    if (!free.length) {
+      slotField.innerHTML = '<option value="">No free slots on this date</option>';
+      if (hint) hint.textContent = 'Try another date — the clinic may be closed or fully booked.';
+      return;
+    }
+    slotField.disabled = false;
+    slotField.innerHTML = '<option value="">-- Choose a time --</option>' +
+      free.map((s) => {
+        const label = typeof s === 'object' ? s.time : s;
+        return '<option value="' + escapeHtml(label) + '">' + escapeHtml(label) + '</option>';
+      }).join('');
+  };
+
+  dateField.addEventListener('change', loadSlots);
+  loadSlots();
 };
 
 window.deleteService = async (id) => {
@@ -786,7 +862,7 @@ function startNotificationPolling() {
   const refreshWhenVisible = () => {
     if (document.visibilityState === 'visible') renderNotifications();
   };
-  window.setInterval(refreshWhenVisible, 5000);
+  window.setInterval(refreshWhenVisible, 30000);
   document.addEventListener('visibilitychange', refreshWhenVisible);
   window.addEventListener('focus', refreshWhenVisible);
 }
@@ -906,6 +982,88 @@ async function renderArchives() {
       '</tr>';
   }).join('');
 }
+async function renderAdminUsers() {
+  const tbody = document.getElementById('admin-users-body');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="5">Loading users…</td></tr>';
+
+  const res = await api.get('users/list.php');
+  if (!res.success) {
+    tbody.innerHTML = '<tr><td colspan="5">Could not load users.</td></tr>';
+    showToast(res.message || 'Failed to load users.', 'error');
+    return;
+  }
+
+  const users = res.data || [];
+  if (!users.length) {
+    tbody.innerHTML = '<tr><td colspan="5">No accounts yet.</td></tr>';
+    return;
+  }
+
+  const roleLabels = { 'super-admin': 'Super Admin', doctor: 'Dentist', patient: 'Patient' };
+  tbody.innerHTML = users.map((u) => '<tr>' +
+    '<td>' + escapeHtml(u.full_name) + '</td>' +
+    '<td>' + escapeHtml(u.email) + '</td>' +
+    '<td>' + escapeHtml(roleLabels[u.role] || u.role) + '</td>' +
+    '<td>' + escapeHtml(u.phone_number || 'Not provided') + '</td>' +
+    '<td>' + escapeHtml((u.created_at || '').slice(0, 10)) + '</td>' +
+    '</tr>').join('');
+}
+
+async function renderAdminReports() {
+  // Default the range to the current month so the page is never blank.
+  const fromInput = document.getElementById('report-from');
+  const toInput = document.getElementById('report-to');
+  const today = new Date().toISOString().slice(0, 10);
+  if (fromInput && !fromInput.value) fromInput.value = today.slice(0, 8) + '01';
+  if (toInput && !toInput.value) toInput.value = today;
+  await renderReport();
+}
+
+function openCreateUserModal() {
+  const body = '' +
+    '<div class="form-group"><label for="new-user-name">Full name</label>' +
+    '<input type="text" id="new-user-name" placeholder="Juan Dela Cruz" required></div>' +
+    '<div class="form-group"><label for="new-user-email">Email</label>' +
+    '<input type="email" id="new-user-email" placeholder="name@example.com" required></div>' +
+    '<div class="form-group"><label for="new-user-role">Role</label>' +
+    '<select id="new-user-role"><option value="doctor">Dentist</option>' +
+    '<option value="patient">Patient</option></select></div>' +
+    '<div class="form-group"><label for="new-user-phone">Phone number (optional)</label>' +
+    '<input type="text" id="new-user-phone" placeholder="09XXXXXXXXX"></div>' +
+    '<div class="form-group"><label for="new-user-password">Temporary password</label>' +
+    '<input type="password" id="new-user-password" placeholder="At least 8 characters" required></div>';
+
+  openModal('Create account', body, [
+    { text: 'Cancel', value: false, class: 'btn-outline' },
+    {
+      text: 'Create account',
+      class: 'btn-primary',
+      value: async () => {
+        const payload = {
+          full_name: document.getElementById('new-user-name')?.value.trim() || '',
+          email: document.getElementById('new-user-email')?.value.trim() || '',
+          role: document.getElementById('new-user-role')?.value || 'patient',
+          phone_number: document.getElementById('new-user-phone')?.value.trim() || '',
+          password: document.getElementById('new-user-password')?.value || '',
+        };
+        if (!payload.full_name || !payload.email || payload.password.length < 8) {
+          showToast('Full name, email and a password of at least 8 characters are required.', 'error');
+          return false;
+        }
+        const res = await api.post('users/create.php', payload);
+        if (res.success) {
+          showToast('Account created.');
+          await renderAdminUsers();
+        } else {
+          showToast(res.message || 'Could not create the account.', 'error');
+        }
+        return false;
+      },
+    },
+  ]);
+}
+
 async function renderReport() {
   const from = document.getElementById('report-from')?.value || '';
   const to = document.getElementById('report-to')?.value || '';
@@ -998,19 +1156,34 @@ function setProfileError(message) {
 function profileFormIsDirty() {
   if (!patientProfileBaseline || !el.patientProfileForm) return false;
   return document.getElementById('profile-fullname')?.value.trim() !== patientProfileBaseline.full_name
-    || document.getElementById('profile-phone')?.value.trim() !== (patientProfileBaseline.phone_number || '');
+    || document.getElementById('profile-phone')?.value.trim() !== (patientProfileBaseline.phone_number || '')
+    || (document.getElementById('profile-emergency')?.value || '').trim() !== (patientProfileBaseline.emergency_contact || '')
+    || (document.getElementById('profile-address')?.value || '').trim() !== (patientProfileBaseline.home_address || '')
+    || (document.getElementById('profile-dob')?.value || '').trim() !== (patientProfileBaseline.date_of_birth || '');
 }
 
 function resetProfileEdit() {
   if (!patientProfileData || !el.patientProfileForm) return;
   document.getElementById('profile-fullname').value = patientProfileData.full_name || '';
   document.getElementById('profile-phone').value = patientProfileData.phone_number || '';
+  const emergencyField = document.getElementById('profile-emergency');
+  if (emergencyField) emergencyField.value = patientProfileData.emergency_contact || '';
+  const addressField = document.getElementById('profile-address');
+  if (addressField) addressField.value = patientProfileData.home_address || '';
+  const dobField = document.getElementById('profile-dob');
+  if (dobField) dobField.value = patientProfileData.date_of_birth || '';
   setProfileError(null);
   el.patientProfileForm.classList.add('hidden');
   document.getElementById('patient-profile-readonly')?.classList.remove('hidden');
   document.getElementById('profile-edit-button').classList.remove('hidden');
   document.getElementById('profile-readonly-hint').textContent = 'View only';
-  patientProfileBaseline = { full_name: patientProfileData.full_name || '', phone_number: patientProfileData.phone_number || '' };
+  patientProfileBaseline = {
+    full_name: patientProfileData.full_name || '',
+    phone_number: patientProfileData.phone_number || '',
+    emergency_contact: patientProfileData.emergency_contact || '',
+    home_address: patientProfileData.home_address || '',
+    date_of_birth: patientProfileData.date_of_birth || '',
+  };
 }
 
 function formatPatientDate(value) {
@@ -1028,6 +1201,19 @@ function displayPatientProfile(profile) {
   document.getElementById('profile-display-name').textContent = name;
   document.getElementById('profile-display-email').textContent = profile.email || 'Not provided';
   document.getElementById('profile-display-phone').textContent = profile.phone_number || 'Not provided';
+  document.getElementById('profile-display-emergency-name').textContent = profile.emergency_contact || 'Not provided';
+  document.getElementById('profile-display-emergency-phone').textContent = profile.emergency_contact ? 'See above' : 'Not provided';
+  document.getElementById('profile-display-address').textContent = profile.home_address || 'Not provided';
+  const dobDisplay = document.getElementById('profile-display-dob');
+  if (dobDisplay) {
+    if (profile.date_of_birth) {
+      const born = new Date(profile.date_of_birth + 'T00:00:00');
+      const age = Math.floor((Date.now() - born.getTime()) / 31557600000);
+      dobDisplay.textContent = formatPatientDate(profile.date_of_birth) + (Number.isFinite(age) && age >= 0 ? ' · ' + age + ' years old' : '');
+    } else {
+      dobDisplay.textContent = 'Not provided';
+    }
+  }
   document.getElementById('profile-display-created').textContent = formatPatientDate(profile.created_at);
   document.getElementById('profile-completed-count').textContent = String(Number(profile.completed_appointments) || 0);
   const next = profile.next_appointment;
@@ -1038,6 +1224,12 @@ function displayPatientProfile(profile) {
   document.getElementById('profile-fullname').value = name;
   document.getElementById('profile-email').value = profile.email || '';
   document.getElementById('profile-phone').value = profile.phone_number || '';
+  const emergencyInput = document.getElementById('profile-emergency');
+  if (emergencyInput) emergencyInput.value = profile.emergency_contact || '';
+  const addressInput = document.getElementById('profile-address');
+  if (addressInput) addressInput.value = profile.home_address || '';
+  const dobInput = document.getElementById('profile-dob');
+  if (dobInput) dobInput.value = profile.date_of_birth || '';
   document.getElementById('settings-account-email').value = profile.email || '';
   currentUser.full_name = name;
   currentUser.email = profile.email || currentUser.email;
@@ -1128,18 +1320,39 @@ if (el.patientProfileForm) {
     if (!el.patientProfileForm.reportValidity()) return;
     const fullName = document.getElementById('profile-fullname').value.trim();
     const phone = document.getElementById('profile-phone').value.trim();
+    const emergencyContact = (document.getElementById('profile-emergency')?.value || '').trim();
+    const homeAddress = (document.getElementById('profile-address')?.value || '').trim();
+    const dateOfBirth = (document.getElementById('profile-dob')?.value || '').trim();
     setProfileError(null);
     if (fullName.length < 2 || fullName.length > 100) { setProfileError({ field: 'name', text: 'Enter a name between 2 and 100 characters.' }); document.getElementById('profile-fullname').focus(); return; }
-    if (phone && !/^\+?[0-9 ()\.-]{7,20}$/.test(phone)) { setProfileError({ field: 'phone', text: 'Enter a valid phone number.' }); document.getElementById('profile-phone').focus(); return; }
+    if (phone && !/^\+?[0-9 ()\-\.]{7,20}$/.test(phone)) { setProfileError({ field: 'phone', text: 'Enter a valid phone number.' }); document.getElementById('profile-phone').focus(); return; }
+    if (emergencyContact.length > 150) { showToast('The emergency contact must be 150 characters or fewer.', 'error'); return; }
+    if (homeAddress.length > 255) { showToast('The address must be 255 characters or fewer.', 'error'); return; }
+    if (dateOfBirth) {
+      const parsed = new Date(dateOfBirth + 'T00:00:00');
+      if (Number.isNaN(parsed.getTime()) || parsed > new Date()) {
+        showToast('Enter a date of birth that is not in the future.', 'error');
+        return;
+      }
+    }
     const confirmed = await confirmModal({ title: 'Save Profile Changes', message: 'Save these changes to your profile?' });
     if (!confirmed) return;
     const save = document.getElementById('profile-save-button');
     save.disabled = true;
-    const res = await api.patch('auth/profile.php', { full_name: fullName, phone_number: phone });
+    const res = await api.patch('auth/profile.php', {
+      full_name: fullName,
+      phone_number: phone,
+      emergency_contact: emergencyContact,
+      home_address: homeAddress,
+      date_of_birth: dateOfBirth,
+    });
     save.disabled = false;
     if (!res.success) { showToast(res.message || 'Profile update failed.', 'error'); return; }
     patientProfileData.full_name = res.data.full_name;
     patientProfileData.phone_number = res.data.phone_number;
+    patientProfileData.emergency_contact = res.data.emergency_contact;
+    patientProfileData.home_address = res.data.home_address;
+    patientProfileData.date_of_birth = res.data.date_of_birth;
     displayPatientProfile(patientProfileData);
     showToast('Profile updated successfully.');
   });
@@ -1282,6 +1495,17 @@ function bindEvents() {
   });
   const runReportButton = document.getElementById('btn-run-report');
   if (runReportButton) runReportButton.addEventListener('click', renderReport);
+  const printReportButton = document.getElementById('btn-print-report');
+  if (printReportButton) printReportButton.addEventListener('click', () => {
+    // Printing is a view action; confirm first like every other action.
+    confirmModal({
+      title: 'Print report?',
+      message: 'This opens your browser print dialog for the report currently shown.',
+      confirmLabel: 'Print',
+    }).then((ok) => { if (ok) window.print(); });
+  });
+  const createUserButton = document.getElementById('btn-create-user');
+  if (createUserButton) createUserButton.addEventListener('click', openCreateUserModal);
   if (scheduleForm) scheduleForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     const operating_days = document.getElementById('sched-days').value.trim();

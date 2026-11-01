@@ -52,6 +52,6 @@ WHERE NOT EXISTS (SELECT 1 FROM services LIMIT 1);
 --    (link to existing super-admin user? no - create standalone dentist linked later; use her own doctor account)
 INSERT INTO dentists (user_id, full_name, specialization, phone_number)
 SELECT * FROM (
-  SELECT NULL AS user_id, 'Dr. Ma. Elena B. Retuerma' AS full_name, 'General Dentistry' AS specialization, '09066636112' AS phone_number
+  SELECT NULL AS user_id, 'Dr. Ma. Elena B. Retuerna' AS full_name, 'General Dentistry' AS specialization, '09066636112' AS phone_number
 ) AS seed
 WHERE NOT EXISTS (SELECT 1 FROM dentists LIMIT 1);

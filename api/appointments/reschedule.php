@@ -68,6 +68,9 @@ try {
     $pdo->commit();
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
+    if ($e instanceof PDOException && $e->getCode() === '23000') {
+        respondError('This time slot was just taken. Please choose another time.', null, 409);
+    }
     error_log('Reschedule failed: ' . $e->getMessage());
     respondError('Reschedule failed. Please try again.', null, 500);
 }

@@ -47,12 +47,5 @@ if (form) {
   });
 }
 
-document.getElementById("btn-oauth-google")?.addEventListener("click", () => {
-  setAuthAlert("Google Auth requires backend configuration.", "danger");
-});
-document.getElementById("btn-oauth-facebook")?.addEventListener("click", () => {
-  setAuthAlert("Facebook Auth requires backend OAuth setup.", "danger");
-});
-document.getElementById("btn-forgot-password")?.addEventListener("click", () => {
-  setAuthAlert("Password recovery emails require an SMTP backend.", "danger");
-});
+// Remember me, Google/Facebook sign-in and password recovery are not implemented;
+// their buttons were removed from index.html rather than left dead.

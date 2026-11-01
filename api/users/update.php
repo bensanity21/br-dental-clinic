@@ -13,8 +13,17 @@ $id = $data['id'] ?? null;
 if (!$id) { respondError('User ID required.', null, 400); }
 
 // Prevent demoting/promoting to super-admin via this form
-if (isset($data['role']) && !in_array($data['role'], ['patient', 'doctor', 'super-admin'], true)) {
-    respondError('Invalid role.', null, 400);
+if (isset($data['role']) && !in_array($data['role'], ['patient', 'doctor'], true)) {
+    respondError('Invalid role. Only patient and doctor accounts can be created or changed here.', null, 400);
+}
+
+// There is exactly one Super Admin (created by the seed SQL); this endpoint never touches it.
+$stmt = $pdo->prepare('SELECT role FROM users WHERE id = ?');
+$stmt->execute([$id]);
+$target = $stmt->fetch();
+if (!$target) { respondError('User not found.', null, 404); }
+if ($target['role'] === 'super-admin') {
+    respondError('The Super Admin account cannot be modified from this page.', null, 403);
 }
 
 // Build dynamic update

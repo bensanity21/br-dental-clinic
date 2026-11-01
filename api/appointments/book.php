@@ -34,6 +34,22 @@ if (!$dateObj || !is_string($timeSlot) || !in_array($timeSlot, bookingSlots($pdo
 if (!isClinicOpenOn($pdo, $dateObj)) {
     respondError('The clinic is closed on that day. Please choose another date.', null, 422);
 }
+// The dentist may keep shorter hours or be taking that day off.
+$dayOff = dentistIsOffOn($pdo, (int)$dentistId, $dateObj->format('Y-m-d'));
+if ($dayOff !== null) {
+    respondError('The selected dentist is not available on that day' . ($dayOff !== 'Day off' ? " ($dayOff)" : '') . '. Please choose another date.', null, 422);
+}
+$dentistHours = dentistHoursForDate($pdo, (int)$dentistId, $dateObj);
+if ($dentistHours === null) {
+    respondError('The selected dentist does not work on that day. Please choose another date.', null, 422);
+}
+$slotMinutes = (function (string $slot): int {
+    $t = DateTimeImmutable::createFromFormat('!h:i A', $slot, new DateTimeZone(BOOKING_TZ));
+    return $t ? ((int)$t->format('G') * 60 + (int)$t->format('i')) : -1;
+})($timeSlot);
+if ($slotMinutes < $dentistHours[0] || $slotMinutes + BOOKING_SLOT_MINUTES > $dentistHours[1]) {
+    respondError('That time is outside the dentist\'s working hours. Please choose another time.', null, 422);
+}
 if (slotHasPassed($dateObj, $timeSlot)) {
     respondError('Cannot book appointments in the past.', null, 400);
 }

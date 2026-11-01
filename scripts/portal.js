@@ -9,6 +9,16 @@ import { setLanguage, t } from './i18n.js?v=5';
 
 let currentUser = null;
 let role = '';
+
+// Views a dentist may open inside the admin shell. Everything else (reports,
+// users, archives, settings) stays Super Admin only.
+const DOCTOR_ALLOWED_VIEWS = new Set([
+  'admin-dashboard',
+  'admin-appointments',
+  'admin-patients',
+  'admin-records',
+  'admin-dentists',
+]);
 let dentistInfo = null;
 let serviceCatalog = [];
 let knownNotificationIds = null;
@@ -109,6 +119,11 @@ function renderNavigation() {
 
   const isAdmin = role === 'super-admin';
   const isDoctor = role === 'doctor';
+  // Patients get the patient shell; dentists and the Super Admin share the
+  // staff shell and then have individual links filtered by role.
+  const isStaffShell = isAdmin || isDoctor;
+  // Dentists also manage their own availability, which lives on the dentists page.
+  const canManageAvailability = isAdmin || isDoctor;
   const searchPlaceholder = isAdmin
     ? 'Search admin sections...'
     : isDoctor
@@ -133,12 +148,12 @@ function renderNavigation() {
       <nav class="sidebar-nav" aria-label="Main navigation">
         <ul>
           <li>
-            <a href="#" class="nav-link${!isAdmin ? ' active' : ''}" data-view="${isAdmin ? 'admin-dashboard' : 'patient-home'}">
+            <a href="#" class="nav-link${!isStaffShell ? ' active' : ''}" data-view="${isStaffShell ? 'admin-dashboard' : 'patient-home'}">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1" ry="1"></rect><rect x="14" y="3" width="7" height="7" rx="1" ry="1"></rect><rect x="14" y="14" width="7" height="7" rx="1" ry="1"></rect><rect x="3" y="14" width="7" height="7" rx="1" ry="1"></rect></svg>
               <span>Dashboard</span>
             </a>
           </li>
-          ${!isAdmin ? `
+          ${!isStaffShell ? `
           <li>
             <a href="#" class="nav-link" data-view="patient-services">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2"></rect><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18M10 12v2h4v-2"></path></svg>
@@ -183,6 +198,14 @@ function renderNavigation() {
             </a>
           </li>
           `}
+          ${canManageAvailability ? `
+          <li>
+            <a href="#" class="nav-link" data-view="admin-dentists">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+              <span>Availability</span>
+            </a>
+          </li>
+          ` : ''}
           ${isAdmin ? `
           <li>
             <a href="#" class="nav-link" data-view="admin-users">
@@ -269,9 +292,15 @@ function renderRoleBasedNav() {
   const isAdmin = role === 'super-admin';
   document.querySelectorAll('.nav-link').forEach((link) => {
     const view = link.getAttribute('data-view') || '';
-    const isAdminOnly = view.startsWith('admin-');
     const li = link.closest('li');
-    if (isAdminOnly && !isAdmin && li) li.style.display = 'none';
+    if (!li) return;
+    if (role === 'doctor') {
+      // Dentists only get the views in their allow-list.
+      li.style.display = DOCTOR_ALLOWED_VIEWS.has(view) ? '' : 'none';
+      return;
+    }
+    const isAdminOnly = view.startsWith('admin-');
+    if (isAdminOnly && !isAdmin) li.style.display = 'none';
   });
   const fullName = currentUser.full_name || '';
   const pName = document.getElementById('profile-fullname');
@@ -286,6 +315,11 @@ async function switchView(targetViewId, { push = true } = {}) {
   const targetView = document.getElementById('view-' + targetViewId);
   if (!targetView) { showToast('This page is not available yet.', 'error'); return; }
   if ((role === 'patient' && !targetViewId.startsWith('patient-')) || (role !== 'patient' && !targetViewId.startsWith('admin-'))) {
+    showToast('This page is not available for your account.', 'error');
+    return;
+  }
+  // Dentists reach the admin shell but only the views they own.
+  if (role === 'doctor' && !DOCTOR_ALLOWED_VIEWS.has(targetViewId)) {
     showToast('This page is not available for your account.', 'error');
     return;
   }
@@ -544,7 +578,7 @@ if (document.getElementById('booking-form')) {
 // Live slot availability for the booking form
 const bookTimeSelect = document.getElementById('book-time');
 const DEFAULT_SLOTS = bookTimeSelect ? Array.from(bookTimeSelect.options).map((o) => o.value).filter(Boolean) : [];
-const SLOT_REASONS = { booked: 'Booked', passed: 'Unavailable', closed: 'Closed' };
+const SLOT_REASONS = { booked: 'Booked', passed: 'Unavailable', closed: 'Closed', off: 'Outside hours' };
 
 function renderTimeOptions(slots) {
   if (!bookTimeSelect) return;
@@ -997,6 +1031,154 @@ if (document.getElementById('admin-patient-search')) {
   document.getElementById('admin-patient-search').addEventListener('input', renderAdminPatients);
 }
 async function renderAdminServices() { await renderServices(); }
+
+// ---------- Dentist availability -----------------------------------------
+const WEEKDAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+// Dentist availability state for the page currently open.
+let availabilityState = { dentistId: null, days: [], daysOff: [], clinicHours: { start_minute: 480, end_minute: 1020 } };
+
+/** minutes from midnight -> "HH:MM" for <input type="time"> */
+function minutesToTime(minutes) {
+  const m = Math.max(0, Math.min(1439, Number(minutes) || 0));
+  return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+}
+
+/** "HH:MM" from <input type="time"> -> minutes from midnight */
+function timeToMinutes(value) {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(String(value || ''));
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function renderAvailabilityDays() {
+  const container = document.getElementById('availability-days');
+  if (!container) return;
+
+  container.innerHTML = WEEKDAY_NAMES.map((name, index) => {
+    const weekday = index + 1;
+    const row = availabilityState.days.find((d) => Number(d.weekday) === weekday);
+    const enabled = Boolean(row);
+    const start = row ? Number(row.start_minute) : availabilityState.clinicHours.start_minute;
+    const end = row ? Number(row.end_minute) : availabilityState.clinicHours.end_minute;
+    return '<div class="availability-row' + (enabled ? '' : ' is-off') + '" data-weekday="' + weekday + '">' +
+      '<label class="availability-toggle">' +
+        '<input type="checkbox" data-avail-toggle="' + weekday + '"' + (enabled ? ' checked' : '') + '>' +
+        '<span>' + name + '</span>' +
+      '</label>' +
+      '<div class="availability-times">' +
+        '<input type="time" data-avail-start="' + weekday + '" value="' + minutesToTime(start) + '" aria-label="' + name + ' start time"' + (enabled ? '' : ' disabled') + '>' +
+        '<span class="availability-dash">to</span>' +
+        '<input type="time" data-avail-end="' + weekday + '" value="' + minutesToTime(end) + '" aria-label="' + name + ' end time"' + (enabled ? '' : ' disabled') + '>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderDaysOff() {
+  const tbody = document.getElementById('days-off-tbody');
+  if (!tbody) return;
+  if (!availabilityState.daysOff.length) {
+    tbody.innerHTML = '<tr><td colspan="3" class="empty-cell">No days off scheduled.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = availabilityState.daysOff
+    .slice()
+    .sort((a, b) => String(a.off_date).localeCompare(String(b.off_date)))
+    .map((row) => '<tr>' +
+      '<td>' + escapeHtml(row.off_date) + '</td>' +
+      '<td>' + escapeHtml(row.reason || '—') + '</td>' +
+      '<td><button type="button" class="btn btn-sm btn-outline" data-remove-day-off="' + escapeHtml(row.off_date) + '">Remove</button></td>' +
+      '</tr>').join('');
+}
+
+/** Pull the current form values into availabilityState.days. */
+function collectAvailabilityFromForm() {
+  const days = [];
+  WEEKDAY_NAMES.forEach((_, index) => {
+    const weekday = index + 1;
+    const toggle = document.querySelector('[data-avail-toggle="' + weekday + '"]');
+    if (!toggle || !toggle.checked) return;
+    const start = timeToMinutes(document.querySelector('[data-avail-start="' + weekday + '"]')?.value);
+    const end = timeToMinutes(document.querySelector('[data-avail-end="' + weekday + '"]')?.value);
+    days.push({ weekday, start_minute: start, end_minute: end });
+  });
+  return days;
+}
+
+/** Apply an availability payload to the page. */
+function applyAvailabilityData(data) {
+  availabilityState.dentistId = data.dentist_id || availabilityState.dentistId;
+  availabilityState.days = data.availability || [];
+  availabilityState.daysOff = data.days_off || [];
+  availabilityState.clinicHours = data.clinic_hours || { start_minute: 480, end_minute: 1020 };
+
+  const hint = document.getElementById('avail-dentist-hint');
+  if (hint) {
+    hint.textContent = availabilityState.days.length
+      ? 'Clinic hours are ' + minutesToTime(availabilityState.clinicHours.start_minute) +
+        ' to ' + minutesToTime(availabilityState.clinicHours.end_minute) + '.'
+      : 'No hours configured yet, so this dentist follows the clinic schedule.';
+  }
+  renderAvailabilityDays();
+  renderDaysOff();
+}
+
+async function loadDentistAvailability(dentistId) {
+  availabilityState.dentistId = dentistId ? Number(dentistId) : null;
+  const hint = document.getElementById('avail-dentist-hint');
+
+  if (!availabilityState.dentistId) {
+    availabilityState.days = [];
+    availabilityState.daysOff = [];
+    renderAvailabilityDays();
+    renderDaysOff();
+    return;
+  }
+
+  const res = await api.get('dentists/availability.php?dentist_id=' + encodeURIComponent(availabilityState.dentistId));
+  if (!res.success) {
+    if (hint) hint.textContent = res.message || 'Could not load availability.';
+    showToast(res.message || 'Could not load availability.', 'error');
+    return;
+  }
+  applyAvailabilityData(res.data);
+}
+
+async function renderAdminDentists() {
+  const select = document.getElementById('avail-dentist-select');
+  if (!select) return;
+
+  // A dentist has exactly one calendar: their own. Hide the picker entirely.
+  if (role === 'doctor') {
+    const pickerCard = select.closest('.card');
+    if (pickerCard) pickerCard.classList.add('hidden');
+    const res = await api.get('dentists/availability.php');
+    if (!res.success) {
+      showToast(res.message || 'Could not load your availability.', 'error');
+      return;
+    }
+    applyAvailabilityData(res.data);
+    return;
+  }
+
+  const res = await api.get('dentists/list.php');
+  if (!res.success) { showToast(res.message || 'Could not load dentists.', 'error'); return; }
+  const dentists = res.data || [];
+  if (!dentists.length) {
+    select.innerHTML = '<option value="">No dentists registered yet</option>';
+    return;
+  }
+
+  const previous = availabilityState.dentistId;
+  select.innerHTML = dentists
+    .map((d) => '<option value="' + Number(d.id) + '">' + escapeHtml(d.full_name) + '</option>')
+    .join('');
+
+  // Keep the dentist the admin was looking at, otherwise show the first one.
+  const keep = previous && dentists.some((d) => Number(d.id) === Number(previous));
+  select.value = String(keep ? previous : Number(dentists[0].id));
+  await loadDentistAvailability(select.value);
+}
 async function renderArchives() {
   const tbody = document.getElementById('admin-archives-tbody');
   if (!tbody) return;
@@ -1206,22 +1388,8 @@ async function renderAdminSettings() {
     if (hours) hours.value = scheduleRes.data.operating_hours || '';
   }
 }
-async function renderAdminDentists() {
-  const res = await api.get('dentists/list.php');
-  if (!res.success) return;
-  const dentists = res.data || [];
-  const container = document.getElementById('admin-dentists-list');
-  if (!container) return;
-  container.innerHTML = dentists.map((d) => (
-    '<tr>' +
-    '<td>' + d.id + '</td>' +
-    '<td>' + escapeHtml(d.full_name) + '</td>' +
-    '<td>' + escapeHtml(d.specialization || '') + '</td>' +
-    '<td>' + escapeHtml(d.phone_number || '') + '</td>' +
-    '<td>' + (d.role || 'doctor') + '</td>' +
-    '</tr>'
-  )).join('');
-}
+// The dentists page is rendered by the availability manager above, which
+// loads the dentist list and then that dentist's working hours.
 
 function setProfileError(message) {
   const nameError = document.getElementById('profile-name-error');
@@ -1611,6 +1779,117 @@ function bindEvents() {
   });
   const createUserButton = document.getElementById('btn-create-user');
   if (createUserButton) createUserButton.addEventListener('click', openCreateUserModal);
+
+  // ---- Dentist availability page ----
+  const availSelect = document.getElementById('avail-dentist-select');
+  if (availSelect) availSelect.addEventListener('change', () => loadDentistAvailability(availSelect.value));
+
+  const availDays = document.getElementById('availability-days');
+  if (availDays) {
+    // Toggling a weekday enables or disables its two time inputs.
+    availDays.addEventListener('change', (event) => {
+      const toggle = event.target.closest('[data-avail-toggle]');
+      if (!toggle) return;
+      const weekday = toggle.getAttribute('data-avail-toggle');
+      const row = toggle.closest('.availability-row');
+      row?.classList.toggle('is-off', !toggle.checked);
+      document.querySelectorAll('[data-avail-start="' + weekday + '"], [data-avail-end="' + weekday + '"]')
+        .forEach((input) => { input.disabled = !toggle.checked; });
+    });
+  }
+
+  document.getElementById('btn-apply-clinic-hours')?.addEventListener('click', () => {
+    const { start_minute, end_minute } = availabilityState.clinicHours;
+    document.querySelectorAll('[data-avail-toggle]').forEach((toggle) => {
+      toggle.checked = true;
+      const weekday = toggle.getAttribute('data-avail-toggle');
+      toggle.closest('.availability-row')?.classList.remove('is-off');
+      const startInput = document.querySelector('[data-avail-start="' + weekday + '"]');
+      const endInput = document.querySelector('[data-avail-end="' + weekday + '"]');
+      if (startInput) { startInput.disabled = false; startInput.value = minutesToTime(start_minute); }
+      if (endInput) { endInput.disabled = false; endInput.value = minutesToTime(end_minute); }
+    });
+    showToast('Clinic hours copied to every day.');
+  });
+
+  document.getElementById('btn-add-day-off')?.addEventListener('click', () => {
+    const dateField = document.getElementById('day-off-date');
+    const reasonField = document.getElementById('day-off-reason');
+    const offDate = dateField?.value || '';
+    if (!offDate) { showToast('Choose the date to take off.', 'error'); return; }
+    if (availabilityState.daysOff.some((row) => row.off_date === offDate)) {
+      showToast('That date is already listed as a day off.', 'error');
+      return;
+    }
+    availabilityState.daysOff.push({ off_date: offDate, reason: (reasonField?.value || '').trim() || null });
+    renderDaysOff();
+    if (dateField) dateField.value = '';
+    if (reasonField) reasonField.value = '';
+  });
+
+  const daysOffTbody = document.getElementById('days-off-tbody');
+  if (daysOffTbody) {
+    daysOffTbody.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-remove-day-off]');
+      if (!button) return;
+      const offDate = button.getAttribute('data-remove-day-off');
+      availabilityState.daysOff = availabilityState.daysOff.filter((row) => row.off_date !== offDate);
+      renderDaysOff();
+    });
+  }
+
+  const availabilityForm = document.getElementById('availability-form');
+  if (availabilityForm) {
+    availabilityForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!availabilityState.dentistId) { showToast('Choose a dentist first.', 'error'); return; }
+
+      const days = collectAvailabilityFromForm();
+      // Validate the same rules the API enforces, so the error is immediate.
+      for (const day of days) {
+        const name = WEEKDAY_NAMES[day.weekday - 1];
+        if (day.start_minute === null || day.end_minute === null) {
+          showToast('Enter both times for ' + name + '.', 'error');
+          return;
+        }
+        if (day.end_minute <= day.start_minute) {
+          showToast(name + ': the end time must be after the start time.', 'error');
+          return;
+        }
+        if (day.end_minute - day.start_minute < 60) {
+          showToast(name + ': working hours must be at least 60 minutes.', 'error');
+          return;
+        }
+      }
+
+      const confirmed = await confirmModal({
+        title: 'Save availability?',
+        message: 'This changes which appointment slots patients can book for this dentist.',
+      });
+      if (!confirmed) return;
+
+      const button = document.getElementById('btn-save-availability');
+      if (button) button.disabled = true;
+      try {
+        const res = await api.patch('dentists/availability.php', {
+          dentist_id: availabilityState.dentistId,
+          availability: days,
+          days_off: availabilityState.daysOff.map((row) => ({
+            off_date: row.off_date,
+            reason: row.reason || '',
+          })),
+        });
+        if (!res.success) {
+          showToast(res.message || 'Could not save availability.', 'error');
+          return;
+        }
+        showToast('Availability saved.');
+        await loadDentistAvailability(availabilityState.dentistId);
+      } finally {
+        if (button) button.disabled = false;
+      }
+    });
+  }
   if (scheduleForm) scheduleForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     const operating_days = document.getElementById('sched-days').value.trim();

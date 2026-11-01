@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BR Dental Clinic - Admin Portal</title>
   <meta name="description" content="BR Dental Clinic master admin portal.">
-  <link rel="stylesheet" href="style.css?v=22">
+  <link rel="stylesheet" href="style.css?v=23">
 </head>
 <body>
   <a class="skip-link" href="#views-viewport">Skip to main content</a>
@@ -190,21 +190,57 @@
         <!-- ADMIN: DENTISTS -->
         <section id="view-admin-dentists" class="page-view">
           <div class="page-header">
-            <h1>Dentist Management</h1>
-            <p>Manage practitioner details and schedules.</p>
+            <h1>Dentists &amp; Availability</h1>
+            <p>Working days and hours decide which appointment slots can be booked.</p>
           </div>
-          <div class="card">
-            <h2>Listed Clinic Practitioner</h2>
-            <div class="dentist-row-item mt-3">
-              <div class="dentist-avatar">DR</div>
-              <div>
-                <h3>Dr. Ma. Elena B. Retuerna</h3>
-                <p><strong>Role:</strong> Lead Practitioner / General Dentist</p>
-                <p><strong>Status:</strong> Active Practitioner</p>
-                <p class="text-sub mt-2">Note: Dr. Ma. Elena B. Retuerna is the sole dentist at BR Dental Clinic. Additional dentist creation is disabled as per clinic configuration.</p>
-              </div>
+
+          <div class="card mb-3">
+            <div class="form-group">
+              <label for="avail-dentist-select">Dentist</label>
+              <select id="avail-dentist-select"><option value="">Loading dentists…</option></select>
+              <span class="field-hint" id="avail-dentist-hint"></span>
             </div>
           </div>
+
+          <form id="availability-form" novalidate>
+            <div class="card mb-3">
+              <h2>Weekly working hours</h2>
+              <p class="text-sub">Unticked days are days off every week. A slot must fit entirely inside these hours.</p>
+              <div id="availability-days" class="availability-days mt-3"></div>
+              <div class="form-actions mt-3">
+                <button type="button" class="btn btn-outline btn-sm" id="btn-apply-clinic-hours">Copy clinic hours to all days</button>
+              </div>
+            </div>
+
+            <div class="card mb-3">
+              <h2>Days off</h2>
+              <p class="text-sub">Specific dates this dentist will not be available, such as leave or a conference.
+                A date still holding pending or approved appointments cannot be marked off.</p>
+              <div class="days-off-add mt-3">
+                <div class="form-group">
+                  <label for="day-off-date">Date</label>
+                  <input type="date" id="day-off-date">
+                </div>
+                <div class="form-group">
+                  <label for="day-off-reason">Reason (optional)</label>
+                  <input type="text" id="day-off-reason" maxlength="150" placeholder="e.g. Conference, Leave">
+                </div>
+                <button type="button" class="btn btn-soft btn-align-bottom" id="btn-add-day-off">Add day off</button>
+              </div>
+              <div class="table-scroll mt-3">
+                <table class="data-table">
+                  <thead><tr><th>Date</th><th>Reason</th><th></th></tr></thead>
+                  <tbody id="days-off-tbody">
+                    <tr><td colspan="3" class="empty-cell">No days off scheduled.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary" id="btn-save-availability">Save availability</button>
+            </div>
+          </form>
         </section>
 
         <!-- ADMIN: DENTAL RECORDS -->
@@ -433,6 +469,6 @@
   <script type="module" src="scripts/api.js?v=8"></script>
   <script type="module" src="scripts/modal.js?v=8"></script>
   <script type="module" src="scripts/toast.js?v=5"></script>
-  <script type="module" src="scripts/portal.js?v=43"></script>
+  <script type="module" src="scripts/portal.js?v=45"></script>
 </body>
 </html>

@@ -50,7 +50,7 @@ CREATE TABLE `appointments` (
   CONSTRAINT `fk_appointments_dentist` FOREIGN KEY (`dentist_id`) REFERENCES `dentists` (`id`),
   CONSTRAINT `fk_appointments_patient` FOREIGN KEY (`patient_id`) REFERENCES `users` (`id`),
   CONSTRAINT `fk_appointments_service` FOREIGN KEY (`service_id`) REFERENCES `services` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `archives`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -114,6 +114,39 @@ CREATE TABLE `dental_records` (
   CONSTRAINT `fk_dental_records_patient` FOREIGN KEY (`patient_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `dentist_availability`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `dentist_availability` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `dentist_id` int(10) unsigned NOT NULL,
+  `weekday` tinyint(3) unsigned NOT NULL,
+  `start_minute` smallint(5) unsigned NOT NULL,
+  `end_minute` smallint(5) unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_dentist_weekday` (`dentist_id`,`weekday`),
+  CONSTRAINT `fk_availability_dentist` FOREIGN KEY (`dentist_id`) REFERENCES `dentists` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `chk_weekday` CHECK (`weekday` between 1 and 7),
+  CONSTRAINT `chk_minutes` CHECK (`end_minute` > `start_minute`)
+) ENGINE=InnoDB AUTO_INCREMENT=35 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+DROP TABLE IF EXISTS `dentist_days_off`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `dentist_days_off` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `dentist_id` int(10) unsigned NOT NULL,
+  `off_date` date NOT NULL,
+  `reason` varchar(150) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_dentist_day_off` (`dentist_id`,`off_date`),
+  KEY `idx_days_off_date` (`off_date`),
+  CONSTRAINT `fk_days_off_dentist` FOREIGN KEY (`dentist_id`) REFERENCES `dentists` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `dentists`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
@@ -153,7 +186,7 @@ CREATE TABLE `notifications` (
   PRIMARY KEY (`id`),
   KEY `fk_notifications_user` (`user_id`),
   CONSTRAINT `fk_notifications_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=75 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=80 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `patient_notification_preferences`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -243,3 +276,9 @@ INSERT INTO `clinic_settings` (`id`, `clinic_name`, `phone_number`, `address`) V
 -- Clinic hours
 INSERT INTO `clinic_schedules` (`id`, `operating_days`, `operating_hours`) VALUES
 (1, 'Monday to Saturday', '8:00 AM - 5:00 PM');
+
+-- Dentist availability: Monday to Saturday, 8:00 AM - 5:00 PM
+-- (minute 480 = 08:00, minute 1020 = 17:00)
+INSERT INTO `dentist_availability` (`dentist_id`, `weekday`, `start_minute`, `end_minute`) VALUES
+(1, 1, 480, 1020), (1, 2, 480, 1020), (1, 3, 480, 1020),
+(1, 4, 480, 1020), (1, 5, 480, 1020), (1, 6, 480, 1020);

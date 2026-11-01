@@ -15,8 +15,12 @@ $mustBlock = [
     'full_codebase.txt',
     'SECURITY_SETUP.md',
     '.gitignore',
+    '.env.example',
     'config/secrets.local.php',
     'database/migrate-activity-logs.sql',
+    'database/set-password.php',
+    'tools/test-mail.php',
+    'docs/ADMIN-IP-ALLOWLIST.md',
 ];
 
 $mustAllow = [
@@ -24,6 +28,9 @@ $mustAllow = [
     'login.html',
     'user.html',
     'admin.html',
+    'setup.html',
+    'forgot-password.html',
+    'reset-password.html',
     'style.css',
     'scripts/portal.js',
     'scripts/site.js',

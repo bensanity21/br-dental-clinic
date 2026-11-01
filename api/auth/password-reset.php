@@ -72,7 +72,7 @@ if (!$user) {
 prunePasswordResets($pdo);
 $token = createPasswordReset($pdo, (int)$user['id'], $ip);
 $link  = resetLink($token);
-sendResetLink($user['email'], $link);
+$delivered = sendResetLink($user['email'], $link);
 
 require_once '../../includes/activity.php';
 logActivity(
@@ -81,16 +81,21 @@ logActivity(
     'users',
     (int)$user['id'],
     'Password reset link requested.',
-    ['ip' => $ip],
+    ['ip' => $ip, 'email_delivered' => $delivered],
     ['id' => $user['id'], 'name' => $user['full_name'], 'role' => $user['role'] ?? 'patient']
 );
 
-// On a local XAMPP install there is no mail server, so the link is also
-// returned to the page that asked for it. Restricted to the development
-// environment - never in production.
+// Where the link can be shown on screen: only when no mail transport is
+// configured (local development), or when delivery failed. In production with
+// working SMTP the link is never returned to the browser.
+require_once '../../includes/mailer.php';
 $reply = $genericReply;
-if ((getenv('APP_ENV') ?: 'development') !== 'production') {
-    $reply['data'] = ['reset_link' => $link];
+$isProduction = (getenv('APP_ENV') ?: 'development') === 'production';
+
+if (!$isProduction && !mailerConfigured()) {
+    $reply['data'] = ['reset_link' => $link, 'email_sent' => false];
+} elseif (!$delivered) {
+    $reply['message'] = 'We could not send the email right now. Please try again shortly.';
 }
 
 respond($reply);

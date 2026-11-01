@@ -238,6 +238,8 @@ try {
     if ($only === null || $only === 'reports') {
         $t->suite('Reports');
 
+        $pdo = testPdoFor(TEST_DB);
+
         $admin = new TestClient('admin');
         $admin->login('admin@brdental.com', 'TestPass123!');
 
@@ -259,6 +261,73 @@ try {
         [$s, $r, $raw] = $admin->get('api/reports/export.php?type=appointments&from=2000-01-01&to=2100-12-31');
         $t->eq(200, $s, 'CSV export returns 200 for the super-admin');
         $t->ok(str_contains($raw, 'BR Dental Clinic'), 'CSV export contains the clinic header');
+
+        // ---- CSV structure and encoding -----------------------------------
+        $t->ok(str_starts_with($raw, "\xEF\xBB\xBF"), 'CSV starts with a UTF-8 BOM so Excel shows accents');
+        $t->ok(mb_check_encoding($raw, 'UTF-8'), 'CSV is valid UTF-8');
+
+        // Write it out and parse it with a real CSV reader.
+        $csvPath = sys_get_temp_dir() . '/br_export_test.csv';
+        file_put_contents($csvPath, $raw);
+        $handle = fopen($csvPath, 'r');
+        $parsedRows = [];
+        while (($row = fgetcsv($handle)) !== false) {
+            $parsedRows[] = $row;
+        }
+        fclose($handle);
+        @unlink($csvPath);
+
+        $t->ok(count($parsedRows) > 4, 'CSV parses into rows', 'rows: ' . count($parsedRows));
+
+        // The totals row must agree with the sum of the data rows.
+        $headerIndex = null;
+        foreach ($parsedRows as $i => $row) {
+            if (($row[0] ?? '') === 'Status' && ($row[1] ?? '') === 'Appointments') {
+                $headerIndex = $i;
+                break;
+            }
+        }
+        $t->ok($headerIndex !== null, 'CSV has a Status/Appointments header row');
+
+        if ($headerIndex !== null) {
+            $sum = 0;
+            $totalRowValue = null;
+            for ($i = $headerIndex + 1; $i < count($parsedRows); $i++) {
+                $label = (string)($parsedRows[$i][0] ?? '');
+                $value = $parsedRows[$i][1] ?? '';
+                if ($label === 'Total appointments') {
+                    $totalRowValue = (int)$value;
+                    break;
+                }
+                if ($label !== '') {
+                    $sum += (int)$value;
+                }
+            }
+            $t->ok($totalRowValue !== null, 'CSV has a totals row');
+            $t->eq($sum, $totalRowValue, 'the totals row equals the sum of the data rows');
+        }
+
+        // Values containing a comma, a quote and an accent must survive a parse.
+        $pdo->prepare("INSERT INTO users (full_name, email, password_hash, role) VALUES (?, ?, ?, 'patient')")
+            ->execute(['Nuñez, Maria "Mia"', 'csv-roundtrip@test.local', testHash('TestPass123!')]);
+
+        [$s, $r, $rawQuoted] = $admin->get('api/reports/export.php?type=patients&from=2000-01-01&to=2100-12-31');
+        $quotedPath = sys_get_temp_dir() . '/br_export_quoted.csv';
+        file_put_contents($quotedPath, $rawQuoted);
+        $handle = fopen($quotedPath, 'r');
+        $roundTrip = null;
+        while (($row = fgetcsv($handle)) !== false) {
+            if (isset($row[2]) && str_contains((string)$row[2], 'csv-roundtrip@test.local')) {
+                $roundTrip = $row[1];
+                break;
+            }
+        }
+        fclose($handle);
+        @unlink($quotedPath);
+        $t->eq('Nuñez, Maria "Mia"', $roundTrip, 'a name with a comma, quote and accent round-trips exactly');
+
+        // Clean up the fixture row.
+        $pdo->exec("DELETE FROM users WHERE email = 'csv-roundtrip@test.local'");
 
         $patient = new TestClient('patient');
         $patient->login('jane@test.com', 'TestPass123!');
@@ -537,6 +606,109 @@ try {
         $t->eq(false, ipMatchesRule('2001:db9::5', '2001:db8::/32'), 'IPv6 CIDR rejects outside');
         $t->eq(false, ipMatchesRule('127.0.0.1', 'not-an-ip'), 'a garbage rule matches nothing');
         $t->eq(false, ipMatchesRule('127.0.0.1', ''), 'an empty rule matches nothing');
+    }
+
+    // ------------------------------------------------------------- mail (SMTP)
+    if ($only === null || $only === 'mail') {
+        $t->suite('Outgoing mail (SMTP)');
+
+        require_once testProjectRoot() . '/includes/mailer.php';
+
+        // With no SMTP_HOST set, the mailer must report "not configured" so
+        // local development keeps working without a mail server.
+        putenv('SMTP_HOST');
+        $t->eq('not-configured', sendMail('nobody@example.com', 'x', 'y'), 'no SMTP host means not-configured');
+
+        // A full session against a local mock server. proc_open is used rather
+        // than 'start /B' because that is unreliable from inside exec() on
+        // Windows, and the test needs to know the child actually started.
+        $logPath = sys_get_temp_dir() . '/br_mock_smtp_test.log';
+        @unlink($logPath);
+        $port = 2533;
+
+        $cmd = sprintf(
+            '"C:\xampp\php\php.exe" %s %d %s',
+            escapeshellarg(str_replace('/', '\\', testProjectRoot() . '/tests/tools/mock-smtp.php')),
+            $port,
+            escapeshellarg(str_replace('/', '\\', $logPath))
+        );
+
+        $pipes = [];
+        $proc = proc_open($cmd, [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ], $pipes);
+
+        $t->ok(is_resource($proc), 'mock SMTP server process started');
+
+        if (is_resource($proc)) {
+            // Wait for the mock to start listening.
+            $ready = false;
+            for ($i = 0; $i < 40; $i++) {
+                usleep(150000);
+                if (str_contains((string)@file_get_contents($logPath), 'listening')) {
+                    usleep(200000); // let the listener settle
+                    $ready = true;
+                    break;
+                }
+            }
+            $t->ok($ready, 'mock SMTP server is listening on 127.0.0.1:' . $port);
+
+            if ($ready) {
+                putenv('SMTP_HOST=127.0.0.1');
+                putenv("SMTP_PORT=$port");
+                putenv('SMTP_SECURE=none');
+                putenv('SMTP_USER=test@local.invalid');
+                putenv('SMTP_PASS=secret123');
+                putenv('SMTP_FROM=clinic@local.invalid');
+
+                $t->eq(true, mailerConfigured(), 'mailer reports configured once SMTP_HOST is set');
+
+                $result = sendMail('patient@example.com', 'Password reset', "Body line one\nBody line two");
+                $t->eq('sent', $result, 'sendMail reports the server accepted the message', $result);
+
+                // Give the mock a moment to flush its log.
+                usleep(400000);
+                $transcript = @file_get_contents($logPath) ?: '';
+
+                $t->ok(str_contains($transcript, 'MAIL FROM:<clinic@local.invalid>'), 'correct sender on the wire');
+                $t->ok(str_contains($transcript, 'RCPT TO:<patient@example.com>'), 'correct recipient on the wire');
+                $t->ok(str_contains($transcript, 'AUTH LOGIN'), 'AUTH LOGIN was issued');
+                $t->ok(
+                    !str_contains($transcript, 'secret123'),
+                    'the password is never sent in plain text (base64 only)'
+                );
+
+                if (preg_match('/=== MESSAGE ===\n(.*?)(?:\nC: QUIT|\z)/s', $transcript, $m)) {
+                    [$headers, $encodedBody] = array_pad(explode("\n\n", trim($m[1]), 2), 2, '');
+                    $t->ok(str_contains($headers, 'Subject: =?UTF-8?B?'), 'subject is RFC 2047 encoded');
+                    $t->ok(
+                        str_contains($headers, 'From: =?UTF-8?B?'),
+                        'display name is RFC 2047 encoded'
+                    );
+                    $decoded = base64_decode(preg_replace('/\s+/', '', $encodedBody), true);
+                    $t->ok(
+                        $decoded !== false && str_contains($decoded, 'Body line one'),
+                        'the decoded body matches what was sent',
+                        'decoded: ' . substr((string)$decoded, 0, 60)
+                    );
+                } else {
+                    $t->ok(false, 'the mock server recorded the message body');
+                }
+            }
+
+            // Tidy up the child process.
+            foreach ($pipes as $pipe) {
+                if (is_resource($pipe)) @fclose($pipe);
+            }
+            @proc_terminate($proc);
+            @proc_close($proc);
+
+            foreach (['SMTP_HOST', 'SMTP_PORT', 'SMTP_SECURE', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM'] as $var) {
+                putenv($var);
+            }
+        }
     }
 
     // --------------------------------------------------------- regression

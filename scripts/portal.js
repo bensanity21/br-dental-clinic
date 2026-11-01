@@ -1260,10 +1260,10 @@ async function renderAdminIpList() {
       </div>
       <div class="admin-ip-actions">
         <button type="button" class="btn btn-small btn-secondary"
-                data-ip-toggle="${entry.id}" data-ip-active="${Number(entry.is_active) === 1 ? 1 : 0}">
+                data-ip-toggle="${Number(entry.id) || 0}" data-ip-active="${Number(entry.is_active) === 1 ? 1 : 0}">
           ${Number(entry.is_active) === 1 ? 'Disable' : 'Enable'}
         </button>
-        <button type="button" class="btn btn-small btn-danger" data-ip-remove="${entry.id}">Remove</button>
+        <button type="button" class="btn btn-small btn-danger" data-ip-remove="${Number(entry.id) || 0}">Remove</button>
       </div>
     </div>
   `).join('');

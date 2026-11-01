@@ -2,14 +2,26 @@
 -- BR Dental Clinic - Complete Database Schema
 -- Import this one file for a fresh install: it matches the code.
 --
--- DEFAULT LOGIN (Super Admin)
---   Email:    admin@brdental.com
---   Password: Admin123!
---   Change this password immediately after the first login.
+-- NO PASSWORDS ARE INCLUDED IN THIS FILE.
 --
--- The Super Admin is the only privileged account in the seed data.
+-- Every seeded account starts in a "no usable password" state, so importing
+-- this file never creates an account anyone can sign in to. Set a real
+-- password for each account once, using either:
+--
+--   php database/set-password.php                  (command line, recommended)
+--   setup.html                                     (browser, fresh install only)
+--
+-- The browser setup page stops working permanently as soon as one
+-- administrator has a usable password, so it cannot be used to take over a
+-- live site.
+--
+-- SEEDED ACCOUNTS
+--   admin@brdental.com    Super Admin   (the only privileged account)
+--   elena@brdental.com    Dentist       Dr. Ma. Elena B. Retuerna
+--   smith@brdental.com    Dentist       Dr. John Smith
+--
 -- Patient accounts create themselves through public sign-up.
--- Dentist accounts are created by the Super Admin.
+-- Dentist accounts are created by the Super Admin from Users & Roles.
 -- ============================================================
 
 CREATE DATABASE IF NOT EXISTS `clinic` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
@@ -313,15 +325,15 @@ CREATE TABLE `users` (
 
 -- Super Admin (the only privileged account)
 INSERT INTO `users` (`id`, `full_name`, `email`, `password_hash`, `role`) VALUES
-(1, 'Super Admin', 'admin@brdental.com', '$2y$10$aDuCA7j9vMoA4zB/GQEWiuZOMIbGDTructVHw6qZFAYu4AsztsFcS', 'super-admin');
+(1, 'Super Admin', 'admin@brdental.com', 'CHANGE_ME', 'super-admin');
 
 -- Dentist account for Dr. Ma. Elena B. Retuerna
 INSERT INTO `users` (`id`, `full_name`, `email`, `password_hash`, `role`) VALUES
-(2, 'Dr. Ma. Elena B. Retuerna', 'elena@brdental.com', '$2y$10$ggAa7deLVT.tSoQOT2RPB.9O6hf/MziSXOJpxqd6VOF1O7weRboP2', 'doctor');
+(2, 'Dr. Ma. Elena B. Retuerna', 'elena@brdental.com', 'CHANGE_ME', 'doctor');
 
 -- Dentist account for Dr. John Smith
 INSERT INTO `users` (`id`, `full_name`, `email`, `password_hash`, `role`) VALUES
-(3, 'Dr. John Smith', 'smith@brdental.com', '$2y$10$R8fXwDtn3NEA88SdLtAi6O7Fv3CmrO7FMTDU9HNR324iup.yVHveq', 'doctor');
+(3, 'Dr. John Smith', 'smith@brdental.com', 'CHANGE_ME', 'doctor');
 
 INSERT INTO `dentists` (`id`, `user_id`, `full_name`, `specialization`, `phone_number`) VALUES
 (1, 2, 'Dr. Ma. Elena B. Retuerna', 'General Dentistry', '09066636112'),

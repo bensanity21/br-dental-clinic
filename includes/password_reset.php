@@ -132,13 +132,62 @@ function resetLink(string $rawToken): string
 /**
  * Deliver the reset link.
  *
- * XAMPP has no mail transport configured, so the link is written to the PHP
- * error log instead of being emailed. Replace the body of this function with
- * mail()/SMTP when the site is hosted. Returning it here also lets the
- * development build show it on screen - see api/auth/password-reset.php.
+ * With SMTP configured (see includes/mailer.php and .env.example) the link is
+ * emailed. Without it - the default on a local XAMPP install - the link is
+ * written to the PHP error log instead and the API returns it to the page, so
+ * development still works with no mail server at all.
+ *
+ * Returns true when the mail was accepted by the server, or when no transport
+ * is configured (the caller then falls back to showing the link).
  */
 function sendResetLink(string $email, string $link): bool
 {
-    error_log(sprintf('[password reset] %s -> %s', $email, $link));
-    return true;
+    require_once __DIR__ . '/mailer.php';
+
+    if (!mailerConfigured()) {
+        error_log(sprintf('[password reset - no SMTP configured] %s -> %s', $email, $link));
+        return true;
+    }
+
+    $clinic = defined('CLINIC_NAME') ? CLINIC_NAME : 'BR Dental Clinic';
+    $minutes = RESET_TOKEN_TTL_MINUTES;
+
+    $subject = "Reset your $clinic password";
+
+    $text = "Hello,\n\n"
+        . "Someone asked to reset the password for your $clinic account.\n\n"
+        . "Open this link to choose a new password:\n$link\n\n"
+        . "The link works once and expires in $minutes minutes.\n\n"
+        . "If you did not ask for this, you can ignore this email - your password "
+        . "will not change.\n\n"
+        . "$clinic\n";
+
+    $safeLink = htmlspecialchars($link, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $safeClinic = htmlspecialchars($clinic, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+    $html = "<!DOCTYPE html><html><body style=\"font-family:Arial,Helvetica,sans-serif;"
+        . "color:#1F2937;line-height:1.6\">"
+        . "<h2 style=\"color:#0F766E;margin:0 0 16px\">Reset your password</h2>"
+        . "<p>Someone asked to reset the password for your $safeClinic account.</p>"
+        . "<p><a href=\"$safeLink\" style=\"display:inline-block;padding:12px 20px;"
+        . "background:#0F766E;color:#ffffff;text-decoration:none;border-radius:6px\">"
+        . "Choose a new password</a></p>"
+        . "<p style=\"color:#6B7280;font-size:14px\">Or copy this address into your browser:<br>"
+        . "<span style=\"word-break:break-all\">$safeLink</span></p>"
+        . "<p style=\"color:#6B7280;font-size:14px\">The link works once and expires in "
+        . "$minutes minutes. If you did not ask for this, ignore this email - your password "
+        . "will not change.</p>"
+        . "<p style=\"color:#6B7280;font-size:14px\">$safeClinic</p>"
+        . "</body></html>";
+
+    $result = sendMail($email, $subject, $text, $html);
+
+    if ($result === 'sent') {
+        return true;
+    }
+
+    // Sending failed. Log it and let the caller fall back so the user is not
+    // stranded by a mail outage.
+    error_log("Password reset email could not be sent to $email (result: $result)");
+    return false;
 }

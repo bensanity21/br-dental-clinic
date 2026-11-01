@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BR Dental Clinic - First Time Setup</title>
+  <meta name="description" content="Set the administrator password for a new BR Dental Clinic installation.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+  <meta name="theme-color" content="#0F766E">
+  <link rel="stylesheet" href="style.css?v=36">
+</head>
+<body>
+  <main id="auth-screen" class="auth-wrapper">
+    <section class="auth-visual" aria-label="BR Dental Clinic">
+      <div class="auth-visual-inner">
+        <div class="auth-brand-lockup">
+          <img class="auth-brand-mark" src="brand-icon.png" alt="">
+          <span>BR Dental Clinic</span>
+        </div>
+        <div class="auth-visual-copy">
+          <p class="auth-eyebrow">FIRST TIME SETUP</p>
+          <h2>Set your administrator password.</h2>
+          <p>This page only works once, before any administrator password has been set. Choose a strong password you will remember.</p>
+        </div>
+        <p class="auth-location" data-clinic="address">73 Nyugan Road · Dasmariñas City, Cavite</p>
+      </div>
+    </section>
+
+    <section class="auth-card" aria-labelledby="auth-title">
+      <header class="auth-header">
+        <p class="auth-kicker">Getting started</p>
+        <h1 id="auth-title" class="auth-heading">Create the admin password</h1>
+        <p class="auth-subtext">At least 12 characters. This replaces the placeholder in the database.</p>
+      </header>
+
+      <div id="auth-alert" class="alert hidden" role="alert" aria-live="polite"></div>
+
+      <form id="setup-form" class="auth-form" novalidate>
+        <div class="form-group">
+          <label for="setup-email">Administrator account</label>
+          <input type="email" id="setup-email" readonly class="input-readonly">
+        </div>
+
+        <div class="form-group">
+          <label for="setup-password">New Password <span class="req">*</span></label>
+          <div class="password-input-group">
+            <input type="password" id="setup-password" name="password" autocomplete="new-password" required placeholder="At least 12 characters">
+            <button type="button" class="btn-toggle-pass" data-target="setup-password" aria-label="Show password">Show</button>
+          </div>
+          <span class="field-error" id="setup-password-error"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="setup-confirm">Confirm Password <span class="req">*</span></label>
+          <div class="password-input-group">
+            <input type="password" id="setup-confirm" name="confirm_password" autocomplete="new-password" required placeholder="Re-enter the password">
+            <button type="button" class="btn-toggle-pass" data-target="setup-confirm" aria-label="Show password">Show</button>
+          </div>
+          <span class="field-error" id="setup-confirm-error"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Save Password</button>
+
+        <p class="auth-switch-text">
+          Already set up? <a class="btn-link" href="login.html">Sign in</a>
+        </p>
+      </form>
+    </section>
+  </main>
+  <div id="toast-container"></div>
+  <script type="module" src="scripts/api.js?v=8"></script>
+  <script type="module" src="scripts/toast.js?v=5"></script>
+  <script type="module" src="scripts/clinic-info.js?v=1"></script>
+  <script type="module" src="scripts/setup-page.js?v=1"></script>
+</body>
+</html>

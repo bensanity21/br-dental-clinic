@@ -6,7 +6,12 @@
 Options -Indexes
 
 # Never serve database dumps, environment files, logs, backups or source dumps.
-<FilesMatch "(?i)\.(sql|sqlite|env|log|bak|old|ini|md|txt)$">
+<FilesMatch "(?i)\.(sql|sqlite|env|log|bak|old|ini|md|txt|example)$">
+    Require all denied
+</FilesMatch>
+
+# Configuration templates must never be downloadable, even the placeholder one.
+<FilesMatch "(?i)^\.env">
     Require all denied
 </FilesMatch>
 
@@ -14,6 +19,12 @@ Options -Indexes
 <FilesMatch "^(full_codebase\.txt|SECURITY_SETUP\.md|\.gitignore)$">
     Require all denied
 </FilesMatch>
+
+# Command-line only directories: nothing in them is meant to be requested.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(tools|database)/ - [F,L]
+</IfModule>
 
 # Block direct access to the git metadata.
 <IfModule mod_rewrite.c>

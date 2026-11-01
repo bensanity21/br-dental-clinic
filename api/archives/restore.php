@@ -26,8 +26,25 @@ $dataRow = json_decode($archived['record_data'], true);
 if (!is_array($dataRow) || !$dataRow) { respondError('Archived record data is invalid.', null, 400); }
 unset($dataRow['id']); // let MySQL re-assign
 
-// Rebuild insert dynamically
-$columns = implode(', ', array_keys($dataRow));
+// Column names come from JSON stored in the archives table. That JSON is
+// written by this application from a real SELECT *, so the keys are genuine
+// column names - but they are still SQL identifiers read from a table, so
+// check every one against the live schema before it reaches the query string.
+// This closes the only place where untrusted data could become SQL syntax.
+$columnCheck = $pdo->prepare(
+    "SELECT COLUMN_NAME FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?"
+);
+foreach (array_keys($dataRow) as $column) {
+    $columnCheck->execute([$table, $column]);
+    if (!$columnCheck->fetchColumn()) {
+        respondError('Archived record data refers to a column that no longer exists.', null, 409);
+    }
+}
+unset($columnCheck);
+
+// Rebuild insert dynamically from the verified column names.
+$columns = implode(', ', array_map(static fn($c) => "`$c`", array_keys($dataRow)));
 $placeholders = implode(', ', array_fill(0, count($dataRow), '?'));
 $values = array_values($dataRow);
 

@@ -6,6 +6,9 @@ import { api, setCsrfToken } from './api.js?v=8';
 import { confirmModal, openModal, closeModal } from './modal.js?v=10';
 import { showToast } from './toast.js';
 import { setLanguage, t } from './i18n.js?v=5';
+import { renderReport, initReports } from './modules/reports.js?v=1';
+import { renderActivityLog, initActivityLog } from './modules/activity.js?v=1';
+import { renderAdminUsers, openCreateUserModal, renderArchives, initUsers } from './modules/users.js?v=1';
 
 let currentUser = null;
 let role = '';
@@ -1187,156 +1190,6 @@ async function renderAdminDentists() {
   await loadDentistAvailability(select.value);
 }
 // ---------- Activity log -------------------------------------------------
-let activityState = { page: 1, pages: 0, filters: {} };
-
-// Readable labels for the dotted action names.
-const ACTIVITY_LABELS = {
-  'auth.login': 'Signed in',
-  'auth.logout': 'Signed out',
-  'appointment.create': 'Booked appointment',
-  'appointment.status': 'Changed appointment status',
-  'appointment.reschedule': 'Rescheduled appointment',
-  'service.create': 'Created service',
-  'service.update': 'Updated service',
-  'service.deactivate': 'Deactivated service',
-  'service.archive': 'Archived service',
-  'user.create': 'Created account',
-  'user.update': 'Updated account',
-  'record.create': 'Added clinical record',
-  'record.complete': 'Completed clinical record',
-  'record.archive': 'Archived record',
-  'archive.restore': 'Restored record',
-  'archive.purge': 'Permanently deleted record',
-  'settings.update': 'Updated clinic details',
-  'schedule.update': 'Updated clinic hours',
-  'availability.update': 'Updated availability',
-};
-
-function activityTone(action) {
-  if (action === 'archive.purge' || action === 'service.archive' || action === 'record.archive') return 'danger';
-  if (action.includes('create') || action.includes('restore')) return 'success';
-  if (action.startsWith('auth.')) return 'neutral';
-  return 'info';
-}
-
-async function renderActivityLog() {
-  const tbody = document.getElementById('activity-tbody');
-  if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">Loading activity…</td></tr>';
-
-  const query = new URLSearchParams({ page: String(activityState.page), per_page: '25' });
-  Object.entries(activityState.filters).forEach(([key, value]) => {
-    if (value) query.set(key, value);
-  });
-
-  const res = await api.get('activity/list.php?' + query.toString());
-  if (!res.success) {
-    tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">Could not load the activity log.</td></tr>';
-    showToast(res.message || 'Could not load the activity log.', 'error');
-    return;
-  }
-
-  const { rows, total, page, pages, actions } = res.data;
-
-  // Keep the action filter in step with what actually exists in the log.
-  const actionSelect = document.getElementById('activity-action');
-  if (actionSelect && actions) {
-    const current = actionSelect.value;
-    actionSelect.innerHTML = '<option value="">All actions</option>' +
-      actions.map((a) => '<option value="' + escapeHtml(a) + '">' +
-        escapeHtml(ACTIVITY_LABELS[a] || a) + '</option>').join('');
-    actionSelect.value = current;
-  }
-
-  if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">No activity matches these filters.</td></tr>';
-  } else {
-    tbody.innerHTML = rows.map((row) => {
-      const when = String(row.created_at || '').replace('T', ' ');
-      const label = ACTIVITY_LABELS[row.action] || row.action;
-      return '<tr>' +
-        '<td class="activity-when">' + escapeHtml(when) + '</td>' +
-        '<td>' + escapeHtml(row.user_name || 'System') +
-          '<br><span class="text-sub activity-role">' + escapeHtml(row.user_role || '') + '</span></td>' +
-        '<td><span class="activity-badge activity-' + activityTone(row.action) + '">' + escapeHtml(label) + '</span></td>' +
-        '<td class="activity-description">' + escapeHtml(row.description || '') + '</td>' +
-        '<td class="activity-ip">' + escapeHtml(row.ip_address || '') + '</td>' +
-        '</tr>';
-    }).join('');
-  }
-
-  activityState.pages = pages || 0;
-  const info = document.getElementById('activity-page-info');
-  if (info) {
-    info.textContent = total === 0
-      ? 'No entries'
-      : 'Page ' + page + ' of ' + pages + ' · ' + total + ' entr' + (total === 1 ? 'y' : 'ies');
-  }
-  const prev = document.getElementById('btn-activity-prev');
-  const next = document.getElementById('btn-activity-next');
-  if (prev) prev.disabled = page <= 1;
-  if (next) next.disabled = page >= pages;
-}
-
-async function renderArchives() {
-  const tbody = document.getElementById('admin-archives-tbody');
-  if (!tbody) return;
-  const res = await api.get('archives/list.php');
-  if (!res.success) { showToast(res.message || 'Failed to load archive.', 'error'); return; }
-  const entries = res.data || [];
-  if (!entries.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="empty-cell">The archive is empty.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = entries.map((entry) => {
-    const record = entry.record_data || {};
-    let summary;
-    if (entry.original_table === 'appointments') {
-      summary = [record.appointment_date, record.time_slot, 'Patient ID ' + (record.patient_id ?? ''), record.status].filter(Boolean).join(' · ');
-    } else if (entry.original_table === 'users') {
-      summary = [record.full_name, record.email].filter(Boolean).join(' · ');
-    } else if (entry.original_table === 'services') {
-      summary = record.service_name || '';
-    } else {
-      summary = record.full_name || record.treatment_procedure || ('Record ID ' + entry.record_id);
-    }
-    return '<tr>' +
-      '<td>' + escapeHtml(entry.original_table.replaceAll('_', ' ')) + '</td>' +
-      '<td>' + escapeHtml(summary) + '</td>' +
-      '<td>' + escapeHtml(entry.deleted_at || '') + '</td>' +
-      '<td><button type="button" class="btn btn-sm btn-primary" data-archive-restore="' + Number(entry.id) + '">Restore</button> ' +
-      '<button type="button" class="btn btn-sm btn-danger" data-archive-purge="' + Number(entry.id) + '">Delete permanently</button></td>' +
-      '</tr>';
-  }).join('');
-}
-async function renderAdminUsers() {
-  const tbody = document.getElementById('admin-users-body');
-  if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="5">Loading users…</td></tr>';
-
-  const res = await api.get('users/list.php');
-  if (!res.success) {
-    tbody.innerHTML = '<tr><td colspan="5">Could not load users.</td></tr>';
-    showToast(res.message || 'Failed to load users.', 'error');
-    return;
-  }
-
-  const users = res.data || [];
-  if (!users.length) {
-    tbody.innerHTML = '<tr><td colspan="5">No accounts yet.</td></tr>';
-    return;
-  }
-
-  const roleLabels = { 'super-admin': 'Super Admin', doctor: 'Dentist', patient: 'Patient' };
-  tbody.innerHTML = users.map((u) => '<tr>' +
-    '<td>' + escapeHtml(u.full_name) + '</td>' +
-    '<td>' + escapeHtml(u.email) + '</td>' +
-    '<td>' + escapeHtml(roleLabels[u.role] || u.role) + '</td>' +
-    '<td>' + escapeHtml(u.phone_number || 'Not provided') + '</td>' +
-    '<td>' + escapeHtml((u.created_at || '').slice(0, 10)) + '</td>' +
-    '</tr>').join('');
-}
-
 async function renderAdminReports() {
   // Default the range to the current month so the page is never blank.
   const fromInput = document.getElementById('report-from');
@@ -1347,126 +1200,6 @@ async function renderAdminReports() {
   await renderReport();
 }
 
-function openCreateUserModal() {
-  const body = '' +
-    '<div class="form-group"><label for="new-user-name">Full name</label>' +
-    '<input type="text" id="new-user-name" placeholder="Juan Dela Cruz" required></div>' +
-    '<div class="form-group"><label for="new-user-email">Email</label>' +
-    '<input type="email" id="new-user-email" placeholder="name@example.com" required></div>' +
-    '<div class="form-group"><label for="new-user-role">Role</label>' +
-    '<select id="new-user-role"><option value="doctor">Dentist</option>' +
-    '<option value="patient">Patient</option></select></div>' +
-    '<div class="form-group"><label for="new-user-phone">Phone number (optional)</label>' +
-    '<input type="text" id="new-user-phone" placeholder="09XXXXXXXXX"></div>' +
-    '<div class="form-group"><label for="new-user-password">Temporary password</label>' +
-    '<input type="password" id="new-user-password" placeholder="At least 8 characters" required></div>';
-
-  openModal('Create account', body, [
-    { text: 'Cancel', value: false, class: 'btn-outline' },
-    {
-      text: 'Create account',
-      class: 'btn-primary',
-      value: async () => {
-        const payload = {
-          full_name: document.getElementById('new-user-name')?.value.trim() || '',
-          email: document.getElementById('new-user-email')?.value.trim() || '',
-          role: document.getElementById('new-user-role')?.value || 'patient',
-          phone_number: document.getElementById('new-user-phone')?.value.trim() || '',
-          password: document.getElementById('new-user-password')?.value || '',
-        };
-        if (!payload.full_name || !payload.email || payload.password.length < 8) {
-          showToast('Full name, email and a password of at least 8 characters are required.', 'error');
-          return false;
-        }
-        const res = await api.post('users/create.php', payload);
-        if (res.success) {
-          showToast('Account created.');
-          await renderAdminUsers();
-        } else {
-          showToast(res.message || 'Could not create the account.', 'error');
-        }
-        return false;
-      },
-    },
-  ]);
-}
-
-async function renderReport() {
-  const from = document.getElementById('report-from')?.value || '';
-  const to = document.getElementById('report-to')?.value || '';
-  const type = document.getElementById('report-type')?.value || 'appointments';
-  const results = document.getElementById('report-results-body');
-
-  if (!from || !to) { showToast('Choose both a start date and an end date.', 'error'); return; }
-  if (from > to) { showToast('The start date must be on or before the end date.', 'error'); return; }
-
-  const button = document.getElementById('btn-run-report');
-  if (button) button.disabled = true;
-  try {
-    const query = new URLSearchParams({ from, to, type });
-    const res = await api.get('reports/generate.php?' + query.toString());
-    if (!res.success) { showToast(res.message || 'Failed to generate report.', 'error'); return; }
-
-    const headers = res.data?.headers || [];
-    const rows = res.data?.data || [];
-    const totals = res.data?.totals || null;
-    const title = res.data?.title || 'Report';
-
-    // Each report has its own column names, so map values in header order.
-    const keys = headers.map((header) => {
-      const map = {
-        'Status': 'status',
-        'Appointments': 'total',
-        'Service': 'service_name',
-        'Dentist': 'full_name',
-        'Patient ID': 'id',
-        'Full Name': 'full_name',
-        'Email': 'email',
-        'Registered': 'created_at',
-      };
-      return map[header] || header.toLowerCase().replace(/\s+/g, '_');
-    });
-
-    const bodyHtml = rows.map((row) => '<tr>' +
-      keys.map((key) => '<td>' + escapeHtml(row[key] ?? '') + '</td>').join('') +
-      '</tr>').join('');
-
-    // A totals row makes the summary verifiable on paper, not just on screen.
-    let totalsHtml = '';
-    if (totals && rows.length) {
-      let value = '';
-      if (totals.column) {
-        value = String(rows.reduce((sum, row) => sum + Number(row[totals.column] || 0), 0));
-      } else if (totals.count !== undefined) {
-        value = String(totals.count);
-      }
-      if (value !== '') {
-        totalsHtml = '<tr class="report-total-row">' +
-          '<td>' + escapeHtml(totals.label) + '</td>' +
-          '<td>' + escapeHtml(value) + '</td>' +
-          keys.slice(2).map(() => '<td></td>').join('') +
-          '</tr>';
-      }
-    }
-
-    if (results) {
-      results.innerHTML =
-        '<div class="report-block">' +
-          '<h3 class="report-block-title">' + escapeHtml(title) + '</h3>' +
-          '<p class="report-block-period">' + escapeHtml(from) + ' to ' + escapeHtml(to) + '</p>' +
-          (rows.length
-            ? '<div class="table-scroll"><table class="data-table report-table">' +
-                '<thead><tr>' + headers.map((header) => '<th>' + escapeHtml(header) + '</th>').join('') + '</tr></thead>' +
-                '<tbody>' + bodyHtml + totalsHtml + '</tbody>' +
-              '</table></div>'
-            : '<p class="text-sub text-center">No records found for the selected dates.</p>') +
-          '<p class="report-generated-note">Generated ' + escapeHtml(new Date().toLocaleString()) + '</p>' +
-        '</div>';
-    }
-  } finally {
-    if (button) button.disabled = false;
-  }
-}
 async function renderAdminSettings() {
   const [clinicRes, scheduleRes] = await Promise.all([
     api.get('settings/clinic.php'),
@@ -1980,8 +1713,8 @@ function bindEvents() {
       el.bookServiceSelect.dispatchEvent(new Event('change', { bubbles: true }));
     }
   });
-  const runReportButton = document.getElementById('btn-run-report');
-  if (runReportButton) runReportButton.addEventListener('click', renderReport);
+  // Reports buttons are wired by modules/reports.js.
+  initReports();
   const printReportButton = document.getElementById('btn-print-report');
   if (printReportButton) printReportButton.addEventListener('click', () => {
     // Printing is a view action; confirm first like every other action.
@@ -2017,39 +1750,10 @@ function bindEvents() {
       showToast('Your CSV download has started.');
     });
   });
-  const createUserButton = document.getElementById('btn-create-user');
-  if (createUserButton) createUserButton.addEventListener('click', openCreateUserModal);
+  // The create-account button is wired once by initUsers() below.
 
-  // ---- Activity log page ----
-  const filterActivity = () => {
-    activityState.page = 1;
-    activityState.filters = {
-      from: document.getElementById('activity-from')?.value || '',
-      to: document.getElementById('activity-to')?.value || '',
-      action: document.getElementById('activity-action')?.value || '',
-      q: (document.getElementById('activity-search')?.value || '').trim(),
-    };
-    renderActivityLog();
-  };
-  document.getElementById('btn-filter-activity')?.addEventListener('click', filterActivity);
-  document.getElementById('activity-search')?.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') { event.preventDefault(); filterActivity(); }
-  });
-  document.getElementById('btn-clear-activity')?.addEventListener('click', () => {
-    ['activity-from', 'activity-to', 'activity-action', 'activity-search'].forEach((id) => {
-      const field = document.getElementById(id);
-      if (field) field.value = '';
-    });
-    activityState.filters = {};
-    activityState.page = 1;
-    renderActivityLog();
-  });
-  document.getElementById('btn-activity-prev')?.addEventListener('click', () => {
-    if (activityState.page > 1) { activityState.page -= 1; renderActivityLog(); }
-  });
-  document.getElementById('btn-activity-next')?.addEventListener('click', () => {
-    if (activityState.page < activityState.pages) { activityState.page += 1; renderActivityLog(); }
-  });
+  // Activity log wiring lives in modules/activity.js.
+  initActivityLog();
 
   // ---- Dentist availability page ----
   const availSelect = document.getElementById('avail-dentist-select');
@@ -2415,29 +2119,12 @@ function bindEvents() {
       await renderAdminRecords();
     }
   });
-  const archiveTbody = document.getElementById('admin-archives-tbody');
-  if (archiveTbody) archiveTbody.addEventListener('click', async (event) => {
-    const restoreButton = event.target.closest('button[data-archive-restore]');
-    const purgeButton = event.target.closest('button[data-archive-purge]');
-    if (restoreButton) {
-      const id = Number(restoreButton.getAttribute('data-archive-restore'));
-      const confirmed = await confirmModal({ title: 'Restore Archived Record', message: 'Restore this record from the archive?' });
-      if (!confirmed) return;
-      const res = await api.post('archives/restore.php', { id });
-      if (!res.success) { showToast(res.message || 'Could not restore this record.', 'error'); return; }
-      showToast('Record restored.');
-      await renderArchives();
+  // Archive buttons are wired by modules/users.js.
+  initUsers({
+    onRestored: async () => {
       await renderAdminAppointments();
       await renderAdminRecords();
-    } else if (purgeButton) {
-      const id = Number(purgeButton.getAttribute('data-archive-purge'));
-      const confirmed = await confirmModal({ title: 'Delete Permanently', message: 'This permanently deletes the archived record and cannot be undone. Continue?', danger: true });
-      if (!confirmed) return;
-      const res = await api.post('archives/hard-delete.php', { id, confirm: 'DELETE' });
-      if (!res.success) { showToast(res.message || 'Could not permanently delete this record.', 'error'); return; }
-      showToast('Archived record permanently deleted.');
-      await renderArchives();
-    }
+    },
   });
 }
 

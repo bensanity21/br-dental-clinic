@@ -1559,7 +1559,7 @@ if (document.getElementById('change-password-form')) {
     const currentPassword = document.getElementById('curr-password').value;
     const newPassword = document.getElementById('new-password').value;
     const confirmPassword = document.getElementById('confirm-new-password').value;
-    if (newPassword.length < 8 || newPassword.length > 72) { showToast('New password must be between 8 and 72 characters.', 'error'); return; }
+    if (newPassword.length < 12 || newPassword.length > 72) { showToast('New password must be between 12 and 72 characters.', 'error'); return; }
     if (newPassword !== confirmPassword) { showToast('The new passwords do not match.', 'error'); document.getElementById('confirm-new-password').focus(); return; }
     if (newPassword === currentPassword) { showToast('Choose a new password different from your current password.', 'error'); return; }
     const confirmed = await confirmModal({ title: 'Change Password', message: 'Change your account password?' });
@@ -1579,7 +1579,7 @@ if (document.getElementById('admin-pass-change-form')) {
     event.preventDefault();
     const currentPassword = document.getElementById('admin-curr-pass').value;
     const newPassword = document.getElementById('admin-new-pass').value;
-    if (newPassword.length < 8) { showToast('New password must be at least 8 characters.', 'error'); return; }
+    if (newPassword.length < 12) { showToast('New password must be at least 12 characters.', 'error'); return; }
     const confirmed = await confirmModal({ title: 'Change Password', message: 'Change your account password?' });
     if (!confirmed) return;
     const res = await api.post('auth/password.php', { current_password: currentPassword, new_password: newPassword });

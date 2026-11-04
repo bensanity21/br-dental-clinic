@@ -25,8 +25,8 @@ if (form && token) {
     const confirm = document.getElementById("reset-confirm").value;
 
     let valid = true;
-    if (password.length < 8) {
-      showFieldError("reset-password", "Use at least 8 characters.");
+    if (password.length < 12) {
+      showFieldError("reset-password", "Use at least 12 characters.");
       valid = false;
     }
     if (password !== confirm) {

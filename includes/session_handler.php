@@ -40,9 +40,17 @@ final class DatabaseSessionHandler implements SessionHandlerInterface, SessionUp
         $user = getenv('DB_USER');
         $pass = getenv('DB_PASSWORD');
 
-        if ((getenv('APP_ENV') ?: 'development') !== 'production') {
-            if ($user === false || $user === '') $user = 'root';
-            if ($pass === false) $pass = '';
+        // Same rule as includes/db.php: environment first, then the gitignored
+        // secrets file. No root fallback - a missing credential must fail
+        // visibly rather than quietly borrow server-wide privileges.
+        // $localSecrets is created at file scope by config.php, so it is read
+        // through $GLOBALS here (this code runs inside a class method).
+        $secrets = $GLOBALS['localSecrets'] ?? [];
+        if ($user === false || $user === '') $user = $secrets['db_user'] ?? '';
+        if ($pass === false || $pass === '') $pass = $secrets['db_password'] ?? '';
+
+        if ($user === '' || $pass === '') {
+            throw new RuntimeException('Database credentials are not configured. Run: php tools/create-db-user.php');
         }
 
         $this->pdo = new PDO(

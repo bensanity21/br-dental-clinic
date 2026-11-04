@@ -48,17 +48,25 @@ if (!function_exists('brInstallErrorHandler')) {
 
 brInstallErrorHandler();
 
-$host = getenv('DB_HOST') ?: 'localhost';
-$dbname = getenv('DB_NAME') ?: 'clinic';
+$host = getenv('DB_HOST') ?: ($localSecrets['db_host'] ?? 'localhost');
+$dbname = getenv('DB_NAME') ?: ($localSecrets['db_name'] ?? 'clinic');
 $username = getenv('DB_USER');
 $password = getenv('DB_PASSWORD');
-if ((getenv('APP_ENV') ?: 'development') !== 'production') {
-    // XAMPP-only default. Production must use a dedicated least-privilege account.
-    if ($username === false || $username === '') $username = 'root';
-    if ($password === false) $password = '';
-} elseif ($username === false || $username === '' || $password === false || $password === '') {
+
+// Credentials come from the environment in production, or from the gitignored
+// config/secrets.local.php on a development machine. There is deliberately NO
+// fallback to root: a missing credential is a configuration error that must be
+// visible, not something that silently reconnects with full server privileges.
+if ($username === false || $username === '') $username = $localSecrets['db_user'] ?? '';
+if ($password === false || $password === '') $password = $localSecrets['db_password'] ?? '';
+
+if ($username === '' || $password === '') {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Production database credentials are not configured.']);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Database credentials are not configured. Run: php tools/create-db-user.php',
+        'data' => null,
+    ]);
     exit;
 }
 

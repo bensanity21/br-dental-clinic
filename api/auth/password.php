@@ -13,8 +13,10 @@ $currentPassword = is_array($data) ? ($data['current_password'] ?? '') : '';
 $newPassword = is_array($data) ? ($data['new_password'] ?? '') : '';
 $confirmPassword = is_array($data) ? ($data['confirm_password'] ?? null) : null;
 
-if (!is_string($currentPassword) || $currentPassword === '' || !is_string($newPassword) || strlen($newPassword) < 8 || strlen($newPassword) > 72) {
-    respondError('Enter your current password and a new password between 8 and 72 characters.', null, 400);
+// Minimum length matches every other password path (see docs/PASSWORD-POLICY.md).
+// bcrypt ignores bytes past 72, so that remains the upper bound.
+if (!is_string($currentPassword) || $currentPassword === '' || !is_string($newPassword) || strlen($newPassword) < 12 || strlen($newPassword) > 72) {
+    respondError('Enter your current password and a new password between 12 and 72 characters.', null, 400);
 }
 if ($user['role'] === 'patient' && (!is_string($confirmPassword) || !hash_equals($newPassword, $confirmPassword))) {
     respondError('The new password confirmation does not match.', null, 422);

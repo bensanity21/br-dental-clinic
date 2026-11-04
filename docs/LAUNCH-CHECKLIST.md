@@ -39,13 +39,13 @@ php database/set-password.php admin@brdental.com
 You are prompted twice with hidden input. The password is never echoed, never
 printed, never logged. Use your own password, at least 12 characters.
 
-**Option B — in the portal (convenient, 8 characters minimum)**
+**Option B — in the portal (convenient, 12 characters minimum)**
 
 Sign in as that user, open the profile card, use **Change Password**. It verifies
 the current password first.
 
-> The portal only requires 8 characters while the CLI requires 12. For the Super
-> Admin account, use Option A.
+> Both the portal and the CLI now require 12 characters. Use Option A for the
+> Super Admin account.
 
 **Do not use `--generate` unless you are ready to paste the result straight into
 a password manager.** It prints the password once to the terminal, which defeats
@@ -258,8 +258,13 @@ and I will cut this down to the applicable half.
 | Keep the key on separate media | already done in Phase 2 | verify-key-backup says YES | same |
 | Rotate passwords | Phase 1 | check-exposed says 0 | **published admin password** |
 
-**Not applicable locally:** HTTPS, HSTS, dedicated DB user, nginx rules,
-`expose_php`. Change them anyway when you deploy.
+**Not applicable locally:** HTTPS, HSTS, nginx rules, `expose_php`. Change them
+anyway when you deploy.
+
+**Dedicated database user** (done locally): the app now connects as
+`br_dental_app` with only SELECT/INSERT/UPDATE/DELETE on the `clinic` schema.
+Credentials live in `config/secrets.local.php` (gitignored). Run
+`php tools/create-db-user.php` to provision or rotate.
 
 ## If you deploy to shared hosting or a VPS
 

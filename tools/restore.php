@@ -37,12 +37,19 @@ $root      = dirname(__DIR__);
 $backupDir = $root . '/backups';
 $dbName    = getenv('DB_NAME') ?: 'clinic';
 $dbHost    = getenv('DB_HOST') ?: 'localhost';
-$dbUser    = getenv('DB_USER');
-$dbPass    = getenv('DB_PASSWORD');
+$dbUser = getenv('DB_USER');
+$dbPass = getenv('DB_PASSWORD');
 
-if ((getenv('APP_ENV') ?: 'development') !== 'production') {
-    if ($dbUser === false || $dbUser === '') $dbUser = 'root';
-    if ($dbPass === false) $dbPass = '';
+// Same credential rule as the application: environment, then the gitignored
+// secrets file. No root fallback.
+$secretsFile = dirname(__DIR__) . '/config/secrets.local.php';
+$secrets = is_file($secretsFile) ? (require $secretsFile) : [];
+if ($dbUser === false || $dbUser === '') $dbUser = $secrets['db_user'] ?? '';
+if ($dbPass === false || $dbPass === '') $dbPass = $secrets['db_password'] ?? '';
+
+if ($dbUser === '' || $dbPass === '') {
+    fwrite(STDERR, "Database credentials are not configured. Run: php tools/create-db-user.php\n");
+    exit(1);
 }
 
 $args     = array_slice($argv, 1);

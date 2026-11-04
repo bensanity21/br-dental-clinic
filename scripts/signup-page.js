@@ -23,7 +23,7 @@ if (form) {
     let valid = true;
     if (!fullname) { showFieldError("signup-fullname", "Full name is required."); valid = false; }
     if (!validateEmail(email)) { showFieldError("signup-email", "Valid email address is required."); valid = false; }
-    if (password.length < 8) { showFieldError("signup-password", "Minimum 8 characters required."); valid = false; }
+    if (password.length < 12) { showFieldError("signup-password", "Minimum 12 characters required."); valid = false; }
     if (password !== confirmPassword) { showFieldError("signup-confirm-password", "Passwords do not match."); valid = false; }
     if (!valid) { setAuthAlert("Please fix the highlighted fields.", "danger"); return; }
 

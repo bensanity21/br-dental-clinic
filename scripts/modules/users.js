@@ -66,8 +66,8 @@ export function openCreateUserModal() {
           phone_number: document.getElementById('new-user-phone')?.value.trim() || '',
           password: document.getElementById('new-user-password')?.value || '',
         };
-        if (!payload.full_name || !payload.email || payload.password.length < 8) {
-          showToast('Full name, email and a password of at least 8 characters are required.', 'error');
+        if (!payload.full_name || !payload.email || payload.password.length < 12) {
+          showToast('Full name, email and a password of at least 12 characters are required.', 'error');
           return false;
         }
         const res = await api.post('users/create.php', payload);

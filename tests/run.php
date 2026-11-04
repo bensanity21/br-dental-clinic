@@ -979,6 +979,28 @@ try {
                 'the backup does contain encrypted values, so the key is genuinely required'
             );
         }
+
+        // Key custody: an off-machine, verified copy must be recorded. This is
+        // allowed to fail on a machine that has not completed the export step,
+        // so it reports rather than aborting the suite.
+        $ledger = $root . '/backups/key-custody.json';
+        $recorded = is_file($ledger) ? (json_decode((string)file_get_contents($ledger), true) ?: []) : [];
+        $fp = substr(hash('sha256', ENCRYPTION_KEY), 0, 16);
+        $custodyOk = (bool)array_filter($recorded, fn($e) => !empty($e['verified']) && ($e['fingerprint'] ?? '') === $fp);
+        $t->ok(
+            $custodyOk,
+            'a verified off-machine copy of the encryption key is recorded',
+            $custodyOk ? '' : 'run tools/key-status.php --mark-offsite=<path> after copying the key to external media'
+        );
+
+        // Loose copies on the same disk as the data are the exact failure mode
+        // custody exists to prevent, so flag them while they are still present.
+        $loose = glob($root . '/backups/encryption-key_*.txt') ?: [];
+        $t->ok(
+            $custodyOk || !$loose,
+            'no loose key file is left beside the database backups',
+            $loose ? count($loose) . ' file(s) in backups/ - delete once an off-machine copy is verified' : ''
+        );
     }
 
     // --------------------------------------------------------- regression

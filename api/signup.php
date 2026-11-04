@@ -43,8 +43,18 @@ if ($recentSignups >= SIGNUP_MAX_PER_WINDOW) {
 }
 
 // ---- Validation ---------------------------------------------------------
-if (empty($fullName) || !$email || strlen($password) < 8) {
-    respond(["success" => false, "message" => "Please complete all fields properly.", "data" => null], 400);
+// Minimum length is 12 everywhere (signup, change, reset, CLI, setup) so no
+// path can create an account weaker than another. bcrypt silently ignores
+// anything past 72 bytes, so that stays the ceiling.
+const SIGNUP_MIN_PASSWORD = 12;
+const SIGNUP_MAX_PASSWORD = 72;
+
+if (empty($fullName) || !$email || strlen($password) < SIGNUP_MIN_PASSWORD || strlen($password) > SIGNUP_MAX_PASSWORD) {
+    respond([
+        "success" => false,
+        "message" => "Please complete all fields properly. Passwords need at least " . SIGNUP_MIN_PASSWORD . " characters.",
+        "data" => null,
+    ], 400);
 }
 
 $nameLength = function_exists('mb_strlen') ? mb_strlen($fullName, 'UTF-8') : strlen($fullName);

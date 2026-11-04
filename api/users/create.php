@@ -24,8 +24,8 @@ $specialization = trim($data['specialization'] ?? '');
 if (!in_array($role, ['doctor', 'patient'], true)) {
     respondError('Invalid role. Only Doctor and Patient accounts can be created here.', null, 400);
 }
-if (!$fullName || !$email || !$password || strlen($password) < 8) {
-    respondError('Full name, valid email, and password (min 8 chars) are required.', null, 400);
+if (!$fullName || !$email || !$password || strlen($password) < 12) {
+    respondError('Full name, valid email, and password (min 12 chars) are required.', null, 400);
 }
 
 // Email uniqueness

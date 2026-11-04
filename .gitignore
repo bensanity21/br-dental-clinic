@@ -25,3 +25,7 @@ full_codebase.txt
 /backups/
 *.sql.gz
 encryption-key_*.txt
+
+# Temporary backup files (may contain credentials)
+*.bak
+*.bak-*

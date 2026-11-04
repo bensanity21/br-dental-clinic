@@ -33,10 +33,10 @@ if ($token === '') {
     respond(['success' => false, 'message' => 'This reset link is not valid.', 'data' => null], 400);
 }
 
-if (strlen($newPassword) < 8 || strlen($newPassword) > 72) {
+if (strlen($newPassword) < 12 || strlen($newPassword) > 72) {
     respond([
         'success' => false,
-        'message' => 'Choose a password between 8 and 72 characters.',
+        'message' => 'Choose a password between 12 and 72 characters.',
         'data'    => null,
     ], 422);
 }

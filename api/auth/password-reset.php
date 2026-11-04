@@ -96,8 +96,6 @@ $allowLocalResetLink = getenv('APP_ENV') === 'development'
 
 if ($allowLocalResetLink) {
     $reply['data'] = ['reset_link' => $link, 'email_sent' => false];
-} elseif (!$delivered) {
-    $reply['message'] = 'We could not send the email right now. Please try again shortly.';
 }
 
 respond($reply);

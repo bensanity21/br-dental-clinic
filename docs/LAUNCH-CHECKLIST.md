@@ -8,6 +8,9 @@ Nothing here is automated for you. **Every step that touches a real account or
 real patient data is performed by you, through the interface named in the step.**
 The project tools are read-only or verifiable-by-design wherever possible.
 
+For the consolidated production environment variables, database grants, and
+HTTPS checklist, follow `PRODUCTION-SECURITY-CHECKLIST.md` before deployment.
+
 ---
 
 # Phase 1 — rotate every exposed password
@@ -228,12 +231,10 @@ the request page.
 For real use you need an SMTP account. Gmail requires 2-Step Verification, then
 an **App Password** — your normal password will be rejected.
 
-```bash
-copy .env.example config\secrets.local.php
-```
-
-Edit that file on your own machine. Add `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`,
-`SMTP_PASS`, `SMTP_FROM`. **Do not paste these into any chat.**
+Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM` in the
+host's secret/environment-variable manager. For local XAMPP, add them inside
+the existing `return [...]` array in `config/secrets.local.php`. Do not put
+real values in `.env.example` or Git.
 
 ```bash
 php tools/test-mail.php your.address@gmail.com

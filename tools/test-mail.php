@@ -38,8 +38,8 @@ if (!mailerConfigured()) {
     echo "SMTP is NOT configured.\n\n";
     echo "That is expected on a local XAMPP install. No reset token is written\n";
     echo "to logs; local page display requires the explicit development flag.\n\n";
-    echo "To enable email delivery, copy .env.example to config/secrets.local.php\n";
-    echo "and fill in the SMTP_* values, then run this script again.\n";
+    echo "Set SMTP_* values in the host environment or add them to the existing\n";
+    echo "return array in config/secrets.local.php, then run this again.\n";
     exit(0);
 }
 

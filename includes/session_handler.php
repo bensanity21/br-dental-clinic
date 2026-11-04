@@ -168,10 +168,3 @@ final class DatabaseSessionHandler implements SessionHandlerInterface, SessionUp
     }
 }
 
-/** Revoke every session belonging to one user (used after a password change). */
-function revokeUserSessions(PDO $pdo, int $userId): void
-{
-    // Session payloads are PHP-serialised strings; match on the encoded id.
-    $pdo->prepare("DELETE FROM sessions WHERE data LIKE ?")
-        ->execute(['%user_id|i:' . $userId . ';%']);
-}

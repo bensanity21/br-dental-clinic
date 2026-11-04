@@ -203,11 +203,8 @@ the request page can show a reset link only when `APP_ENV=development` and
 `ALLOW_RESET_LINK_IN_RESPONSE=1` are explicitly set. Reset tokens are never
 written to the PHP error log. Do not enable this option on a public host.
 
-```bash
-copy .env.example config\secrets.local.php
-```
-
-Add your SMTP settings to that file:
+On local XAMPP, add these SMTP entries inside the existing `return [...]` array
+in `config/secrets.local.php` (do not replace its encryption key):
 
 ```php
 'SMTP_HOST'      => 'smtp.gmail.com',
@@ -221,6 +218,10 @@ Add your SMTP settings to that file:
 
 Gmail needs an **App Password** (Google Account → Security → 2-Step
 Verification → App passwords). Your normal password is rejected.
+
+`.env.example` is a reference for environment-variable names; PHP does not
+load that file. On a hosted server, set the values through the host's secret or
+environment-variable manager instead.
 
 Test it:
 

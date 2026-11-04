@@ -6,6 +6,9 @@ An honest, ordered list. Nothing here is claimed as done.
 
 ## Must do before real patient use (manual hosting/account steps)
 
+Use `PRODUCTION-SECURITY-CHECKLIST.md` for the ordered password rotation,
+environment-variable, database privilege, and HTTPS instructions.
+
 | # | Task | Who | Time |
 |---|---|---|---|
 | 1 | **Rotate every account still using a password exposed in Git history** | you | 10 min |

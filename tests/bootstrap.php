@@ -246,18 +246,12 @@ function testStopServer(): void
 /** In-memory cookie jar per simulated user. */
 final class TestClient
 {
-    private string $jar;
+    private ?string $sessionCookie = null;
     public ?string $csrf = null;
     public ?array $user = null;
 
     public function __construct(public string $label = 'anon')
     {
-        $this->jar = tempnam(sys_get_temp_dir(), 'brjar');
-    }
-
-    public function __destruct()
-    {
-        @unlink($this->jar);
     }
 
     /**
@@ -267,6 +261,10 @@ final class TestClient
     {
         $ch = curl_init(TEST_BASE . '/' . ltrim($path, '/'));
         $headers = ['Accept: application/json'];
+        if ($this->sessionCookie !== null) {
+            $headers[] = 'Cookie: ' . SESSION_COOKIE_NAME . '=' . $this->sessionCookie;
+        }
+        $responseCookie = null;
 
         if ($body !== null) {
             $payload = json_encode($body);
@@ -281,8 +279,13 @@ final class TestClient
             CURLOPT_CUSTOMREQUEST  => strtoupper($method),
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER     => $headers,
-            CURLOPT_COOKIEJAR      => $this->jar,
-            CURLOPT_COOKIEFILE     => $this->jar,
+            CURLOPT_HEADERFUNCTION => static function ($curl, string $line) use (&$responseCookie): int {
+                if (stripos($line, 'Set-Cookie: ' . SESSION_COOKIE_NAME . '=') === 0
+                    && preg_match('/^Set-Cookie:\s*' . preg_quote(SESSION_COOKIE_NAME, '/') . '=([^;]*)/i', $line, $m)) {
+                    $responseCookie = trim($m[1]);
+                }
+                return strlen($line);
+            },
             CURLOPT_FOLLOWLOCATION => false,
             CURLOPT_TIMEOUT        => 20,
         ]);
@@ -290,25 +293,18 @@ final class TestClient
         $raw    = (string)curl_exec($ch);
         $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
+        if ($responseCookie !== null) {
+            $this->sessionCookie = $responseCookie === '' ? null : $responseCookie;
+        }
 
         $decoded = json_decode($raw, true);
         return [$status, is_array($decoded) ? $decoded : null, $raw];
     }
 
-    /** Read this client's session cookie value from its jar. */
+    /** Read this client's current session cookie value. */
     public function sessionId(): ?string
     {
-        $lines = @file($this->jar, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
-        foreach ($lines as $line) {
-            // Curl prefixes HttpOnly cookies with "#HttpOnly_", so a plain
-            // "#" skip would discard the very line we need.
-            if (str_contains($line, SESSION_COOKIE_NAME)) {
-                $parts = preg_split('/\s+/', trim($line));
-                $value = end($parts);
-                return $value !== false && $value !== '' ? $value : null;
-            }
-        }
-        return null;
+        return $this->sessionCookie;
     }
 
     public function get(string $path): array   { return $this->request('GET', $path); }

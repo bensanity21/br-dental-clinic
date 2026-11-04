@@ -13,7 +13,6 @@ $base = $argv[1] ?? 'http://localhost/draft%20for%20clinic';
 $mustBlock = [
     'clinic.sql',
     'full_codebase.txt',
-    'SECURITY_SETUP.md',
     '.gitignore',
     '.env.example',
     'config/secrets.local.php',

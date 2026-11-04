@@ -4,22 +4,26 @@ How to take this project from XAMPP to a live server, and what must change first
 
 ---
 
-## 1. Set passwords (there are none in the database file)
+## 1. Set passwords and review exposed credentials
 
-`clinic.sql` deliberately contains **no usable passwords**. Every seeded account
-has the placeholder `CHANGE_ME`, which `password_verify()` can never match.
+`clinic.sql` deliberately contains **no usable passwords**. Every seeded
+account has the placeholder `CHANGE_ME`, which `password_verify()` can never
+match. If this is an existing installation, however, rotate every account
+listed in `LAUNCH-CHECKLIST.md` before public deployment; those live accounts
+were reported to accept credentials found in Git history.
 
-See `SETUP.md` steps 3-5 for the full sequence. In short:
+For an imported empty database, see `SETUP.md` steps 3-5. For existing exposed
+accounts, follow `PRODUCTION-SECURITY-CHECKLIST.md` and use the hidden-input
+password command, then run `php tools/check-exposed.php`.
+
+Generate a new encryption key for a new empty installation:
 
 ```bash
-php -r "echo bin2hex(random_bytes(32));"          # 1. encryption key -> config/secrets.local.php
-php database/set-password.php admin@brdental.com --generate
-php database/set-password.php elena@brdental.com --generate
-php database/set-password.php smith@brdental.com --generate
+php -r "echo bin2hex(random_bytes(32)), PHP_EOL;"
 ```
 
-Each prints a strong password once, saves the hash, and signs out any existing
-session for that account.
+Store the key in a protected environment/secret manager or in the gitignored
+local `config/secrets.local.php`. Never commit it.
 
 > The browser alternative is `setup.html`, which works **only** while the
 > administrator still has the `CHANGE_ME` placeholder and closes permanently
@@ -55,11 +59,10 @@ error log. A local offline setup can explicitly show the link in the request
 page with `APP_ENV=development` and `ALLOW_RESET_LINK_IN_RESPONSE=1`; never
 enable that option on a public host.
 
-```bash
-cp .env.example config/secrets.local.php
-```
-
-Fill in the `SMTP_*` values, then test:
+Set the `SMTP_*` variables in the host secret manager, or add them as entries
+to the existing `return [...]` array in `config/secrets.local.php` on a local
+XAMPP instance. `.env.example` is a reference only; PHP does not load it.
+Then test:
 
 ```bash
 php tools/test-mail.php you@example.com
@@ -92,26 +95,23 @@ them, and the reset page is marked no-referrer and no-store.
 On the live host, set these as real environment variables (most panels have an
 "Environment Variables" section):
 
-```
-APP_ENV=production
-APP_BASE_URL=https://your-clinic-domain.example
-DB_HOST=...
-DB_NAME=...
-DB_USER=...
-DB_PASSWORD=...
-```
+See `PRODUCTION-SECURITY-CHECKLIST.md` for the complete environment-variable
+snippet. In addition to the database variables, production requires
+`BR_DENTAL_ENCRYPTION_KEY` and a canonical HTTPS `APP_BASE_URL`.
 
-`APP_ENV=production` does three things:
+`APP_ENV=production` enforces the following application behavior:
 
 1. **Refuses to start** if `DB_USER`/`DB_PASSWORD` are missing, instead of
    silently falling back to `root` with no password.
 2. Stops the reset endpoint from ever returning the link in the response.
-3. Stops PHP notices from being shown.
-4. Forces session cookies to use the `Secure` flag, so they are never sent over
+3. Forces session cookies to use the `Secure` flag, so they are never sent over
    plain HTTP. Configure HTTPS and an HTTP-to-HTTPS redirect before enabling
    production mode.
-5. Requires `APP_BASE_URL` to be the canonical HTTPS URL, preventing reset
+4. Requires `APP_BASE_URL` to be the canonical HTTPS URL, preventing reset
    links from being built from an untrusted Host header.
+
+`display_errors=Off` is a PHP configuration requirement; `APP_ENV` does not
+change it. Apply the PHP/Apache settings in section 7 separately.
 
 If HTTPS terminates at a reverse proxy and Apache receives plain HTTP, keep
 `TRUST_PROXY_HEADERS` unset unless that proxy always overwrites
@@ -129,11 +129,9 @@ header directly.
 
 Never deploy as `root`. Create a dedicated account limited to this schema:
 
-```sql
-CREATE USER 'br_clinic'@'localhost' IDENTIFIED BY 'a-long-random-password';
-GRANT SELECT, INSERT, UPDATE, DELETE ON clinic.* TO 'br_clinic'@'localhost';
-FLUSH PRIVILEGES;
-```
+Follow the SQL and verification steps in `PRODUCTION-SECURITY-CHECKLIST.md`.
+Replace its password placeholder with a generated secret and store that value
+in the host's secret manager.
 
 Note there is no `DROP` or `ALTER` in that grant. Schema changes should be run
 deliberately with the migrations in `database/`, not by the web application.
@@ -143,7 +141,7 @@ deliberately with the migrations in `database/`, not by the web application.
 ## 5. Encryption key
 
 `config/config.php` reads the AES-256 key from `config/secrets.local.php`
-(gitignored) or from an `ENCRYPTION_KEY` environment variable.
+(gitignored) or from `BR_DENTAL_ENCRYPTION_KEY`.
 
 **On a new deployment, generate a new key rather than reusing this one:**
 
@@ -162,18 +160,18 @@ somewhere safe and separate from the database.
 
 ## 6. HTTPS
 
-The session cookie sets `secure` automatically when the request is HTTPS, but
-HTTPS must be terminated by the web server or proxy.
+Production session cookies always set `Secure`; HTTPS must be terminated by
+the web server or trusted proxy, and HTTP must redirect to HTTPS.
 
 Minimum on Apache:
 
 - A certificate (Let's Encrypt is fine)
 - `Redirect permanent / https://your-domain/` for port 80
-- `Header always set Strict-Transport-Security "max-age=31536000"` once HTTPS works
+- Confirm the existing conditional HSTS header on HTTPS responses after TLS works
 
-> Note: `Strict-Transport-Security` is **not** currently set in `.htaccess`,
-> because sending it over plain HTTP on a development machine can poison a
-> browser for the whole domain. Add it only after HTTPS is confirmed working.
+The current `.htaccess` sends `Strict-Transport-Security` only when Apache
+detects HTTPS. Verify the header on the actual host. If TLS ends at a reverse
+proxy, configure HSTS at that proxy instead.
 
 ---
 
@@ -221,10 +219,12 @@ location ^~ /config/   { deny all; }
 
 ## 9. Before going live
 
+Complete every item in `PRODUCTION-SECURITY-CHECKLIST.md` first.
+
 - [ ] `clinic.sql` imported, then a real password set for every staff account
 - [ ] `APP_ENV=production` and DB credentials in environment variables
 - [ ] Dedicated database user, not `root`
-- [ ] A new `ENCRYPTION_KEY`, backed up offline
+- [ ] `BR_DENTAL_ENCRYPTION_KEY`, backed up offline
 - [ ] SMTP configured and `php tools/test-mail.php` succeeds
 - [ ] HTTPS working, HTTP redirects, HSTS added
 - [ ] `php tests/check-htaccess.php` all green

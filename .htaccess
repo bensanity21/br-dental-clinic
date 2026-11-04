@@ -16,7 +16,7 @@ Options -Indexes
 </FilesMatch>
 
 # Development-only artefacts that must never be downloadable.
-<FilesMatch "^(full_codebase\.txt|SECURITY_SETUP\.md|\.gitignore)$">
+<FilesMatch "^(full_codebase\.txt|\.gitignore)$">
     Require all denied
 </FilesMatch>
 

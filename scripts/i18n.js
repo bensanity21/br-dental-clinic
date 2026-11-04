@@ -355,7 +355,6 @@ export function setLanguage(language) {
   return activeLanguage;
 }
 
-export function getLanguage() { return activeLanguage; }
 export function t(phrase) { return dictionaries[activeLanguage]?.[phrase] ?? phrase; }
 
 export function startLocalization() {

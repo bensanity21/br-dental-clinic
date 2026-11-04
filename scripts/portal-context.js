@@ -47,16 +47,3 @@ export function escapeHtml(text) {
   return div.innerHTML;
 }
 
-/** Format a price in Philippine pesos, matching the rest of the portal. */
-export function peso(price) {
-  const value = Number(price);
-  if (!Number.isFinite(value)) return '';
-  return '\u20B1' + value.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-/** Human-readable role label. */
-export function roleLabel(role) {
-  if (role === 'super-admin') return 'Super Admin';
-  if (role === 'doctor') return 'Doctor';
-  return 'Patient';
-}

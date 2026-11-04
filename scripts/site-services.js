@@ -2,7 +2,7 @@
 import {
   esc, peso, duration, loadClinicInfo, loadServices, serviceImage,
   initSiteNav, stampYear,
-} from './site.js?v=1';
+} from './site.js?v=2';
 
 initSiteNav();
 stampYear();

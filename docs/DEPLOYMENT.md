@@ -50,8 +50,10 @@ keys by adding `previous_key`, not by replacing it outright.
 
 ## 2. Configure mail (password reset delivery)
 
-Without mail, reset links are written to the PHP error log and shown on screen.
-That is fine locally and **must not** be how a live site behaves.
+Without mail, reset emails cannot be delivered. No token is written to the PHP
+error log. A local offline setup can explicitly show the link in the request
+page with `APP_ENV=development` and `ALLOW_RESET_LINK_IN_RESPONSE=1`; never
+enable that option on a public host.
 
 ```bash
 cp .env.example config/secrets.local.php
@@ -76,8 +78,12 @@ Sample Gmail settings:
 
 Gmail requires 2-Step Verification before App Passwords are available.
 
-Once `SMTP_HOST` is set, the reset API stops returning the link to the browser
-automatically — no code change needed.
+The reset API never returns the link to the browser by default. For a local,
+offline development instance only, set `APP_ENV=development` and
+`ALLOW_RESET_LINK_IN_RESPONSE=1`; this is ignored if SMTP is configured and
+must never be set on a public host. Reset tokens use a URL fragment (not sent
+to the web server), are removed from the address bar after the page reads
+them, and the reset page is marked no-referrer and no-store.
 
 ---
 
@@ -88,6 +94,7 @@ On the live host, set these as real environment variables (most panels have an
 
 ```
 APP_ENV=production
+APP_BASE_URL=https://your-clinic-domain.example
 DB_HOST=...
 DB_NAME=...
 DB_USER=...
@@ -100,6 +107,18 @@ DB_PASSWORD=...
    silently falling back to `root` with no password.
 2. Stops the reset endpoint from ever returning the link in the response.
 3. Stops PHP notices from being shown.
+4. Forces session cookies to use the `Secure` flag, so they are never sent over
+   plain HTTP. Configure HTTPS and an HTTP-to-HTTPS redirect before enabling
+   production mode.
+5. Requires `APP_BASE_URL` to be the canonical HTTPS URL, preventing reset
+   links from being built from an untrusted Host header.
+
+If HTTPS terminates at a reverse proxy and Apache receives plain HTTP, keep
+`TRUST_PROXY_HEADERS` unset unless that proxy always overwrites
+`X-Forwarded-Proto`. When it does, set `TRUST_PROXY_HEADERS=1` so PHP can
+recognize HTTPS for development-mode sessions. Production cookies are Secure
+regardless. Never enable this setting when clients can supply the forwarded
+header directly.
 
 > Verified: `APP_ENV=production` with no DB credentials returns a fatal error
 > naming the missing configuration rather than connecting as root.

@@ -55,5 +55,5 @@ document.getElementById("btn-forgot-password")?.addEventListener("click", () => 
 });
 
 // Clinic address under the sign-up panel comes from the database.
-import { loadClinicInfo } from './clinic-info.js?v=1';
+import { loadClinicInfo } from './clinic-info.js?v=2';
 loadClinicInfo();

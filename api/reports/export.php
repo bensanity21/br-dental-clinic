@@ -58,14 +58,14 @@ $out = fopen('php://output', 'w');
 fwrite($out, "\xEF\xBB\xBF");
 
 // Header block: who generated this and for which period.
-fputcsv($out, [$clinicName]);
-fputcsv($out, [$report['title']]);
-fputcsv($out, ['Period', $from . ' to ' . $to]);
-fputcsv($out, ['Generated', date('Y-m-d H:i')]);
+fputcsv($out, [reportCell($clinicName)]);
+fputcsv($out, [reportCell($report['title'])]);
+fputcsv($out, [reportCell('Period'), reportCell($from . ' to ' . $to)]);
+fputcsv($out, [reportCell('Generated'), reportCell(date('Y-m-d H:i'))]);
 fputcsv($out, []);
 
 // Table
-fputcsv($out, $report['headers']);
+fputcsv($out, array_map('reportCell', $report['headers']));
 foreach ($report['rows'] as $row) {
     $cells = [];
     foreach ($row as $value) {
@@ -83,9 +83,9 @@ if (!empty($report['totals'])) {
         foreach ($report['rows'] as $row) {
             $sum += (int)($row[$totals['column']] ?? 0);
         }
-        fputcsv($out, [$totals['label'], $sum]);
+        fputcsv($out, [reportCell($totals['label']), reportCell($sum)]);
     } elseif (isset($totals['count'])) {
-        fputcsv($out, [$totals['label'], $totals['count']]);
+        fputcsv($out, [reportCell($totals['label']), reportCell($totals['count'])]);
     }
 }
 

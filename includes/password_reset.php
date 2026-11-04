@@ -117,36 +117,42 @@ function prunePasswordResets(PDO $pdo): void
  */
 function resetLink(string $rawToken): string
 {
-    $https  = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== '' && strtolower((string)$_SERVER['HTTPS']) !== 'off';
-    $scheme = $https ? 'https' : 'http';
-    $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $configuredBase = rtrim((string)(getenv('APP_BASE_URL') ?: ''), '/');
+    if ($configuredBase !== '') {
+        $base = $configuredBase;
+    } else {
+        $https = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== '' && strtolower((string)$_SERVER['HTTPS']) !== 'off';
+        $trustedProxyHttps = getenv('TRUST_PROXY_HEADERS') === '1'
+            && strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
+        $scheme = ($https || $trustedProxyHttps) ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 
-    // The app lives in a subdirectory on XAMPP; derive it from the script path
-    // ( .../draft for clinic/api/auth/password-reset.php -> /draft for clinic ).
-    $script = $_SERVER['SCRIPT_NAME'] ?? '';
-    $base   = preg_replace('#/api/.*$#', '', $script) ?: '';
+        // The app lives in a subdirectory on XAMPP; derive it from the script path.
+        $script = $_SERVER['SCRIPT_NAME'] ?? '';
+        $path = preg_replace('#/api/.*$#', '', $script) ?: '';
+        $base = $scheme . '://' . $host . $path;
+    }
 
-    return sprintf('%s://%s%s/reset-password.html?token=%s', $scheme, $host, $base, $rawToken);
+    // A fragment is not included in the HTTP request, so Apache access logs
+    // and intermediaries never receive the reset token.
+    return $base . '/reset-password.html#token=' . rawurlencode($rawToken);
 }
 
 /**
  * Deliver the reset link.
  *
  * With SMTP configured (see includes/mailer.php and .env.example) the link is
- * emailed. Without it - the default on a local XAMPP install - the link is
- * written to the PHP error log instead and the API returns it to the page, so
- * development still works with no mail server at all.
+ * emailed. Without it, no token is written to logs; the caller may return it
+ * only when the explicit local-development flag is enabled.
  *
- * Returns true when the mail was accepted by the server, or when no transport
- * is configured (the caller then falls back to showing the link).
+ * Returns true only when the mail server accepted the message.
  */
 function sendResetLink(string $email, string $link): bool
 {
     require_once __DIR__ . '/mailer.php';
 
     if (!mailerConfigured()) {
-        error_log(sprintf('[password reset - no SMTP configured] %s -> %s', $email, $link));
-        return true;
+        return false;
     }
 
     $clinic = defined('CLINIC_NAME') ? CLINIC_NAME : 'BR Dental Clinic';

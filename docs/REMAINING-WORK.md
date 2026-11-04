@@ -4,11 +4,11 @@ An honest, ordered list. Nothing here is claimed as done.
 
 ---
 
-## Must do (blockers)
+## Must do before real patient use (manual hosting/account steps)
 
 | # | Task | Who | Time |
 |---|---|---|---|
-| 1 | Import the schema and **set a real password** for every staff account | you | 10 min |
+| 1 | **Rotate every account still using a password exposed in Git history** | you | 10 min |
 | 2 | Set `APP_ENV=production` and DB credentials as **environment variables** | you | 10 min |
 | 3 | Create a **dedicated MySQL user** (not `root`) | you | 5 min |
 | 4 | **Configure SMTP** and confirm with `php tools/test-mail.php` | you | 15 min |
@@ -24,7 +24,7 @@ An honest, ordered list. Nothing here is claimed as done.
 |---|---|---|
 | 10 | Test a **restore on the target server** before real patients use it | the drill is verified locally; prove it where it matters |
 | 11 | `expose_php = Off`, `display_errors = Off` on the live host | php.ini |
-| 12 | Change `Admin123!` / `Dentist123!` — they are in your Git history | see note below |
+| 12 | Verify with `php tools/check-exposed.php` that no account accepts an exposed password | run after rotation |
 | 13 | Write down the **key custody** procedure: who holds it, where | a clinic that loses the key loses records |
 | 14 | If you rotate the encryption key, run `php tools/reindex-phones.php` | or patients stop being findable by phone |
 
@@ -55,7 +55,7 @@ repository you should assume they are known.
 
 ---
 
-## What is already done and verified
+## Implemented in code during this review
 
 - Phone numbers encrypted at rest with a keyed blind index, so patient matching
   by name + phone still works; migration, backfill tool and reindex tool included
@@ -67,4 +67,19 @@ repository you should assume they are known.
 - 166 automated assertions
 - 10 sensitive paths blocked at the web server
 - Three seeded accounts with no usable password until you set one
+- CSV report values are escaped against spreadsheet formula injection
+- Public clinic-hour fallbacks use the same configured default as booking
+- Reset links are not returned to clients unless an explicit development-only flag is set
+- Reset tokens are removed from the address bar and the reset page is no-referrer/no-store
+- Production session cookies are Secure; proxy headers are ignored unless explicitly trusted
+- Clinic address rendering uses text nodes rather than HTML insertion
+
+## Still requires account or hosting access
+
+The code changes above do not rotate passwords in the live database, enable
+HTTPS on a hosting account, configure real SMTP credentials, schedule backups,
+or copy backups and the encryption key off the server. Complete those steps in
+`LAUNCH-CHECKLIST.md` and `DEPLOYMENT.md` before real patient use. The HTTPS
+server must also redirect HTTP to HTTPS; production cookies are now Secure and
+will not work over plain HTTP.
 - Setup guide (`SETUP.md`) and deployment guide (`DEPLOYMENT.md`)

@@ -17,8 +17,8 @@ $details = [
     'clinic_name'     => $row['clinic_name'] ?? CLINIC_NAME,
     'phone_number'    => $row['phone_number'] ?? CLINIC_PHONE,
     'address'         => $row['address'] ?? CLINIC_ADDRESS,
-    'operating_days'  => 'Monday to Saturday',
-    'operating_hours' => '8:00 AM - 5:00 PM',
+    'operating_days'  => CLINIC_OPERATING_DAYS,
+    'operating_hours' => CLINIC_HOURS,
 ];
 
 // Operating days and hours live in a separate table.

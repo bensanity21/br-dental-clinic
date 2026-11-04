@@ -76,7 +76,9 @@ export async function loadClinicInfo() {
     const parts = String(d.address || '').split(',');
     const street = parts.slice(0, 2).join(',').trim();
     const rest = parts.slice(2).join(',').trim();
-    if (street && rest) { el.innerHTML = esc(street) + '<br>' + esc(rest); }
+    if (street && rest) {
+      el.replaceChildren(document.createTextNode(street), document.createElement('br'), document.createTextNode(rest));
+    }
     else if (d.address) { el.textContent = d.address; }
   });
 

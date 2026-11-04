@@ -50,6 +50,13 @@ ErrorDocument 404 /draft%20for%20clinic/404.html
     # Only ever send the hostname to other sites.
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
 
+    # Reset tokens arrive in the query string. Never send that URL as a
+    # referrer and do not cache the reset page.
+    <Files "reset-password.html">
+        Header always set Referrer-Policy "no-referrer"
+        Header always set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+    </Files>
+
     # Stop browsers guessing a different content type than the one we send.
     Header always set X-Content-Type-Options "nosniff"
 

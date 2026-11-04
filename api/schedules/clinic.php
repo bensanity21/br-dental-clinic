@@ -9,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt = $pdo->query('SELECT operating_days, operating_hours, updated_at FROM clinic_schedules WHERE id = 1');
     $row = $stmt->fetch();
     if (!$row) {
-        respondSuccess('No schedule set', ['operating_days' => 'Mon-Sat', 'operating_hours' => '8:00 AM - 6:00 PM']);
+        respondSuccess('No schedule set', ['operating_days' => CLINIC_OPERATING_DAYS, 'operating_hours' => CLINIC_HOURS]);
     }
     respondSuccess('Schedule retrieved', $row);
 }

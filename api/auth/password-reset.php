@@ -85,14 +85,16 @@ logActivity(
     ['id' => $user['id'], 'name' => $user['full_name'], 'role' => $user['role'] ?? 'patient']
 );
 
-// Where the link can be shown on screen: only when no mail transport is
-// configured (local development), or when delivery failed. In production with
-// working SMTP the link is never returned to the browser.
+// Returning a reset token in a response is only allowed when explicitly
+// enabled for local development. This remains off if APP_ENV is unset or
+// misconfigured, and can never be enabled in production.
 require_once '../../includes/mailer.php';
 $reply = $genericReply;
-$isProduction = (getenv('APP_ENV') ?: 'development') === 'production';
+$allowLocalResetLink = getenv('APP_ENV') === 'development'
+    && getenv('ALLOW_RESET_LINK_IN_RESPONSE') === '1'
+    && !mailerConfigured();
 
-if (!$isProduction && !mailerConfigured()) {
+if ($allowLocalResetLink) {
     $reply['data'] = ['reset_link' => $link, 'email_sent' => false];
 } elseif (!$delivered) {
     $reply['message'] = 'We could not send the email right now. Please try again shortly.';

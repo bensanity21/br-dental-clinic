@@ -2195,5 +2195,5 @@ window.addEventListener('pageshow', async (event) => {
 });
 
 // Load clinic details for the public-facing blocks on the patient pages.
-import { loadClinicInfo } from './clinic-info.js?v=1';
+import { loadClinicInfo } from './clinic-info.js?v=2';
 loadClinicInfo();

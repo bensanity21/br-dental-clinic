@@ -5,7 +5,15 @@ import { api } from "./api.js";
 bindPasswordToggles();
 
 const form = document.getElementById("reset-form");
-const token = new URLSearchParams(window.location.search).get("token") || "";
+const token = new URLSearchParams(window.location.hash.slice(1)).get("token")
+  || new URLSearchParams(window.location.search).get("token")
+  || "";
+
+// Keep the token in memory for the POST, but remove it from the address bar
+// and browser history as soon as the page has captured it.
+if (token && window.history && window.history.replaceState) {
+  window.history.replaceState(null, "", window.location.pathname);
+}
 
 // A missing token means the link was truncated or hand-edited.
 if (!token) {

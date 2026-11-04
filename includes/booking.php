@@ -59,7 +59,7 @@ function takenSlots(PDO $pdo, int $dentistId, string $date): array {
 
 const BOOKING_SLOT_MINUTES = 60;   // change to 30 for half-hour slots
 
-// "8:00 AM - 5:00 PM" -> [480, 1020] (minutes from midnight). null = unreadable.
+// "8:00 AM - 6:00 PM" -> [480, 1080] (minutes from midnight). null = unreadable.
 function operatingHourRange(string $text): ?array {
     if (!preg_match('/(\d{1,2})(?::(\d{2}))?\s*(am|pm)\s*(?:-|–|—|to)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i', $text, $m)) return null;
     $toMin = function (string $h, string $min, string $ap): int {
@@ -74,7 +74,7 @@ function operatingHourRange(string $text): ?array {
 
 function bookingSlots(PDO $pdo): array {
     $text = (string)$pdo->query('SELECT operating_hours FROM clinic_schedules WHERE id = 1')->fetchColumn();
-    [$open, $close] = operatingHourRange($text) ?? [8 * 60, 17 * 60];
+    [$open, $close] = operatingHourRange($text) ?? operatingHourRange(CLINIC_HOURS);
     $base = new DateTimeImmutable('today', new DateTimeZone(BOOKING_TZ));
     $slots = [];
     for ($m = $open; $m + BOOKING_SLOT_MINUTES <= $close; $m += BOOKING_SLOT_MINUTES) {
@@ -105,7 +105,7 @@ function dentistHoursForDate(PDO $pdo, int $dentistId, DateTimeImmutable $date):
     $stmt->execute([$dentistId]);
     if ((int)$stmt->fetchColumn() === 0 && isClinicOpenOn($pdo, $date)) {
         $text = (string)$pdo->query('SELECT operating_hours FROM clinic_schedules WHERE id = 1')->fetchColumn();
-        return operatingHourRange($text) ?? [8 * 60, 17 * 60];
+        return operatingHourRange($text) ?? operatingHourRange(CLINIC_HOURS);
     }
 
     return null; // configured, but not on this weekday

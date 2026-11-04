@@ -6,6 +6,7 @@ define('CLINIC_NAME', 'BR Dental Clinic');
 define('CLINIC_PHONE', '09066636112');
 define('CLINIC_ADDRESS', '73 Nyugan Road, Paliparan 1, Dasmariñas City, Cavite');
 define('CLINIC_EMAIL', 'admin@brdental.com');
+define('CLINIC_OPERATING_DAYS', 'Monday to Saturday');
 define('CLINIC_HOURS', '8:00 AM - 6:00 PM');
 
 // Keep encryption keys out of source control. Production should provide these
@@ -26,6 +27,15 @@ define('ENCRYPTION_KEY_PREVIOUS', $previousEncryptionKey);
 if ((getenv('APP_ENV') ?: 'development') === 'production'
     && (!getenv('DB_USER') || getenv('DB_PASSWORD') === false || getenv('DB_PASSWORD') === '')) {
     throw new RuntimeException('Production database credentials must be supplied through server environment variables.');
+}
+if ((getenv('APP_ENV') ?: 'development') === 'production') {
+    $appBaseUrl = getenv('APP_BASE_URL') ?: '';
+    $appBaseParts = parse_url($appBaseUrl);
+    if (!$appBaseParts || strtolower((string)($appBaseParts['scheme'] ?? '')) !== 'https'
+        || empty($appBaseParts['host']) || isset($appBaseParts['user']) || isset($appBaseParts['pass'])
+        || isset($appBaseParts['query']) || isset($appBaseParts['fragment'])) {
+        throw new RuntimeException('Production requires APP_BASE_URL set to the canonical HTTPS site URL.');
+    }
 }
 
 // Session settings

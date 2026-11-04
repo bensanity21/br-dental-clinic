@@ -121,5 +121,15 @@ function buildReport(PDO $pdo, string $type, string $from, string $to): array {
  */
 function reportCell($value): string {
     if ($value === null) return '';
-    return (string)$value;
+    $text = (string)$value;
+
+    // Spreadsheet programs may evaluate cells that begin with formula
+    // operators, including when the operator follows leading whitespace.
+    // Prefix those values with an apostrophe so exported patient-controlled
+    // names and email addresses open as text instead of formulas.
+    if (preg_match('/^[\t\r\n]/', $text) || preg_match('/^[\x00-\x20]*[=+\-@]/', $text)) {
+        return "'" . $text;
+    }
+
+    return $text;
 }

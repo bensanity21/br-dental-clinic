@@ -198,8 +198,10 @@ Sign in as the Super Admin with the password from step 5.
 
 ## 8. Optional: email delivery
 
-Without this, password reset links are written to the PHP error log and shown
-on the request page. Fine for local work; not fine for real patients.
+Without SMTP, reset emails cannot be delivered. For an offline local setup,
+the request page can show a reset link only when `APP_ENV=development` and
+`ALLOW_RESET_LINK_IN_RESPONSE=1` are explicitly set. Reset tokens are never
+written to the PHP error log. Do not enable this option on a public host.
 
 ```bash
 copy .env.example config\secrets.local.php

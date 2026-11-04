@@ -236,7 +236,12 @@ php tools/test-mail.php your.address@gmail.com
 ```bash
 php tools/backup.php
 php tools/backup.php --list
+php tools/backup.php --encrypt
 ```
+
+The default command writes a plain `.sql` file for compatibility. Use
+`--encrypt` for an authenticated `.sql.enc` file; the temporary SQL dump is
+removed after encryption. See `LOCAL-BACKUP-RECOVERY.md` before restoring.
 
 Schedule it nightly. In an **Administrator** command prompt:
 
@@ -256,7 +261,7 @@ the exported key to somewhere else.
 ## 10. Confirm everything works
 
 ```bash
-php tests/run.php                  # expect: ALL PASSED 166/166
+php tests/run.php                  # latest recorded result: ALL PASSED 175/175
 php tests/check-htaccess.php       # expect: File protection OK
 php tests/tools/phone-index.php    # expect: ALL PHONE INDEX CHECKS PASSED
 php tests/tools/smtp-matrix.php    # only meaningful once SMTP is configured

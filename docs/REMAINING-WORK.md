@@ -67,7 +67,7 @@ repository you should assume they are known.
 - No passwords in `clinic.sql`
 - Session storage in MySQL with hashed ids
 - Optional IP allowlist with lockout protection
-- 166 automated assertions
+- 175/175 automated assertions in the latest recorded local run (2026-11-05)
 - 10 sensitive paths blocked at the web server
 - Three seeded accounts with no usable password until you set one
 - CSV report values are escaped against spreadsheet formula injection

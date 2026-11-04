@@ -24,6 +24,7 @@
  *   php tools/backup.php --no-prune      create one, keep everything
  *   php tools/backup.php --keep=30       override retention (days)
  *   php tools/backup.php --list          show existing backups, change nothing
+ *   php tools/backup.php --encrypt       create authenticated encrypted backup
  */
 
 if (PHP_SAPI !== 'cli') {
@@ -32,6 +33,7 @@ if (PHP_SAPI !== 'cli') {
 }
 
 require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../includes/backup_crypto.php';
 
 $root       = dirname(__DIR__);
 $backupDir  = $root . '/backups';
@@ -56,6 +58,7 @@ if ($dbUser === '' || $dbPass === '') {
 $args       = array_slice($argv, 1);
 $noPrune    = in_array('--no-prune', $args, true);
 $listOnly   = in_array('--list', $args, true);
+$encrypt    = in_array('--encrypt', $args, true);
 $keepDays   = 14;
 foreach ($args as $a) {
     if (preg_match('/^--keep=(\d+)$/', $a, $m)) $keepDays = max(1, (int)$m[1]);
@@ -84,7 +87,7 @@ function fmtSize(int $bytes): string
 // ---------------------------------------------------------------- list mode
 
 if ($listOnly) {
-    $files = glob($backupDir . '/backup_*.sql');
+    $files = glob($backupDir . '/backup_*.sql*');
     sort($files);
     if (!$files) {
         echo "No backups yet in $backupDir\n";
@@ -108,8 +111,9 @@ if ($listOnly) {
 // ------------------------------------------------------------------- backup
 
 $stamp   = date('Y-m-d_His');
-$final   = $backupDir . "/backup_{$dbName}_{$stamp}.sql";
-$temp    = $final . '.part';
+$finalSql = $backupDir . "/backup_{$dbName}_{$stamp}.sql";
+$final   = $encrypt ? $finalSql . '.enc' : $finalSql;
+$temp    = $finalSql . '.part';
 
 echo "BR Dental Clinic - database backup\n";
 echo str_repeat('=', 62) . "\n";
@@ -180,8 +184,23 @@ if ($problems) {
     exit(1);
 }
 
-// Promote atomically.
-if (!@rename($temp, $final)) {
+// Encrypted mode keeps the validated SQL dump temporary and only promotes the
+// authenticated ciphertext. Plain mode retains the existing .sql behavior.
+if ($encrypt) {
+    $encTemp = $final . '.part';
+    try { backupEncryptFile($temp, $encTemp); }
+    catch (Throwable $e) {
+        @unlink($temp); @unlink($encTemp);
+        fwrite(STDERR, "\nENCRYPTION FAILED: " . $e->getMessage() . "\nNo backup was promoted.\n");
+        exit(1);
+    }
+    @unlink($temp);
+    if (!@rename($encTemp, $final)) {
+        @unlink($encTemp);
+        fwrite(STDERR, "\nCould not move encrypted backup into place.\n");
+        exit(1);
+    }
+} elseif (!@rename($temp, $final)) {
     @unlink($temp);
     fwrite(STDERR, "\nCould not move the backup into place.\n");
     exit(1);
@@ -195,7 +214,7 @@ echo "  Verified : size, header, table count and completion marker all present\n
 
 if (!$noPrune) {
     $cutoff = time() - ($keepDays * 86400);
-    $all = glob($backupDir . '/backup_*.sql');
+    $all = glob($backupDir . '/backup_*.sql*');
     sort($all); // oldest first
     $newest = end($all);
     $removed = 0;
@@ -212,7 +231,7 @@ if (!$noPrune) {
     }
 }
 
-$remaining = glob($backupDir . '/backup_*.sql');
+$remaining = glob($backupDir . '/backup_*.sql*');
 echo "\nBackup complete. " . count($remaining) . " backup(s) on disk.\n";
 
 // Remind about the key, which is NOT in the dump.

@@ -225,8 +225,10 @@ That last row is the whole reason this phase exists.
 
 # Phase 3 — email delivery (only if real patients will use it)
 
-Skip entirely for a local demo: reset links go to the PHP error log and show on
-the request page.
+Skip entirely for a local demo if you do not need password resets. Without
+SMTP, the link is shown only when `APP_ENV=development` and
+`ALLOW_RESET_LINK_IN_RESPONSE=1` are explicitly enabled. Reset tokens are not
+written to the PHP error log.
 
 For real use you need an SMTP account. Gmail requires 2-Step Verification, then
 an **App Password** — your normal password will be rejected.
@@ -287,7 +289,7 @@ Credentials live in `config/secrets.local.php` (gitignored). Run
 
 # What "ready" means
 
-**Verified by execution on 2026-11-01:**
+**Historical verification on 2026-11-01:**
 
 - 173/173 API assertions · 29/29 phone-index checks · full PHP lint
 - 10 sensitive paths blocked, 12 app routes reachable
@@ -297,6 +299,10 @@ Credentials live in `config/secrets.local.php` (gitignored). Run
 - A restored copy decrypts with the exported key: 5 of 5
 - Key file verification rejects a wrong key
 - The database backup provably does not contain the key
+
+The latest recorded local test result is 175/175 assertions on 2026-11-05;
+`tests/check-htaccess.php` also passed on that date. These are local results,
+not production deployment verification.
 
 **Not verified — no claim made:**
 

@@ -239,9 +239,12 @@ Complete every item in `PRODUCTION-SECURITY-CHECKLIST.md` first.
 
 Stated plainly, because these matter more than a checklist:
 
-1. **No backup strategy.** Nothing here backs up the database or the encryption
-   key. A clinic losing patient records is a serious event. Use `mysqldump` on a
-   schedule and keep copies off the server.
+1. **Backup operations still need operational setup.** `tools/backup.php`
+   creates local SQL backups, and `php tools/backup.php --encrypt` creates
+   authenticated encrypted backup files. Scheduling, off-device copies,
+   separate encryption-key custody, alerting, and a documented restore drill
+   still need to be established for any real deployment. See
+   `LOCAL-BACKUP-RECOVERY.md` for the local XAMPP procedure.
 2. **No CSRF rotation.** The token is per-session and never rotated. Acceptable
    with `SameSite=Lax` and the existing checks, but not ideal.
 3. **Single-server sessions.** Sessions live in MySQL, which works across

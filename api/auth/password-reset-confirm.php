@@ -24,9 +24,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     respond(['success' => false, 'message' => 'Method not allowed.', 'data' => null], 405);
 }
 
-$data = json_decode(file_get_contents('php://input'), true) ?: [];
-$token = trim((string)($data['token'] ?? ''));
-$newPassword = (string)($data['new_password'] ?? '');
+$data = json_decode(file_get_contents('php://input'), true);
+if (!is_array($data)) {
+    respond(['success' => false, 'message' => 'Invalid request body.', 'data' => null], 400);
+}
+$tokenValue = $data['token'] ?? '';
+$passwordValue = $data['new_password'] ?? '';
+$token = is_string($tokenValue) ? trim($tokenValue) : '';
+$newPassword = is_string($passwordValue) ? $passwordValue : '';
 $confirm = $data['confirm_password'] ?? null;
 
 if ($token === '') {
@@ -41,7 +46,11 @@ if (strlen($newPassword) < 12 || strlen($newPassword) > 72) {
     ], 422);
 }
 
-if ($confirm !== null && $newPassword !== $confirm) {
+if (!is_string($confirm) || trim($confirm) === '') {
+    respond(['success' => false, 'message' => 'Confirm your new password.', 'data' => null], 422);
+}
+
+if (!hash_equals($newPassword, $confirm)) {
     respond(['success' => false, 'message' => 'The passwords do not match.', 'data' => null], 422);
 }
 

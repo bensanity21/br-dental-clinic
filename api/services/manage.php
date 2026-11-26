@@ -16,26 +16,33 @@ $method = $_SERVER['REQUEST_METHOD'];
 function readServicePayload(array $data, bool $requireAll): array {
     $errors = [];
 
-    $name = trim($data['service_name'] ?? '');
-    $desc = trim($data['description'] ?? '');
+    $nameRaw = $data['service_name'] ?? '';
+    $descRaw = $data['description'] ?? '';
     $price = $data['price'] ?? null;
     $duration = $data['duration_minutes'] ?? null;
     $active = $data['is_active'] ?? null;
 
+    $nameValid = is_string($nameRaw);
+    $descriptionValid = is_string($descRaw);
+    $name = $nameValid ? trim($nameRaw) : '';
+    $desc = $descriptionValid ? trim($descRaw) : '';
+
     if ($requireAll || array_key_exists('service_name', $data)) {
-        if ($name === '' || mb_strlen($name) > 100) $errors[] = 'Service name is required (max 100 characters).';
+        if (!$nameValid || $name === '' || mb_strlen($name) > 100) $errors[] = 'Service name must be text and is required (max 100 characters).';
     }
     if ($requireAll || array_key_exists('description', $data)) {
-        if ($desc === '') $errors[] = 'Description is required.';
+        if (!$descriptionValid || $desc === '') $errors[] = 'Description must be text and is required.';
     }
     if ($requireAll || array_key_exists('price', $data)) {
-        if (!is_numeric($price) || (float)$price < 0) $errors[] = 'Price must be zero or a positive number.';
+        if ((!is_int($price) && !is_float($price) && !is_string($price)) || !is_numeric($price) || (float)$price < 0) $errors[] = 'Price must be zero or a positive number.';
     }
     if ($requireAll || array_key_exists('duration_minutes', $data)) {
-        $d = (int)$duration;
-        if ($d < 15 || $d > 480) $errors[] = 'Duration must be between 15 and 480 minutes.';
+        $durationValid = is_int($duration) || (is_string($duration) && ctype_digit($duration));
+        $d = $durationValid ? (int)$duration : 0;
+        if (!$durationValid || $d < 15 || $d > 480) $errors[] = 'Duration must be an integer between 15 and 480 minutes.';
     }
-    if ($active !== null && !in_array((int)$active, [0, 1], true)) {
+    if (array_key_exists('is_active', $data)
+        && !($active === 0 || $active === 1 || $active === '0' || $active === '1')) {
         $errors[] = 'Status must be active or inactive.';
     }
 
@@ -45,8 +52,8 @@ function readServicePayload(array $data, bool $requireAll): array {
             'service_name' => $name,
             'description' => $desc,
             'price' => is_numeric($price) ? round((float)$price, 2) : null,
-            'duration_minutes' => (int)$duration,
-            'is_active' => $active === null ? 1 : (int)$active,
+            'duration_minutes' => (is_int($duration) || (is_string($duration) && ctype_digit($duration))) ? (int)$duration : null,
+            'is_active' => $active === null ? 1 : (($active === 0 || $active === '0') ? 0 : 1),
         ],
     ];
 }
@@ -92,7 +99,8 @@ if ($method === 'POST') {
 
 if ($method === 'PATCH') {
     $id = $data['id'] ?? null;
-    if (!$id) respondError('Service ID required.', null, 400);
+    if ((!is_int($id) && !(is_string($id) && ctype_digit($id))) || (int)$id < 1) respondError('Service ID must be a positive integer.', null, 400);
+    $id = (int)$id;
 
     $parsed = readServicePayload($data, false);
     if ($parsed['errors']) {
@@ -122,7 +130,8 @@ if ($method === 'DELETE') {
     // Deleting a service is a soft delete: appointments reference it and the
     // foreign key is RESTRICT, so history must be preserved.
     $id = $data['id'] ?? null;
-    if (!$id) respondError('Service ID required.', null, 400);
+    if ((!is_int($id) && !(is_string($id) && ctype_digit($id))) || (int)$id < 1) respondError('Service ID must be a positive integer.', null, 400);
+    $id = (int)$id;
 
     $stmt = $pdo->prepare('SELECT id, service_name, description, price, duration_minutes, is_active FROM services WHERE id = ?');
     $stmt->execute([$id]);

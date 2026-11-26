@@ -15,19 +15,40 @@ requireRole(['patient']);
 $user = currentUser();
 
 $data = json_decode(file_get_contents('php://input'), true);
+if (!is_array($data)) {
+    respondError('Invalid request body.', null, 400);
+}
 
-$serviceId  = $data['service_id'] ?? null;
-$dentistId  = $data['dentist_id'] ?? null;
-$date       = $data['appointment_date'] ?? '';
-$timeSlot   = $data['time_slot'] ?? '';
-$notes      = trim($data['notes'] ?? '');
+$serviceId = $data['service_id'] ?? null;
+$dentistId = $data['dentist_id'] ?? null;
+$date = $data['appointment_date'] ?? '';
+$timeSlot = $data['time_slot'] ?? '';
+$notes = $data['notes'] ?? '';
+$validId = static fn($value): bool => (is_int($value) || (is_string($value) && ctype_digit($value)))
+    && (int)$value > 0;
+
+if (!$validId($serviceId) || !$validId($dentistId)
+    || !is_string($date) || !is_string($timeSlot)
+    || (!is_string($notes) && $notes !== null)) {
+    respondError('Enter valid service, dentist, date, time, and notes values.', null, 400);
+}
+$serviceId = (int)$serviceId;
+$dentistId = (int)$dentistId;
+$notes = trim($notes ?? '');
 
 // Validate required fields
-if (!$serviceId || !$dentistId || !$date || !$timeSlot) {
+if (!$date || !$timeSlot) {
     respondError('Service, dentist, date, and time slot are required.', null, 400);
 }
 
-// Validate date is not in the past
+// Validate the service before applying the date and availability rules.
+$stmt = $pdo->prepare('SELECT id FROM services WHERE id = ? AND is_active = 1');
+$stmt->execute([$serviceId]);
+if (!$stmt->fetch()) {
+    respondError('Selected service is unavailable.', null, 422);
+}
+
+// Validate date and offered slot once before checking availability.
 $dateObj = is_string($date) ? parseBookingDate($date) : null;
 if (!$dateObj || !is_string($timeSlot) || !in_array($timeSlot, bookingSlots($pdo), true)) {
     respondError('Enter a valid appointment date and time slot.', null, 400);
@@ -55,13 +76,6 @@ if (slotHasPassed($dateObj, $timeSlot)) {
     respondError('Cannot book appointments in the past.', null, 400);
 }
 
-// Validate service exists and is active
-$stmt = $pdo->prepare('SELECT id FROM services WHERE id = ?');
-$stmt->execute([$serviceId]);
-if (!$stmt->fetch()) {
-    respondError('Selected service does not exist.', null, 400);
-}
-
 // Validate dentist exists
 $stmt = $pdo->prepare('SELECT id, user_id FROM dentists WHERE id = ?');
 $stmt->execute([$dentistId]);
@@ -70,16 +84,6 @@ if (!$dentist) {
     respondError('Selected dentist does not exist.', null, 400);
 }
 
-$dateObj = is_string($date) ? parseBookingDate($date) : null;
-if (!$dateObj || !is_string($timeSlot) || !in_array($timeSlot, bookingSlots($pdo), true)) {
-    respondError('Enter a valid appointment date and time slot.', null, 400);
-}
-if (!isClinicOpenOn($pdo, $dateObj)) {
-    respondError('The clinic is closed on that day. Please choose another date.', null, 422);
-}
-if (slotHasPassed($dateObj, $timeSlot)) {
-    respondError('Cannot book appointments in the past.', null, 400);
-}
 // Lock the dentist row so two patients can't take the same slot at once
 $pdo->beginTransaction();
 try {
@@ -105,15 +109,18 @@ try {
     respondError('Booking failed.', null, 500);
 }
 
-// Create notification for the patient, respecting their saved preference.
-createInAppNotification($pdo, (int)$user['id'], "Appointment booked for $date at $timeSlot is pending approval.");
-
-// Notify admin/super-admin of new booking
-$stmt = $pdo->prepare("SELECT id FROM users WHERE role = 'super-admin' LIMIT 1");
-$stmt->execute();
-$admin = $stmt->fetch();
-if ($admin) {
-    createInAppNotification($pdo, (int)$admin['id'], "New appointment booking requested by {$user['full_name']} for $date at $timeSlot.");
+// Notifications are post-commit side effects; their failure must not make a
+// successfully committed booking appear to have failed to the patient.
+try {
+    createInAppNotification($pdo, (int)$user['id'], "Appointment booked for $date at $timeSlot is pending approval.");
+    $stmt = $pdo->prepare("SELECT id FROM users WHERE role = 'super-admin' LIMIT 1");
+    $stmt->execute();
+    $admin = $stmt->fetch();
+    if ($admin) {
+        createInAppNotification($pdo, (int)$admin['id'], "New appointment booking requested by {$user['full_name']} for $date at $timeSlot.");
+    }
+} catch (Throwable $e) {
+    error_log('Booking notification failed: ' . $e->getMessage());
 }
 
 logActivity(

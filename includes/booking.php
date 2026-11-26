@@ -1,6 +1,8 @@
 <?php
 // includes/booking.php - Shared booking rules
-require_once __DIR__ . '/db.php';
+// API entry points load db.php/config.php before this file. Keep this helper
+// free of connection side effects so its pure schedule parsers are safe to
+// load from the CLI test harness.
 
 const BOOKING_TZ = 'Asia/Manila';
 
@@ -10,32 +12,70 @@ function parseBookingDate(string $date): ?DateTimeImmutable {
     return ($d && $d->format('Y-m-d') === $date) ? $d : null;
 }
 
-// "Monday to Saturday", "Mon-Sat", "Mon, Wed, Fri" -> [1..7]. null = unreadable.
-function operatingDayNumbers(string $text): ?array {
-    $names = ['mon' => 1, 'tue' => 2, 'wed' => 3, 'thu' => 4, 'fri' => 5, 'sat' => 6, 'sun' => 7];
-    preg_match_all('/(mon|tue|wed|thu|fri|sat|sun)[a-z]*|\bto\b|[-–—]/u', strtolower($text), $m);
-    $days = []; $prev = null; $range = false;
-    foreach ($m[0] as $token) {
-        $key = substr($token, 0, 3);
-        if (isset($names[$key])) {
-            $n = $names[$key];
-            if ($range && $prev !== null) {
-                for ($d = $prev; ; $d = $d % 7 + 1) { $days[$d] = true; if ($d === $n) break; }
+// "Monday to Saturday", "Mon-Sat", "Mon, Wed, Fri" -> [1..7]. null = invalid.
+function operatingDayNumbers(?string $text): ?array {
+    if ($text === null || trim($text) === '') return null;
+
+    $names = [
+        'mon' => 1, 'monday' => 1, 'tue' => 2, 'tues' => 2, 'tuesday' => 2,
+        'wed' => 3, 'wednesday' => 3, 'thu' => 4, 'thur' => 4, 'thurs' => 4,
+        'thursday' => 4, 'fri' => 5, 'friday' => 5, 'sat' => 6, 'saturday' => 6,
+        'sun' => 7, 'sunday' => 7,
+    ];
+    $normalized = strtolower(trim($text));
+    preg_match_all('/[a-z]+|[-–—,;&]/u', $normalized, $matches);
+    $tokens = $matches[0];
+    if (!$tokens || implode('', $tokens) !== preg_replace('/\s+/u', '', $normalized)) return null;
+
+    $days = [];
+    $previous = null;
+    $pendingSeparator = null;
+    $expectDay = true;
+    foreach ($tokens as $token) {
+        if (isset($names[$token])) {
+            if (!$expectDay) return null;
+            $day = $names[$token];
+            if ($pendingSeparator === 'range' && $previous !== null) {
+                for ($n = $previous; ; $n = $n % 7 + 1) {
+                    $days[$n] = true;
+                    if ($n === $day) break;
+                }
             } else {
-                $days[$n] = true;
+                $days[$day] = true;
             }
-            $prev = $n; $range = false;
-        } else {
-            $range = true;
+            $previous = $day;
+            $pendingSeparator = null;
+            $expectDay = false;
+            continue;
         }
+
+        if ($expectDay || $pendingSeparator !== null) return null;
+        if ($token === 'to' || in_array($token, ['-', '–', '—'], true)) {
+            $pendingSeparator = 'range';
+        } elseif (in_array($token, [',', ';', '&'], true)) {
+            $pendingSeparator = 'list';
+        } else {
+            return null;
+        }
+        $expectDay = true;
     }
-    return $days ? array_keys($days) : null;
+
+    return (!$expectDay && $days) ? array_keys($days) : null;
 }
 
 function isClinicOpenOn(PDO $pdo, DateTimeImmutable $date): bool {
-    $text = (string)$pdo->query('SELECT operating_days FROM clinic_schedules WHERE id = 1')->fetchColumn();
+    $value = $pdo->query('SELECT operating_days FROM clinic_schedules WHERE id = 1')->fetchColumn();
+    $text = is_string($value) ? $value : null;
     $days = operatingDayNumbers($text);
-    return $days === null || in_array((int)$date->format('N'), $days, true); // unreadable text = don't block
+    if ($days === null) {
+        static $loggedInvalidSchedule = false;
+        if (!$loggedInvalidSchedule) {
+            error_log('Invalid clinic operating_days configuration; bookings are blocked until it is corrected.');
+            $loggedInvalidSchedule = true;
+        }
+        return false;
+    }
+    return in_array((int)$date->format('N'), $days, true);
 }
 
 function slotHasPassed(DateTimeImmutable $date, string $slot): bool {

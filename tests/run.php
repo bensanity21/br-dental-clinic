@@ -5,12 +5,13 @@
  * Usage:
  *   php tests/run.php              run every suite
  *   php tests/run.php auth         run one suite (auth, authz, appointments,
- *                                  users, reports, reset, sessions, regression)
+ *                                  users, reports, reset, sessions, regression, qa)
  *
  * Runs the real endpoints over HTTP against an isolated test database.
  */
 
 require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/qa-regressions.php';
 
 $only = $argv[1] ?? null;
 
@@ -118,12 +119,36 @@ try {
         $patient = new TestClient('patient');
         $patient->login('jane@test.com', 'TestPass123!');
 
-        $date = date('Y-m-d', strtotime('+45 days'));
+        // Use a future date the configured clinic and dentist actually offer.
+        // The old fixed +45 day date could land on Sunday, which must be closed
+        // now that invalid and closed operating days correctly fail closed.
+        $date = null;
+        $offeredTimes = [];
+        $startDate = new DateTimeImmutable('+45 days', new DateTimeZone('Asia/Manila'));
+        for ($offset = 0; $offset <= 14 && $date === null; $offset++) {
+            $candidate = $startDate->modify('+' . $offset . ' days')->format('Y-m-d');
+            [$slotStatus, $slotResponse] = $patient->get(
+                'api/appointments/slots.php?date=' . $candidate . '&dentist_id=' . $dentistId
+            );
+            $freeSlots = array_values(array_filter(
+                $slotResponse['data']['slots'] ?? [],
+                static fn($slot) => !empty($slot['available'])
+            ));
+            if ($slotStatus === 200 && count($freeSlots) >= 2) {
+                $date = $candidate;
+                $offeredTimes = array_column($freeSlots, 'time');
+            }
+        }
+        $t->ok($date !== null, 'test fixture has a future date with two available slots');
+        if ($date === null) {
+            $date = $startDate->format('Y-m-d'); // allow remaining assertions to report normally
+            $offeredTimes = ['09:00 AM', '11:00 AM'];
+        }
         $payload = [
             'service_id'       => $serviceId,
             'dentist_id'       => $dentistId,
             'appointment_date' => $date,
-            'time_slot'        => '09:00 AM',
+            'time_slot'        => $offeredTimes[0],
             'notes'            => 'Automated test booking',
         ];
 
@@ -144,7 +169,7 @@ try {
 
         // A different slot is fine. Booking is hourly, so use an offered slot.
         $payload2 = $payload;
-        $payload2['time_slot'] = '11:00 AM';
+        $payload2['time_slot'] = $offeredTimes[1];
         [$s, $r] = $second->post('api/appointments/book.php', $payload2);
         $t->eq(true, $r['success'] ?? null, 'a different slot books fine', (string)($r['message'] ?? ''));
 
@@ -172,7 +197,7 @@ try {
         $t->ok(($r['success'] ?? true) === false, 'an invalid status is rejected');
 
         // Slots endpoint is date-scoped and authenticated.
-        [$s, $r] = $patient->get('api/appointments/slots.php?date=' . $date . '&dentist_id=1');
+        [$s, $r] = $patient->get('api/appointments/slots.php?date=' . $date . '&dentist_id=' . $dentistId);
         $t->eq(true, $r['success'] ?? null, 'a patient can read available slots');
 
         $anon = new TestClient('anon');
@@ -1056,6 +1081,11 @@ try {
         // skipped here and covered by the Apache-level check in
         // tests/check-htaccess.php.
         $t->ok(true, 'file protection is verified separately against Apache (see tests/check-htaccess.php)');
+    }
+
+    // ------------------------------------------------------- QA regressions
+    if ($only === null || $only === 'qa') {
+        runQaRegressionTests($t);
     }
 } catch (Throwable $e) {
     echo "\n\033[31mSUITE ABORTED: " . $e->getMessage() . "\033[0m\n";

@@ -13,13 +13,18 @@ requireRole(['patient']);
 $user = currentUser();
 
 $data = json_decode(file_get_contents('php://input'), true);
+if (!is_array($data)) {
+    respondError('Invalid request body.', null, 400);
+}
 $appointmentId = $data['id'] ?? null;
 $date = $data['appointment_date'] ?? '';
 $timeSlot = $data['time_slot'] ?? '';
 
-if (!$appointmentId || !is_string($date) || !is_string($timeSlot)) {
+if ((!is_int($appointmentId) && !(is_string($appointmentId) && ctype_digit($appointmentId)))
+    || (int)$appointmentId < 1 || !is_string($date) || !is_string($timeSlot)) {
     respondError('Appointment ID, date, and time slot are required.', null, 400);
 }
+$appointmentId = (int)$appointmentId;
 
 // Fetch the appointment and confirm ownership
 $stmt = $pdo->prepare("
@@ -93,11 +98,16 @@ try {
     respondError('Reschedule failed. Please try again.', null, 500);
 }
 
-// Notify the patient and the admin of the reschedule request
-createInAppNotification($pdo, (int)$user['id'], "Your appointment has been rescheduled to $date at $timeSlot and is pending approval.");
-$admin = $pdo->query("SELECT id FROM users WHERE role = 'super-admin' LIMIT 1")->fetch();
-if ($admin) {
-    createInAppNotification($pdo, (int)$admin['id'], "Appointment #$appointmentId was rescheduled by {$user['full_name']} to $date at $timeSlot.");
+// Notifications are post-commit side effects and must not turn a committed
+// reschedule into an apparent failure for the patient.
+try {
+    createInAppNotification($pdo, (int)$user['id'], "Your appointment has been rescheduled to $date at $timeSlot and is pending approval.");
+    $admin = $pdo->query("SELECT id FROM users WHERE role = 'super-admin' LIMIT 1")->fetch();
+    if ($admin) {
+        createInAppNotification($pdo, (int)$admin['id'], "Appointment #$appointmentId was rescheduled by {$user['full_name']} to $date at $timeSlot.");
+    }
+} catch (Throwable $e) {
+    error_log('Reschedule notification failed: ' . $e->getMessage());
 }
 
 logActivity(

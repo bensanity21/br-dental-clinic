@@ -198,22 +198,20 @@ Sign in as the Super Admin with the password from step 5.
 
 ## 8. Optional: email delivery
 
-Without SMTP, reset emails cannot be delivered. For an offline local setup,
-the request page can show a reset link only when `APP_ENV=development` and
-`ALLOW_RESET_LINK_IN_RESPONSE=1` are explicitly set. Reset tokens are never
-written to the PHP error log. Do not enable this option on a public host.
+Password reset links are sent by PHPMailer through SMTP. The API never returns
+the token to the browser, and delivery failures are written to the PHP error
+log without exposing SMTP credentials or reset tokens.
 
 On local XAMPP, add these SMTP entries inside the existing `return [...]` array
 in `config/secrets.local.php` (do not replace its encryption key):
 
 ```php
-'SMTP_HOST'      => 'smtp.gmail.com',
-'SMTP_PORT'      => '465',
-'SMTP_SECURE'    => 'tls',
-'SMTP_USER'      => 'your.address@gmail.com',
-'SMTP_PASS'      => 'your-app-password',
-'SMTP_FROM'      => 'your.address@gmail.com',
-'SMTP_FROM_NAME' => 'BR Dental Clinic',
+'smtp_host'      => 'smtp.gmail.com',
+'smtp_port'      => '587',
+'smtp_secure'    => 'starttls',
+'smtp_user'      => 'your.address@gmail.com',
+'smtp_pass'      => 'your-16-character-google-app-password',
+'smtp_from_name' => 'BR Dental Clinic',
 ```
 
 Gmail needs an **App Password** (Google Account → Security → 2-Step

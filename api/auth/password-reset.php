@@ -54,10 +54,11 @@ if ((int)$stmt->fetchColumn() >= RESET_REQUEST_MAX_PER_HOUR) {
 $pdo->prepare("INSERT INTO login_attempts (email, ip_address) VALUES ('reset', ?)")->execute([$ip]);
 
 // ---- Issue the token ----------------------------------------------------
-// The same reply is used for a registered and an unregistered address.
+// Keep the same message for registered and unregistered addresses. Reset
+// links are emailed only and are never included in the API response.
 $genericReply = [
     'success' => true,
-    'message' => 'If that email address is registered, a reset link has been sent.',
+    'message' => 'If that email address is registered, a password reset link has been sent to your email.',
     'data'    => null,
 ];
 
@@ -85,17 +86,4 @@ logActivity(
     ['id' => $user['id'], 'name' => $user['full_name'], 'role' => $user['role'] ?? 'patient']
 );
 
-// Returning a reset token in a response is only allowed when explicitly
-// enabled for local development. This remains off if APP_ENV is unset or
-// misconfigured, and can never be enabled in production.
-require_once '../../includes/mailer.php';
-$reply = $genericReply;
-$allowLocalResetLink = getenv('APP_ENV') === 'development'
-    && getenv('ALLOW_RESET_LINK_IN_RESPONSE') === '1'
-    && !mailerConfigured();
-
-if ($allowLocalResetLink) {
-    $reply['data'] = ['reset_link' => $link, 'email_sent' => false];
-}
-
-respond($reply);
+respond($genericReply);

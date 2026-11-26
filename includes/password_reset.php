@@ -141,9 +141,9 @@ function resetLink(string $rawToken): string
 /**
  * Deliver the reset link.
  *
- * With SMTP configured (see includes/mailer.php and .env.example) the link is
- * emailed. Without it, no token is written to logs; the caller may return it
- * only when the explicit local-development flag is enabled.
+ * The link is delivered by the configured SMTP transport. Without valid SMTP
+ * configuration, delivery fails closed; the raw token is never returned or
+ * written to logs.
  *
  * Returns true only when the mail server accepted the message.
  */
@@ -152,6 +152,7 @@ function sendResetLink(string $email, string $link): bool
     require_once __DIR__ . '/mailer.php';
 
     if (!mailerConfigured()) {
+        error_log('Password reset email could not be sent: SMTP is not configured.');
         return false;
     }
 
@@ -192,8 +193,8 @@ function sendResetLink(string $email, string $link): bool
         return true;
     }
 
-    // Sending failed. Log it and let the caller fall back so the user is not
-    // stranded by a mail outage.
+    // Log transport failure without exposing the token or SMTP details to the
+    // browser. The endpoint still returns its generic anti-enumeration reply.
     error_log("Password reset email could not be sent to $email (result: $result)");
     return false;
 }

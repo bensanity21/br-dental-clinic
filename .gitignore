@@ -15,6 +15,7 @@ slots_resp.txt
 
 # Local secrets must never be committed
 /config/secrets.local.php
+/vendor/
 
 full_codebase.txt
 # Test scratch

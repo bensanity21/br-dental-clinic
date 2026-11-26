@@ -225,18 +225,18 @@ That last row is the whole reason this phase exists.
 
 # Phase 3 — email delivery (only if real patients will use it)
 
-Skip entirely for a local demo if you do not need password resets. Without
-SMTP, the link is shown only when `APP_ENV=development` and
-`ALLOW_RESET_LINK_IN_RESPONSE=1` are explicitly enabled. Reset tokens are not
-written to the PHP error log.
+Skip this phase only if password resets are not needed. Reset tokens are never
+shown on the request page or written to the PHP error log; without valid SMTP
+credentials, email delivery fails and the API keeps the same generic response.
 
 For real use you need an SMTP account. Gmail requires 2-Step Verification, then
 an **App Password** — your normal password will be rejected.
 
-Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM` in the
-host's secret/environment-variable manager. For local XAMPP, add them inside
-the existing `return [...]` array in `config/secrets.local.php`. Do not put
-real values in `.env.example` or Git.
+Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, and
+`SMTP_FROM_NAME` in the host's secret/environment-variable manager. For Gmail,
+use `smtp.gmail.com`, port `587`, and `starttls`. For local XAMPP, add them
+inside the existing `return [...]` array in `config/secrets.local.php`. Do not
+put real values in `.env.example` or Git.
 
 ```bash
 php tools/test-mail.php your.address@gmail.com

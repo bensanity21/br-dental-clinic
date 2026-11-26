@@ -54,15 +54,27 @@ keys by adding `previous_key`, not by replacing it outright.
 
 ## 2. Configure mail (password reset delivery)
 
-Without mail, reset emails cannot be delivered. No token is written to the PHP
-error log. A local offline setup can explicitly show the link in the request
-page with `APP_ENV=development` and `ALLOW_RESET_LINK_IN_RESPONSE=1`; never
-enable that option on a public host.
+Password reset messages are sent through PHPMailer and Gmail SMTP. The reset
+token is never returned in the API response or written to logs. Install the
+Composer dependency from the project root with `composer install` after cloning.
 
-Set the `SMTP_*` variables in the host secret manager, or add them as entries
-to the existing `return [...]` array in `config/secrets.local.php` on a local
-XAMPP instance. `.env.example` is a reference only; PHP does not load it.
-Then test:
+For local XAMPP, add the settings to the returned array in the ignored
+`config/secrets.local.php`. `.env.example` is a reference only; PHP does not
+load it automatically. For Gmail, use an App Password, never your normal
+Google password:
+
+```php
+'smtp_host' => 'smtp.gmail.com',
+'smtp_port' => '587',
+'smtp_secure' => 'starttls',
+'smtp_user' => 'your Gmail address',
+'smtp_pass' => 'your 16-character Google App Password',
+'smtp_from_name' => 'BR Dental Clinic',
+```
+
+The sender address defaults to `smtp_user`. Gmail requires 2-Step Verification
+before App Passwords are available. Keep `config/secrets.local.php` out of Git.
+To test delivery without requesting a password reset:
 
 ```bash
 php tools/test-mail.php you@example.com
@@ -73,19 +85,16 @@ Sample Gmail settings:
 | Setting | Value |
 |---|---|
 | `SMTP_HOST` | `smtp.gmail.com` |
-| `SMTP_PORT` | `465` |
-| `SMTP_SECURE` | `tls` |
+| `SMTP_PORT` | `587` |
+| `SMTP_SECURE` | `starttls` |
 | `SMTP_USER` | your Gmail address |
 | `SMTP_PASS` | an **App Password**, not your login password |
-| `SMTP_FROM` | the same Gmail address |
+| `SMTP_FROM_NAME` | `BR Dental Clinic` |
 
-Gmail requires 2-Step Verification before App Passwords are available.
-
-The reset API never returns the link to the browser by default. For a local,
-offline development instance only, set `APP_ENV=development` and
-`ALLOW_RESET_LINK_IN_RESPONSE=1`; this is ignored if SMTP is configured and
-must never be set on a public host. Reset tokens use a URL fragment (not sent
-to the web server), are removed from the address bar after the page reads
+The reset API uses the same confirmation for registered and unregistered
+addresses. If SMTP delivery fails, the error is written to the PHP error log;
+the token is not exposed in the response. Reset tokens use a URL fragment (not
+sent to the web server), are removed from the address bar after the page reads
 them, and the reset page is marked no-referrer and no-store.
 
 ---

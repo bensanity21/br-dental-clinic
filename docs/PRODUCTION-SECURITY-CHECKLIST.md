@@ -76,8 +76,8 @@ DB_USER=br_dental_app
 DB_PASSWORD=<generated database password>
 BR_DENTAL_ENCRYPTION_KEY=<64 hexadecimal characters>
 SMTP_HOST=<provider SMTP host>
-SMTP_PORT=465
-SMTP_SECURE=tls
+SMTP_PORT=587
+SMTP_SECURE=starttls
 SMTP_USER=<clinic mailbox>
 SMTP_PASS=<mail provider secret or app password>
 SMTP_FROM=<clinic mailbox>
@@ -97,8 +97,7 @@ replace it with a new key. For planned rotation, set the former key as
 `BR_DENTAL_ENCRYPTION_KEY_PREVIOUS` and follow the key-rotation procedure.
 
 Only set `TRUST_PROXY_HEADERS=1` when a trusted reverse proxy strips any
-client-supplied `X-Forwarded-Proto` and writes its own value. Never set
-`ALLOW_RESET_LINK_IN_RESPONSE` on a public or production server.
+client-supplied `X-Forwarded-Proto` and writes its own value.
 
 Configure all required variables before setting `APP_ENV=production`; the app
 refuses startup if the database credentials, canonical HTTPS URL, or encryption

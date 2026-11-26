@@ -27,8 +27,8 @@ if (!$to) {
 echo "SMTP configuration\n";
 echo str_repeat('-', 50) . "\n";
 printf("Host:      %s\n", mailerSetting('SMTP_HOST', '(not set)'));
-printf("Port:      %s\n", mailerSetting('SMTP_PORT', '465'));
-printf("Encryption:%s\n", mailerSetting('SMTP_SECURE', '(inferred)'));
+printf("Port:      %s\n", mailerSetting('SMTP_PORT', '587'));
+printf("Encryption:%s\n", mailerSetting('SMTP_SECURE', 'starttls'));
 printf("User:      %s\n", mailerSetting('SMTP_USER') ? '(set)' : '(not set)');
 printf("Password:  %s\n", mailerSetting('SMTP_PASS') ? '(set)' : '(not set)');
 printf("From:      %s\n", mailerSetting('SMTP_FROM', '(defaults to user)'));
@@ -36,10 +36,9 @@ echo "\n";
 
 if (!mailerConfigured()) {
     echo "SMTP is NOT configured.\n\n";
-    echo "That is expected on a local XAMPP install. No reset token is written\n";
-    echo "to logs; local page display requires the explicit development flag.\n\n";
-    echo "Set SMTP_* values in the host environment or add them to the existing\n";
-    echo "return array in config/secrets.local.php, then run this again.\n";
+    echo "Password reset links will not be delivered until SMTP credentials are set.\n";
+    echo "Add SMTP_* values to config/secrets.local.php or the host environment,\n";
+    echo "then run this command again. Reset tokens are never shown on the page or logged.\n";
     exit(0);
 }
 

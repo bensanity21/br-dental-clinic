@@ -29,16 +29,6 @@ if (form) {
         // The API answers the same way for a registered and an unregistered
         // address, so this message never reveals whether the account exists.
         setAuthAlert(res.message, "success");
-
-        const link = res.data && res.data.reset_link;
-        if (link) {
-          const box = document.getElementById("dev-reset-link");
-          const anchor = document.getElementById("dev-reset-anchor");
-          if (box && anchor) {
-            anchor.href = link;
-            box.classList.remove("hidden");
-          }
-        }
       } else {
         setAuthAlert(res && res.message ? res.message : "Could not send the reset link.", "danger");
       }

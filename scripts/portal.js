@@ -247,19 +247,19 @@ function renderNavigation() {
 
       <div class="navbar-right">
         <div class="navbar-item">
-          <button type="button" class="btn-icon btn-notif-toggle" id="btn-notif-toggle" aria-label="Notifications" aria-controls="notif-dropdown-panel" aria-expanded="false" style="position: relative;">
+          <button type="button" class="btn-icon btn-notif-toggle" id="btn-notif-toggle" aria-label="Notifications" aria-controls="notif-dropdown-panel" aria-expanded="false">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
             <span id="notif-count-badge" class="badge-count hidden" aria-hidden="true">0</span>
           </button>
-          <div id="notif-dropdown-panel" class="dropdown-panel dropdown-right hidden" role="region" aria-labelledby="notif-dropdown-heading" aria-hidden="true" style="position: absolute; top: 100%; right: 0; width: 320px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); margin-top: 0.5rem; z-index: 100;">
-            <div class="dropdown-header" style="padding: 0.75rem 1rem; border-bottom: 1px solid #f3f4f6;">
-              <h3 id="notif-dropdown-heading" style="margin: 0; font-size: 0.875rem; font-weight: 600; color: #111827;">Notifications</h3>
+          <div id="notif-dropdown-panel" class="dropdown-panel dropdown-right notif-popover hidden" role="region" aria-labelledby="notif-dropdown-heading" aria-hidden="true">
+            <div class="dropdown-header notif-popover-header">
+              <h3 id="notif-dropdown-heading">Notifications</h3>
             </div>
-            <ul id="notif-list-container" class="dropdown-list" style="list-style: none; margin: 0; padding: 0; max-height: 240px; overflow-y: auto;">
-              <li class="empty-list-text" style="padding: 0.75rem 1rem; color: #6b7280; font-size: 0.875rem;">No new notifications.</li>
+            <ul id="notif-list-container" class="dropdown-list notif-list">
+              <li class="empty-list-text">No new notifications.</li>
             </ul>
-            <div style="padding: 0.5rem 1rem; border-top: 1px solid #f3f4f6;">
-              <button type="button" class="btn btn-outline" style="width: 100%; padding: 0.5rem 1rem; font-size: 0.875rem;" id="btn-mark-all-read">Mark all as read</button>
+            <div class="notif-popover-footer">
+              <button type="button" class="btn btn-outline" id="btn-mark-all-read">Mark all as read</button>
             </div>
           </div>
         </div>
@@ -339,11 +339,26 @@ async function switchView(targetViewId, { push = true } = {}) {
     resetProfileEdit();
   }
   document.querySelectorAll('.page-view').forEach((v) => v.classList.remove('active'));
-  document.querySelectorAll('.nav-link').forEach((l) => l.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach((l) => {
+    l.classList.remove('active', 'nav-link-context');
+    l.removeAttribute('aria-current');
+  });
   targetView.classList.add('active');
-    if (location.hash !== '#view-' + targetViewId) history[push ? 'pushState' : 'replaceState'](null, '', '#view-' + targetViewId);
-  const navLink = document.querySelector('.nav-link[data-view="' + targetViewId + '"]');
-  if (navLink) navLink.classList.add('active');
+  if (location.hash !== '#view-' + targetViewId) history[push ? 'pushState' : 'replaceState'](null, '', '#view-' + targetViewId);
+  const patientNavParent = {
+    'patient-book': 'patient-appointments',
+    'patient-profile': 'patient-home',
+    'patient-settings': 'patient-home',
+    'patient-records': 'patient-home',
+  };
+  const activeNavTarget = role === 'patient' ? (patientNavParent[targetViewId] || targetViewId) : targetViewId;
+  const navLink = document.querySelector('.nav-link[data-view="' + activeNavTarget + '"]');
+  if (navLink) {
+    navLink.classList.add('active');
+    const isContextFallback = targetViewId !== activeNavTarget;
+    if (isContextFallback) navLink.classList.add('nav-link-context');
+    navLink.setAttribute('aria-current', isContextFallback ? 'location' : 'page');
+  }
   closeDropdowns();
   if (el.appSidebar) el.appSidebar.classList.remove('show-sidebar');
   updateSidebarAccessibility();
@@ -391,6 +406,7 @@ async function renderServices() {
       serviceCatalog
         .filter((s) => !isAdminView || Number(s.is_active) !== 0)
         .map((s) => '<option value="' + Number(s.id) + '">' + escapeHtml(s.service_name) + '</option>').join('');
+    updateBookingSummary();
   }
 }
 
@@ -440,7 +456,8 @@ function renderServiceCards() {
         '<div class="service-card-content">' +
         (inactive ? '<span class="status-tag status-cancelled">Inactive</span>' : '') +
         '<h2 class="service-card-title">' + name + '</h2>' +
-        '<p class="service-card-description">' + escapeHtml(service.description || 'Ask the clinic for more information about this treatment.') + '</p>' +
+      '<div class="service-card-description-wrap"><p class="service-card-description is-collapsed">' + escapeHtml(service.description || 'Ask the clinic for more information about this treatment.') + '</p>' +
+        '<button type="button" class="service-description-toggle hidden" aria-expanded="false">Read more</button></div>' +
         '<div class="service-card-bottom"><div class="service-card-price"><span>Price</span><strong>' + formatServicePrice(service.price || 0) + '</strong>' +
         (durationText ? '<span class="service-card-duration">' + escapeHtml(durationText) + '</span>' : '') +
         '</div>' + actions + '</div>' +
@@ -450,7 +467,34 @@ function renderServiceCards() {
   };
   renderCards(el.patientServiceCards);
   renderCards(el.adminServiceCards, true);
+  refreshServiceDescriptionToggles();
 }
+
+function refreshServiceDescriptionToggles() {
+  document.querySelectorAll('.service-card-description-wrap').forEach((wrap) => {
+    const description = wrap.querySelector('.service-card-description');
+    const toggle = wrap.querySelector('.service-description-toggle');
+    if (!description || !toggle) return;
+    requestAnimationFrame(() => {
+      const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+      const isOverflowing = description.scrollHeight > description.clientHeight + 1;
+      toggle.classList.toggle('hidden', !isOverflowing && !isExpanded);
+    });
+  });
+}
+
+window.addEventListener('resize', refreshServiceDescriptionToggles, { passive: true });
+
+document.addEventListener('click', (event) => {
+  const toggle = event.target.closest('.service-description-toggle');
+  if (!toggle) return;
+  const description = toggle.previousElementSibling;
+  if (!description) return;
+  const expanded = toggle.getAttribute('aria-expanded') !== 'true';
+  description.classList.toggle('is-collapsed', !expanded);
+  toggle.setAttribute('aria-expanded', String(expanded));
+  toggle.textContent = expanded ? 'Show less' : 'Read more';
+});
 
 async function renderDentists() {
   const res = await api.get('dentists/list.php');
@@ -460,6 +504,7 @@ async function renderDentists() {
     el.bookDentistField.innerHTML = '<option value="">' + (dentists.length ? '-- Choose a Dentist --' : 'No dentists are available') + '</option>' +
       dentists.map((dentist) => '<option value="' + Number(dentist.id) + '">' + escapeHtml(dentist.full_name) + (dentist.specialization ? ' (' + escapeHtml(dentist.specialization) + ')' : '') + '</option>').join('');
     el.bookDentistField.disabled = dentists.length === 0;
+    updateBookingSummary();
   }
 }
 async function populateBookingDentist() { await renderDentists(); }
@@ -589,6 +634,32 @@ if (document.getElementById('booking-form')) {
 const bookTimeSelect = document.getElementById('book-time');
 const DEFAULT_SLOTS = bookTimeSelect ? Array.from(bookTimeSelect.options).map((o) => o.value).filter(Boolean) : [];
 const SLOT_REASONS = { booked: 'Booked', passed: 'Unavailable', closed: 'Closed', off: 'Outside hours' };
+let bookingSlotsRequestId = 0;
+
+function updateBookingSummary() {
+  const serviceSelect = document.getElementById('book-service');
+  const dentistSelect = document.getElementById('book-dentist');
+  const dateInput = document.getElementById('book-date');
+  const timeSelect = document.getElementById('book-time');
+  const service = serviceCatalog.find((item) => String(item.id) === serviceSelect?.value);
+  const setText = (id, value) => {
+    const node = document.getElementById(id);
+    if (node) node.textContent = value || 'Select in the form';
+  };
+  setText('booking-summary-service', service?.service_name || 'Select in the form');
+  const price = service ? Number(service.price) : NaN;
+  setText('booking-summary-price', Number.isFinite(price) ? '₱' + price.toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : 'Shown after service selection');
+  const minutes = Number(service?.duration_minutes);
+  setText('booking-summary-duration', Number.isFinite(minutes) && minutes > 0 ? minutes + ' minutes' : 'Shown after service selection');
+  setText('booking-summary-dentist', dentistSelect?.selectedOptions[0]?.value ? dentistSelect.selectedOptions[0].text : 'Select in the form');
+  setText('booking-summary-date', dateInput?.value || 'Select in the form');
+  setText('booking-summary-time', timeSelect?.value || 'Select in the form');
+}
+
+['book-service', 'book-dentist', 'book-date', 'book-time'].forEach((id) => {
+  document.getElementById(id)?.addEventListener('change', updateBookingSummary);
+});
+updateBookingSummary();
 
 function renderTimeOptions(slots) {
   if (!bookTimeSelect) return;
@@ -607,20 +678,39 @@ async function refreshBookingSlots() {
   if (!dateInput || !dentistSelect || !bookTimeSelect) return;
   if (dateError) dateError.textContent = '';
   const date = dateInput.value;
-  const dentistId = Number(dentistSelect.value);
+  const dentistValue = dentistSelect.value;
+  const dentistId = Number(dentistValue);
+  const requestId = ++bookingSlotsRequestId;
   if (!date || !dentistId) {
-    bookTimeSelect.innerHTML = '<option value="">' + escapeHtml(t('-- Choose date and dentist first --')) + '</option>';
+    bookTimeSelect.innerHTML = '<option value="">' + escapeHtml(t('Choose a date and dentist to see available times.')) + '</option>';
     bookTimeSelect.disabled = true;
+    updateBookingSummary();
     return;
   }
-  bookTimeSelect.disabled = false;
-  bookTimeSelect.innerHTML = '<option value="">' + escapeHtml(t('Loading…')) + '</option>';
-  const res = await api.get('appointments/slots.php?date=' + encodeURIComponent(date) + '&dentist_id=' + encodeURIComponent(dentistId));
-  if (!res.success || !res.data || !Array.isArray(res.data.slots)) {
-    bookTimeSelect.innerHTML = '<option value="">' + escapeHtml(t('No appointments found.')) + '</option>';
-    return;
+  bookTimeSelect.disabled = true;
+  bookTimeSelect.innerHTML = '<option value="">' + escapeHtml(t('Loading available times…')) + '</option>';
+  try {
+    const res = await api.get('appointments/slots.php?date=' + encodeURIComponent(date) + '&dentist_id=' + encodeURIComponent(dentistId));
+    if (requestId !== bookingSlotsRequestId || dateInput.value !== date || dentistSelect.value !== dentistValue) return;
+    if (!res.success || !res.data || !Array.isArray(res.data.slots)) {
+      bookTimeSelect.innerHTML = '<option value="">' + escapeHtml(t('Could not load times. Please try another date or dentist.')) + '</option>';
+      bookTimeSelect.disabled = true;
+      updateBookingSummary();
+      return;
+    }
+    renderTimeOptions(res.data.slots);
+    const hasAvailableSlot = res.data.slots.some((slot) => slot.available);
+    bookTimeSelect.disabled = !hasAvailableSlot;
+    if (!hasAvailableSlot && bookTimeSelect.options[0]) {
+      bookTimeSelect.options[0].textContent = t('No slots available. Choose another date or dentist.');
+    }
+    updateBookingSummary();
+  } catch (error) {
+    if (requestId !== bookingSlotsRequestId || dateInput.value !== date || dentistSelect.value !== dentistValue) return;
+    bookTimeSelect.innerHTML = '<option value="">' + escapeHtml(t('Could not load times. Please try again or choose another date or dentist.')) + '</option>';
+    bookTimeSelect.disabled = true;
+    updateBookingSummary();
   }
-  renderTimeOptions(res.data.slots);
 }
 
 (() => {
@@ -932,7 +1022,7 @@ async function renderNotifications() {
       if (notifications.length === 0) { el.notifListContainer.innerHTML = '<li class="empty-list-text">No new notifications.</li>'; }
       else { el.notifListContainer.innerHTML = notifications.map((n) => {
         const isUnread = Number(n.is_read) === 0;
-        return '<li class="notification-item' + (isUnread ? ' is-unread' : '') + '">' +
+        return '<li class="notification-item notif-item' + (isUnread ? ' is-unread' : '') + '">' +
           '<button type="button" class="notification-item-button" data-notification-id="' + Number(n.id) + '" aria-label="Open notification: ' + escapeHtml(n.message) + '">' +
           '<div class="notification-message-row"><div class="notification-message">' + escapeHtml(n.message) + '</div>' +
           (isUnread ? '<span class="notification-unread-indicator"><span class="notification-unread-dot" aria-hidden="true"></span><span class="sr-only">Unread notification</span></span>' : '') + '</div>' +

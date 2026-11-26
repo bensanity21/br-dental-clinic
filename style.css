@@ -509,6 +509,7 @@ input:focus, select:focus, textarea:focus {
 .nav-link svg { display: block; flex: 0 0 18px; width: 18px; height: 18px; }
 .nav-link:hover { background: #f0f6f3; color: var(--teal-dark); text-decoration: none; }
 .nav-link.active { background: var(--teal-light); color: var(--teal-dark); font-weight: 700; }
+.nav-link.active.nav-link-context { box-shadow: inset 3px 0 0 var(--teal-primary); }
 
 /* Main column */
 .main-wrapper {
@@ -682,6 +683,15 @@ input:focus, select:focus, textarea:focus {
 .dropdown-logout-btn:hover { background: var(--danger-bg); }
 
 .empty-list-text { padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
+.notif-popover { top: calc(100% + 0.5rem); z-index: 120; width: 340px; max-width: calc(100vw - 24px); overflow: hidden; border-radius: 12px; }
+.notif-popover-header { padding: 0.75rem 1rem; }
+.notif-popover-header h3 { margin: 0; color: var(--text-main); font-size: 0.9rem; font-weight: 700; }
+.notif-list { max-height: min(360px, 55vh); margin: 0; padding: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #9bbdb2 #f4f8f6; }
+.notif-list::-webkit-scrollbar { width: 8px; }
+.notif-list::-webkit-scrollbar-track { background: #f4f8f6; }
+.notif-list::-webkit-scrollbar-thumb { border: 2px solid #f4f8f6; border-radius: 999px; background: #9bbdb2; }
+.notif-popover-footer { padding: 0.6rem 1rem; border-top: 1px solid var(--border-color); }
+.notif-popover-footer .btn { width: 100%; padding: 0.5rem 1rem; font-size: 0.875rem; }
 .notification-item { padding: 0; border-bottom: 1px solid var(--border-color); font-size: 0.82rem; }
 .notification-item-button { display: block; width: 100%; padding: 0.65rem 1rem; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
 .notification-item-button:hover { background: #f4faf7; }
@@ -714,6 +724,22 @@ input:focus, select:focus, textarea:focus {
   box-shadow: var(--shadow-sm);
 }
 .form-card-narrow { max-width: 580px; }
+.patient-booking-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr); align-items: start; gap: 1.25rem; }
+.patient-booking-form-card { min-width: 0; }
+.patient-booking-form-card form { max-width: none; }
+.booking-summary-card { min-width: 0; padding: 1.35rem; }
+.booking-summary-sticky { position: sticky; top: calc(var(--navbar-h) + 1.25rem); }
+.booking-summary-card h2 { margin: 0 0 1rem; font-size: 1.2rem; }
+.booking-summary-card .section-kicker { margin: 0 0 0.35rem; }
+.booking-summary-list { margin: 0; }
+.booking-summary-list > div { display: flex; justify-content: space-between; gap: 1rem; padding: 0.7rem 0; border-bottom: 1px solid var(--border-color); }
+.booking-summary-list dt { flex: 0 0 auto; color: var(--text-muted); font-size: 0.85rem; }
+.booking-summary-list dd { min-width: 0; margin: 0; color: var(--text-main); font-size: 0.88rem; font-weight: 650; text-align: right; overflow-wrap: anywhere; }
+.booking-clinic-info { margin-top: 1.25rem; padding: 1rem; border: 1px solid #d5e5de; border-radius: 10px; background: var(--teal-light); }
+.booking-clinic-info h3 { margin: 0 0 0.45rem; color: var(--teal-dark); font-size: 0.95rem; }
+.booking-clinic-info p { margin: 0 0 0.65rem; line-height: 1.5; }
+.booking-clinic-info p:last-child { margin-bottom: 0; }
+.booking-clinic-info .text-sub { font-size: 0.82rem; }
 .admin-settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); align-items: start; gap: 1rem; }
 .admin-settings-grid .form-card-narrow { width: 100%; max-width: none; }
 
@@ -724,13 +750,19 @@ input:focus, select:focus, textarea:focus {
 .service-price { margin-top: 0.8rem; font-weight: 700; font-size: 0.95rem; color: var(--teal-dark); }
 
 /* Services cards */
-.service-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr)); align-items: stretch; gap: 1.25rem; }
+.service-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr)); align-items: start; gap: 1.25rem; }
 .service-card { display: flex; min-width: 0; flex-direction: column; overflow: hidden; border: 1px solid var(--border-color); border-radius: 14px; background: var(--white); box-shadow: var(--shadow-sm); transition: transform 0.18s ease, box-shadow 0.18s ease; }
-.service-card:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(25, 58, 48, 0.1); }
+@media (hover: hover) {
+  .service-card:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(25, 58, 48, 0.1); }
+}
 .service-card-image { display: block; width: 100%; aspect-ratio: 16 / 8.5; object-fit: cover; background: #e7f4ef; }
 .service-card-content { display: flex; min-height: 220px; flex: 1; flex-direction: column; padding: 1.15rem; }
 .service-card-title { margin: 0; color: var(--text-main); font-size: 1.08rem; line-height: 1.35; }
-.service-card-description { display: -webkit-box; overflow: hidden; margin: 0.65rem 0 1rem; color: var(--text-muted); line-height: 1.55; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; }
+.service-card-description-wrap { margin: 0.65rem 0 1rem; }
+.service-card-description { margin: 0; color: var(--text-muted); line-height: 1.55; }
+.service-card-description.is-collapsed { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; }
+.service-description-toggle { margin-top: 0.35rem; padding: 0; border: 0; background: transparent; color: var(--teal-dark); font: inherit; font-size: 0.84rem; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.service-description-toggle:focus-visible { outline: 3px solid var(--teal-primary); outline-offset: 3px; border-radius: 2px; }
 .service-card-bottom { display: flex; flex: 1; flex-direction: column; justify-content: flex-end; gap: 1rem; margin-top: auto; }
 .service-card-price { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; padding-top: 0.85rem; border-top: 1px solid var(--border-color); color: var(--text-muted); }
 .service-card-price strong { color: var(--teal-dark); font-size: 1.15rem; font-weight: 800; font-variant-numeric: tabular-nums; }
@@ -742,6 +774,8 @@ input:focus, select:focus, textarea:focus {
 .service-book-button { width: 100%; min-height: 44px; }
 .service-card-actions { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
 .service-card-actions .icon-action-button { margin: 0; }
+.service-card-bottom { margin-top: auto; }
+.service-card-bottom > .service-book-button { width: 100%; }
 .service-cards-empty { grid-column: 1 / -1; margin: 0; padding: 2rem 1rem; border: 1px dashed var(--border-dark); border-radius: 12px; color: var(--text-muted); text-align: center; }
 .admin-service-card-grid { margin-top: 0.25rem; }
 .required-mark { color: var(--danger); }
@@ -1172,6 +1206,8 @@ input:focus, select:focus, textarea:focus {
 
 @media (max-width: 900px) {
   .grid-2col { grid-template-columns: 1fr; }
+  .patient-booking-layout { grid-template-columns: minmax(0, 1fr); }
+  .booking-summary-sticky { position: static; }
   .profile-card-large { flex-direction: column; }
   .patient-profile-grid { grid-template-columns: minmax(0, 1fr); }
 
@@ -1181,6 +1217,10 @@ input:focus, select:focus, textarea:focus {
 
   .welcome-banner { grid-template-columns: 1fr; align-items: start; }
   .welcome-clinic-note { width: fit-content; }
+}
+
+@media (min-width: 901px) and (max-width: 1100px) {
+  #view-patient-book .patient-booking-form-card .grid-2col { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 768px) {
@@ -1580,7 +1620,7 @@ input:focus, select:focus, textarea:focus {
 .site-card-icon svg { width: 21px; height: 21px; }
 
 /* Service cards on the public site share the portal illustration style. */
-.site-service-card { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.site-service-card { display: flex; flex-direction: column; padding: 0; overflow: hidden; border-radius: 12px; box-shadow: var(--shadow-sm); }
 .site-service-card img { width: 100%; height: 132px; object-fit: cover; background: var(--teal-light); }
 .site-service-body { display: flex; flex: 1; flex-direction: column; padding: 1.15rem 1.25rem 1.25rem; }
 .site-service-body h3 { margin: 0 0 0.45rem; font-size: 1rem; }

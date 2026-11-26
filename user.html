@@ -151,8 +151,9 @@
             <h1>Book an Appointment</h1>
             <p>Submit a visit request with your preferred service and date.</p>
           </div>
-          <div class="card form-card-narrow">
-            <form id="booking-form" novalidate>
+          <div class="patient-booking-layout">
+            <div class="card patient-booking-form-card">
+              <form id="booking-form" novalidate>
               <div class="form-group">
                 <label for="book-service">Select Service <span class="req">*</span></label>
                 <select id="book-service" required>
@@ -191,7 +192,27 @@
               </div>
 
               <button type="submit" class="btn btn-primary">Submit Booking Request</button>
-            </form>
+              </form>
+            </div>
+            <aside class="card booking-summary-card" aria-labelledby="booking-summary-heading">
+              <div class="booking-summary-sticky">
+                <p class="section-kicker">YOUR VISIT</p>
+                <h2 id="booking-summary-heading">Booking Summary</h2>
+                <dl class="booking-summary-list">
+                  <div><dt>Service</dt><dd id="booking-summary-service">Select in the form</dd></div>
+                  <div><dt>Estimated price</dt><dd id="booking-summary-price">Shown after service selection</dd></div>
+                  <div><dt>Estimated duration</dt><dd id="booking-summary-duration">Shown after service selection</dd></div>
+                  <div><dt>Dentist</dt><dd id="booking-summary-dentist">Select in the form</dd></div>
+                  <div><dt>Date</dt><dd id="booking-summary-date">Select in the form</dd></div>
+                  <div><dt>Time</dt><dd id="booking-summary-time">Select in the form</dd></div>
+                </dl>
+                <div class="booking-clinic-info">
+                  <h3>Clinic Hours</h3>
+                  <p><span data-clinic="hours-days">Monday to Saturday</span><br><strong data-clinic="hours">8:00 AM - 6:00 PM</strong></p>
+                  <p class="text-sub">Need to change your visit? Contact the clinic as early as possible to request a cancellation or new time.</p>
+                </div>
+              </div>
+            </aside>
           </div>
         </section>
 

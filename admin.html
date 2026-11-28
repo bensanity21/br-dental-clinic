@@ -9,7 +9,7 @@
   <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <meta name="theme-color" content="#0F766E">
-  <link rel="stylesheet" href="style.css?v=36">
+  <link rel="stylesheet" href="style.css?v=41">
 </head>
 <body>
   <a class="skip-link" href="#views-viewport">Skip to main content</a>
@@ -149,6 +149,12 @@
             <p>Restore archived records or permanently delete them.</p>
           </div>
           <div class="card">
+            <div class="archive-filters">
+              <div class="form-group"><label for="archive-search">Search</label><input type="search" id="archive-search" placeholder="Name or record details"></div>
+              <div class="form-group"><label for="archive-type-filter">Record type</label><select id="archive-type-filter"><option value="">All record types</option><option value="appointments">Appointments</option><option value="users">Users</option><option value="services">Services</option><option value="dentists">Dentists</option><option value="dental_records">Dental records</option></select></div>
+              <div class="form-group"><label for="archive-date-from">From</label><input type="date" id="archive-date-from"></div>
+              <div class="form-group"><label for="archive-date-to">To</label><input type="date" id="archive-date-to"></div>
+            </div>
             <div class="table-scroll">
               <table class="data-table">
                 <thead>
@@ -159,6 +165,7 @@
                 </tbody>
               </table>
             </div>
+            <nav id="archive-pagination" class="pagination" aria-label="Archive pages"></nav>
           </div>
         </section>
 
@@ -296,12 +303,12 @@
           </form>
         </section>
 
-        <!-- ADMIN: DENTAL RECORDS -->
+        <!-- ADMIN: DENTAL RECORD -->
         <section id="view-admin-records" class="page-view">
           <div class="page-header flex-between">
             <div>
-              <h1>Dental Records & Notes</h1>
-              <p>Log treatment histories and clinical progress notes.</p>
+              <h1>Dental Record</h1>
+              <p>Review treatment history and visit details.</p>
             </div>
             <button type="button" class="btn btn-primary" id="btn-modal-record">Add Clinical Record</button>
           </div>
@@ -316,7 +323,6 @@
                     <th>Treatment Provided</th>
                     <th>Contact Number</th>
                     <th>Attending Doctor</th>
-                    <th>Clinical Notes</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -349,14 +355,20 @@
               <h1>Reports & Analytics</h1>
               <p>Export or print appointment summaries and clinic logs.</p>
             </div>
-            <button type="button" class="btn btn-outline" id="btn-export-csv">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Export CSV
-            </button>
-            <button type="button" class="btn btn-outline" id="btn-print-report">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-              Print Report
-            </button>
+            <div class="report-toolbar" role="group" aria-label="Report output actions">
+              <button type="button" class="btn btn-outline report-action-button" id="btn-export-csv">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Export CSV</span>
+              </button>
+              <button type="button" class="btn btn-outline report-action-button" id="btn-export-pdf">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6M9 13h7M9 17h7"/></svg>
+                <span>Export PDF</span>
+              </button>
+              <button type="button" class="btn btn-outline report-action-button" id="btn-print-report">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                <span>Print Report</span>
+              </button>
+            </div>
           </div>
 
           <div class="card mb-3">
@@ -546,6 +558,6 @@
   <script type="module" src="scripts/api.js?v=8"></script>
   <script type="module" src="scripts/modal.js?v=8"></script>
   <script type="module" src="scripts/toast.js?v=5"></script>
-  <script type="module" src="scripts/portal.js?v=48"></script>
+  <script type="module" src="scripts/portal.js?v=53"></script>
 </body>
 </html>

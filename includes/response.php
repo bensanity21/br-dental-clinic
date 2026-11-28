@@ -13,8 +13,10 @@ if (!function_exists('respond')) {
 }
 
 if (!function_exists('respondSuccess')) {
-    function respondSuccess($message = 'OK', $data = null, $httpCode = 200) {
-        respond(['success' => true, 'message' => $message, 'data' => $data], $httpCode);
+    function respondSuccess($message = 'OK', $data = null, $httpCode = 200, $meta = null) {
+        $response = ['success' => true, 'message' => $message, 'data' => $data];
+        if (is_array($meta) && $meta) $response['meta'] = $meta;
+        respond($response, $httpCode);
     }
 }
 

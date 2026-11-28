@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BR Dental Clinic - Patient Portal</title>
-  <meta name="description" content="Book appointments, view your dental records and manage your profile at BR Dental Clinic.">
+  <meta name="description" content="Book appointments, view your treatment history and manage your profile at BR Dental Clinic.">
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <meta name="theme-color" content="#0F766E">
-  <link rel="stylesheet" href="style.css?v=36">
+  <link rel="stylesheet" href="style.css?v=41">
 </head>
 <body>
   <a class="skip-link" href="#views-viewport">Skip to main content</a>
@@ -266,7 +266,7 @@
 
               <div class="patient-profile-side-column">
                 <section class="card" aria-labelledby="patient-summary-heading"><h2 id="patient-summary-heading">Patient Summary</h2><div class="patient-summary-row"><span>Completed appointments</span><strong id="profile-completed-count">—</strong></div><div class="patient-summary-next"><span class="text-sub">Next appointment</span><strong id="profile-next-appointment">—</strong><span id="profile-next-service" class="text-sub"></span></div><button type="button" class="btn btn-soft mt-3" data-navigate="patient-appointments">View appointments</button></section>
-                <section class="card" aria-labelledby="patient-health-heading"><h2 id="patient-health-heading">Health Information</h2><p class="text-sub">No patient-provided allergies, conditions, or medication information is stored in your account yet. Your professional treatment history is available in Dental Records.</p><button type="button" class="btn btn-outline mt-2" data-navigate="patient-records">View Dental Records</button></section>
+                <section class="card" aria-labelledby="patient-health-heading"><h2 id="patient-health-heading">Health Information</h2><p class="text-sub">No patient-provided allergies, conditions, or medication information is stored in your account yet. Your visit details are recorded by the clinic and shown in your appointment history.</p><button type="button" class="btn btn-outline mt-2" data-navigate="patient-appointments">View appointments</button></section>
               </div>
             </div>
           </div>
@@ -368,31 +368,6 @@
           </div>
         </section>
 
-        <!-- PATIENT: DENTAL RECORDS -->
-        <section id="view-patient-records" class="page-view">
-          <div class="page-header">
-            <h1>Dental Records</h1>
-            <p>View official clinical notes and treatment history recorded by your doctor.</p>
-          </div>
-          <div class="card">
-            <div class="table-scroll">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Treatment / Procedure</th>
-                    <th>Clinical Notes</th>
-                    <th>Attending Dentist</th>
-                  </tr>
-                </thead>
-                <tbody id="patient-records-tbody">
-                  <!-- Dynamic content or empty state -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
       </main>
     </div>
     <div id="modal-slot">
@@ -411,6 +386,6 @@
   <script type="module" src="scripts/api.js?v=8"></script>
   <script type="module" src="scripts/modal.js?v=8"></script>
   <script type="module" src="scripts/toast.js?v=5"></script>
-  <script type="module" src="scripts/portal.js?v=48"></script>
+  <script type="module" src="scripts/portal.js?v=53"></script>
 </body>
 </html>

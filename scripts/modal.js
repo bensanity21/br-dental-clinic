@@ -28,6 +28,7 @@ export function openModal(title, bodyHTML, actions = []) {
       btn.className = `btn ${act.class || 'btn-outline'}`;
       if (act.danger) btn.className += ' btn-danger';
       btn.textContent = act.text;
+      if (act.value !== false) btn.dataset.modalConfirm = 'true';
       btn.addEventListener('click', async () => {
         if (typeof act.value !== 'function') {
           closeModal(act.value);
@@ -48,6 +49,40 @@ export function openModal(title, bodyHTML, actions = []) {
       });
       modalFooter.appendChild(btn);
     });
+
+    const requiredFields = Array.from(modalBody.querySelectorAll('input[required], select[required], textarea[required]'));
+    const syncRequiredValidation = () => {
+      let valid = true;
+      requiredFields.forEach((field) => {
+        const fieldValid = field.disabled
+          ? String(field.value || '').trim() !== ''
+          : field.checkValidity() && String(field.value || '').trim() !== '';
+        valid = valid && fieldValid;
+        field.classList.toggle('field-invalid', !fieldValid);
+        field.setAttribute('aria-invalid', String(!fieldValid));
+        const group = field.closest('.form-group');
+        if (!group) return;
+        let warning = group.querySelector('.required-field-warning');
+        if (!warning) {
+          warning = document.createElement('span');
+          warning.className = 'required-field-warning';
+          warning.id = field.id ? field.id + '-required-warning' : '';
+          warning.setAttribute('role', 'alert');
+          group.appendChild(warning);
+        }
+        warning.textContent = fieldValid ? '' : (field.validationMessage || 'This field is required.');
+        if (warning.id) field.setAttribute('aria-describedby', [...new Set([...(field.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean), warning.id])].join(' '));
+        warning.hidden = fieldValid;
+      });
+      const confirm = modalFooter.querySelector('[data-modal-confirm]');
+      if (confirm) confirm.disabled = !valid;
+    };
+    requiredFields.forEach((field) => {
+      field.addEventListener('input', syncRequiredValidation);
+      field.addEventListener('change', syncRequiredValidation);
+    });
+    syncRequiredValidation();
+    requestAnimationFrame(() => { if (currentResolve === resolve) syncRequiredValidation(); });
 
     modalBackdrop.classList.remove('hidden');
     modalBackdrop.setAttribute('aria-hidden', 'false');

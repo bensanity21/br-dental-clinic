@@ -7,6 +7,20 @@ import { api, showToast, openModal, escapeHtml } from '../portal-context.js';
 import { confirmModal } from '../portal-context.js';
 
 const ROLE_LABELS = { 'super-admin': 'Super Admin', doctor: 'Dentist', patient: 'Patient' };
+let archivePage = 1;
+let archiveRequest = 0;
+
+function archivePagination(page, pages) {
+  if (pages <= 1) return '';
+  const numbers = [...new Set([1, pages, page - 1, page, page + 1].filter((n) => n >= 1 && n <= pages))].sort((a, b) => a - b);
+  let previous = 0;
+  const links = numbers.map((n) => {
+    const gap = n - previous > 1 ? '<span class="pagination-ellipsis" aria-hidden="true">…</span>' : '';
+    previous = n;
+    return gap + '<button type="button" class="pagination-page' + (n === page ? ' is-active' : '') + '" data-archive-page="' + n + '"' + (n === page ? ' aria-current="page"' : '') + '>' + n + '</button>';
+  }).join('');
+  return '<button type="button" class="pagination-page" data-archive-page="' + Math.max(1, page - 1) + '" aria-label="Previous page"' + (page <= 1 ? ' disabled' : '') + '>‹</button>' + links + '<button type="button" class="pagination-page" data-archive-page="' + Math.min(pages, page + 1) + '" aria-label="Next page"' + (page >= pages ? ' disabled' : '') + '>›</button>';
+}
 
 // ---------------------------------------------------------------- users list
 
@@ -89,11 +103,25 @@ export function openCreateUserModal() {
 export async function renderArchives() {
   const tbody = document.getElementById('admin-archives-tbody');
   if (!tbody) return;
-
-  const res = await api.get('archives/list.php');
+  const requestId = ++archiveRequest;
+  const params = new URLSearchParams({
+    page: String(archivePage), limit: '25',
+    q: document.getElementById('archive-search')?.value.trim() || '',
+    table: document.getElementById('archive-type-filter')?.value || '',
+    date_from: document.getElementById('archive-date-from')?.value || '',
+    date_to: document.getElementById('archive-date-to')?.value || '',
+  });
+  const res = await api.get('archives/list.php?' + params.toString());
+  if (requestId !== archiveRequest) return;
   if (!res.success) { showToast(res.message || 'Failed to load archive.', 'error'); return; }
 
   const entries = res.data || [];
+  const pagination = document.getElementById('archive-pagination');
+  const info = res.meta?.pagination;
+  if (info) {
+    archivePage = info.page;
+    if (pagination) pagination.innerHTML = archivePagination(info.page, info.total_pages) + '<span class="pagination-count">' + info.total + ' records</span>';
+  } else if (pagination) pagination.innerHTML = '';
   if (!entries.length) {
     tbody.innerHTML = '<tr><td colspan="4" class="empty-cell">The archive is empty.</td></tr>';
     return;
@@ -134,6 +162,19 @@ export function initUsers({ onRestored } = {}) {
   if (createButton) createButton.addEventListener('click', openCreateUserModal);
 
   const archiveBody = document.getElementById('admin-archives-tbody');
+  const search = document.getElementById('archive-search');
+  const type = document.getElementById('archive-type-filter');
+  const from = document.getElementById('archive-date-from');
+  const to = document.getElementById('archive-date-to');
+  let filterTimer;
+  const applyFilters = () => { clearTimeout(filterTimer); archivePage = 1; filterTimer = setTimeout(renderArchives, 180); };
+  [search, type, from, to].forEach((control) => control?.addEventListener(control === search ? 'input' : 'change', applyFilters));
+  document.getElementById('archive-pagination')?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-archive-page]');
+    if (!button || button.disabled) return;
+    archivePage = Number(button.dataset.archivePage) || 1;
+    renderArchives();
+  });
   if (!archiveBody) return;
 
   archiveBody.addEventListener('click', async (event) => {

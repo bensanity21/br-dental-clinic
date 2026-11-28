@@ -5,7 +5,7 @@
 import { api, setCsrfToken } from './api.js?v=8';
 import { confirmModal, openModal, closeModal } from './modal.js?v=10';
 import { showToast } from './toast.js';
-import { setLanguage, t } from './i18n.js?v=5';
+import { setLanguage, t } from './i18n.js?v=6';
 import { renderReport, initReports } from './modules/reports.js?v=1';
 import { renderActivityLog, initActivityLog } from './modules/activity.js?v=1';
 import { renderAdminUsers, openCreateUserModal, renderArchives, initUsers } from './modules/users.js?v=1';
@@ -24,6 +24,8 @@ const DOCTOR_ALLOWED_VIEWS = new Set([
 ]);
 let dentistInfo = null;
 let serviceCatalog = [];
+const servicePageByContainer = new WeakMap();
+const SERVICE_PAGE_SIZE = 8;
 let knownNotificationIds = null;
 let notificationsRequestInFlight = false;
 let lastNotificationSnapshot = null;
@@ -60,7 +62,6 @@ const el = {
   bookServiceSelect: document.getElementById('book-service'),
   bookDentistField: document.getElementById('book-dentist'),
   patientAppointmentsTbody: document.getElementById('patient-appointments-tbody'),
-  patientRecordsTbody: document.getElementById('patient-records-tbody'),
   bookingForm: document.getElementById('booking-form'),
   patientProfileForm: document.getElementById('patient-profile-form'),
   changePasswordForm: document.getElementById('change-password-form'),
@@ -139,12 +140,12 @@ function renderNavigation() {
   sidebarSlot.innerHTML = `
     <aside class="sidebar" id="app-sidebar" aria-label="Clinic navigation">
       <div class="sidebar-header">
-        <div class="clinic-brand">
+        <a class="clinic-brand" href="index.html" aria-label="BR Dental Clinic home">
           <img class="brand-mark" src="brand-icon.png" alt="" width="32" height="32">
           <span class="brand-name">BR Dental Clinic</span>
-        </div>
-        <button type="button" class="btn-icon sidebar-toggle-btn" id="sidebar-toggle-btn" aria-label="Toggle navigation" aria-controls="app-sidebar" aria-expanded="false">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </a>
+        <button type="button" class="btn-icon sidebar-close-btn" id="sidebar-close-btn" aria-label="Close navigation menu" aria-controls="app-sidebar">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
       </div>
 
@@ -185,7 +186,7 @@ function renderNavigation() {
           <li>
             <a href="#" class="nav-link" data-view="admin-records">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-              <span>Dental Records</span>
+              <span>Dental Record</span>
             </a>
           </li>
           <li>
@@ -236,9 +237,24 @@ function renderNavigation() {
   `;
   updateSidebarAccessibility();
 
+  // Mobile drawer backdrop: client-rendered so both portals inherit it.
+  const shell = document.getElementById('app-shell');
+  if (shell && !document.getElementById('sidebar-backdrop')) {
+    const backdrop = document.createElement('div');
+    backdrop.id = 'sidebar-backdrop';
+    backdrop.className = 'sidebar-backdrop';
+    backdrop.hidden = true;
+    backdrop.setAttribute('aria-hidden', 'true');
+    shell.appendChild(backdrop);
+  }
+  el.sidebarBackdrop = document.getElementById('sidebar-backdrop');
+
   // ---------- Top Navbar ----------
   navbarSlot.innerHTML = `
     <header class="top-navbar" id="top-navbar">
+      <button type="button" class="btn-icon navbar-menu-btn" id="sidebar-toggle-btn" aria-label="Open navigation menu" aria-controls="app-sidebar" aria-expanded="false">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      </button>
       <div class="navbar-search">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="search-icon"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         <input type="search" id="global-search-input" placeholder="${searchPlaceholder}" aria-label="Search information available to your account" aria-controls="global-search-results" aria-expanded="false" autocomplete="off">
@@ -288,6 +304,7 @@ function renderNavigation() {
 
   // Re-fetch DOM elements now that they exist
   el.sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
+  el.sidebarCloseBtn = document.getElementById('sidebar-close-btn');
   el.appSidebar = document.getElementById('app-sidebar');
   el.btnProfileToggle = document.getElementById('btn-profile-toggle');
   el.profileDropdownPanel = document.getElementById('profile-dropdown-panel');
@@ -349,7 +366,6 @@ async function switchView(targetViewId, { push = true } = {}) {
     'patient-book': 'patient-appointments',
     'patient-profile': 'patient-home',
     'patient-settings': 'patient-home',
-    'patient-records': 'patient-home',
   };
   const activeNavTarget = role === 'patient' ? (patientNavParent[targetViewId] || targetViewId) : targetViewId;
   const navLink = document.querySelector('.nav-link[data-view="' + activeNavTarget + '"]');
@@ -360,9 +376,7 @@ async function switchView(targetViewId, { push = true } = {}) {
     navLink.setAttribute('aria-current', isContextFallback ? 'location' : 'page');
   }
   closeDropdowns();
-  if (el.appSidebar) el.appSidebar.classList.remove('show-sidebar');
-  updateSidebarAccessibility();
-  document.getElementById('sidebar-toggle-btn')?.setAttribute('aria-expanded', 'false');
+  setSidebarOpen(false);
   window.scrollTo({ top: 0, behavior: 'smooth' });
   const pageHeading = targetView.querySelector('h1');
   if (pageHeading) {
@@ -374,7 +388,6 @@ async function switchView(targetViewId, { push = true } = {}) {
     case 'patient-services': await renderServices(); break;
     case 'patient-book': await renderServices(); await populateBookingDentist(); break;
     case 'patient-appointments': await renderPatientAppointments(); break;
-    case 'patient-records': await renderPatientRecords(); break;
     case 'patient-profile': await renderPatientProfile(); break;
     case 'patient-settings': await renderPatientSettings(); break;
     case 'patient-dentists': await renderDentists(); break;
@@ -437,7 +450,14 @@ function renderServiceCards() {
       container.innerHTML = '<p class="service-cards-empty">No services are currently available.</p>';
       return;
     }
-    container.innerHTML = serviceCatalog.map((service) => {
+    const page = servicePageByContainer.get(container) || 1;
+    const pageSize = SERVICE_PAGE_SIZE;
+    const pageCount = Math.max(1, Math.ceil(serviceCatalog.length / pageSize));
+    const safePage = Math.min(page, pageCount);
+    servicePageByContainer.set(container, safePage);
+    const firstItemIndex = (safePage - 1) * pageSize;
+    const visibleServices = serviceCatalog.slice(firstItemIndex, safePage * pageSize);
+    container.innerHTML = visibleServices.map((service) => {
       const name = escapeHtml(service.service_name || 'Dental service');
       const image = service.image_url || service.image_path || serviceIllustration(service.service_name);
       const minutes = Number(service.duration_minutes);
@@ -454,7 +474,7 @@ function renderServiceCards() {
       return '<article class="service-card' + (inactive ? ' service-card-inactive' : '') + '">' +
         '<img class="service-card-image" src="' + escapeHtml(image) + '" alt="Illustration for ' + name + '" loading="lazy">' +
         '<div class="service-card-content">' +
-        (inactive ? '<span class="status-tag status-cancelled">Inactive</span>' : '') +
+        (inactive ? '<span class="status-tag status-cancelled service-card-status">Inactive</span>' : '') +
         '<h2 class="service-card-title">' + name + '</h2>' +
       '<div class="service-card-description-wrap"><p class="service-card-description is-collapsed">' + escapeHtml(service.description || 'Ask the clinic for more information about this treatment.') + '</p>' +
         '<button type="button" class="service-description-toggle hidden" aria-expanded="false">Read more</button></div>' +
@@ -463,11 +483,24 @@ function renderServiceCards() {
         '</div>' + actions + '</div>' +
         '</div>' +
         '</article>';
-    }).join('');
+    }).join('') + renderServicePagination(safePage, pageCount);
   };
   renderCards(el.patientServiceCards);
   renderCards(el.adminServiceCards, true);
   refreshServiceDescriptionToggles();
+}
+
+function renderServicePagination(page, pageCount) {
+  if (pageCount <= 1) return '';
+  const pages = new Set([1, pageCount, page - 1, page, page + 1].filter((n) => n >= 1 && n <= pageCount));
+  const ordered = [...pages].sort((a, b) => a - b);
+  let previous = 0;
+  const items = ordered.map((number) => {
+    const gap = number - previous > 1 ? '<span class="pagination-ellipsis" aria-hidden="true">…</span>' : '';
+    previous = number;
+    return gap + '<button type="button" class="pagination-page' + (number === page ? ' is-active' : '') + '" data-service-page="' + number + '" aria-label="Page ' + number + '"' + (number === page ? ' aria-current="page"' : '') + '>' + number + '</button>';
+  }).join('');
+  return '<nav class="pagination service-pagination" aria-label="Service pages"><button type="button" class="pagination-page" data-service-page="' + Math.max(1, page - 1) + '" aria-label="Previous page"' + (page <= 1 ? ' disabled' : '') + '>Previous</button>' + items + '<button type="button" class="pagination-page" data-service-page="' + Math.min(pageCount, page + 1) + '" aria-label="Next page"' + (page >= pageCount ? ' disabled' : '') + '>Next</button></nav>';
 }
 
 function refreshServiceDescriptionToggles() {
@@ -573,7 +606,7 @@ async function renderAdminAppointments() {
         return (
           '<tr>' +
           '<td>' + a.appointment_date + ' (' + a.time_slot + ')</td>' +
-          '<td>' + escapeHtml(a.patient_name || '') + '</td>' +
+          '<td>' + (role === 'super-admin' ? '<button type="button" class="text-link-button" data-patient-profile="' + Number(a.patient_id) + '">' + escapeHtml(a.patient_name || '') + '</button>' : escapeHtml(a.patient_name || '')) + '</td>' +
           '<td>' + escapeHtml(a.service_name || '') + '</td>' +
           '<td>' + escapeHtml(a.dentist_name || '') + '</td>' +
           '<td><span class="status-tag ' + statusClass + '">' + a.status + '</span></td>' +
@@ -592,7 +625,7 @@ async function renderAdminAppointments() {
       el.adminTodayTbody.innerHTML = todayAppts.map((a) => (
         '<tr>' +
         '<td>' + a.time_slot + '</td>' +
-        '<td>' + escapeHtml(a.patient_name || '') + '</td>' +
+        '<td>' + (role === 'super-admin' ? '<button type="button" class="text-link-button" data-patient-profile="' + Number(a.patient_id) + '">' + escapeHtml(a.patient_name || '') + '</button>' : escapeHtml(a.patient_name || '')) + '</td>' +
         '<td>' + escapeHtml(a.service_name || '') + '</td>' +
         '<td>' + escapeHtml(a.dentist_name || '') + '</td>' +
         '<td><span class="status-tag status-' + (a.status || 'Pending').toLowerCase() + '">' + a.status + '</span></td>' +
@@ -725,13 +758,15 @@ async function refreshBookingSlots() {
 window.cancelApt = async (id) => {
   const confirmed = await confirmModal({ title: 'Cancel Appointment', message: 'Are you sure you want to cancel this appointment?', danger: true });
   if (!confirmed) return;
+  const cancelButton = document.querySelector('button[onclick="cancelApt(' + Number(id) + ')"]');
+  if (cancelButton) cancelButton.disabled = true;
   const res = await api.patch('appointments/status.php', { id, status: 'Cancelled' });
   if (res.success) {
     showToast('Appointment cancelled.');
     await renderPatientAppointments();
     await renderAdminAppointments();
     await renderNotifications();
-  } else { showToast(res.message || 'Failed to cancel.', 'error'); }
+  } else { showToast(res.message || 'Failed to cancel.', 'error'); if (cancelButton) cancelButton.disabled = false; }
 };
 
 // Patient reschedule: pick a new date, then a free slot for the same dentist.
@@ -773,23 +808,43 @@ window.rescheduleApt = async (id, currentDate) => {
   const slotField = document.getElementById('resched-slot');
   const hint = document.getElementById('resched-hint');
   if (!dateField || !slotField) return;
+  let slotRequestId = 0;
 
   const loadSlots = async () => {
     const chosenDate = dateField.value;
-    if (!chosenDate) return;
+    const requestId = ++slotRequestId;
+    if (!chosenDate) {
+      slotField.disabled = true;
+      slotField.innerHTML = '<option value="">Choose a date first</option>';
+      if (hint) hint.textContent = 'Select a new date to view available times.';
+      return;
+    }
     slotField.disabled = true;
     slotField.innerHTML = '<option value="">Loading…</option>';
     if (hint) hint.textContent = '';
     // Reuse the booking slots endpoint; it needs the dentist for this appointment.
     const appts = await api.get('appointments/mine.php');
+    if (requestId !== slotRequestId || dateField.value !== chosenDate) return;
     const mine = (appts.data || []).find((a) => Number(a.id) === Number(id));
     const dentistId = mine?.dentist_id;
-    if (!dentistId) { slotField.innerHTML = '<option value="">Could not load slots</option>'; return; }
+    if (!appts.success || !dentistId) {
+      slotField.innerHTML = '<option value="">Could not load available times</option>';
+      if (hint) hint.textContent = 'Please try again or contact the clinic for help.';
+      return;
+    }
     const res = await api.get('appointments/slots.php?date=' + encodeURIComponent(chosenDate) + '&dentist_id=' + encodeURIComponent(dentistId));
+    if (requestId !== slotRequestId || dateField.value !== chosenDate) return;
+    if (!res.success) {
+      slotField.innerHTML = '<option value="">Could not load available times</option>';
+      slotField.disabled = true;
+      if (hint) hint.textContent = res.message || 'Please try again or choose another date.';
+      return;
+    }
     const slots = res.success ? (res.data?.slots || []) : [];
     const free = slots.filter((s) => typeof s === 'object' ? s.available : true);
     if (!free.length) {
       slotField.innerHTML = '<option value="">No free slots on this date</option>';
+      slotField.disabled = true;
       if (hint) hint.textContent = 'Try another date — the clinic may be closed or fully booked.';
       return;
     }
@@ -870,24 +925,10 @@ async function openServiceForm(service = null) {
     return;
   }
   showToast(isEdit ? 'Service updated successfully.' : 'Service added successfully.');
+  // A name change or new service can move to another alphabetical page.
+  // Return management to page one so the saved result is easy to find.
+  if (el.adminServiceCards) servicePageByContainer.set(el.adminServiceCards, 1);
   await renderServices();
-}
-
-async function renderPatientRecords() {
-  const res = await api.get('records/mine.php');
-  if (!res.success) { showToast('Failed to load records.', 'error'); return; }
-  const records = res.data || [];
-  if (el.patientRecordsTbody) {
-    if (records.length === 0) { el.patientRecordsTbody.innerHTML = '<tr><td colspan="4" class="empty-cell">No dental records.</td></tr>'; }
-    else { el.patientRecordsTbody.innerHTML = records.map((r) => (
-      '<tr>' +
-      '<td>' + r.record_date + '</td>' +
-      '<td>' + escapeHtml(r.treatment_procedure || '') + '</td>' +
-      '<td>' + escapeHtml(r.clinical_notes || '') + '</td>' +
-      '<td>' + escapeHtml(r.dentist_name || '') + '</td>' +
-      '</tr>'
-    )).join(''); }
-  }
 }
 
 async function renderAdminRecords() {
@@ -895,7 +936,7 @@ async function renderAdminRecords() {
   if (!res.success) { showToast('Failed to load records.', 'error'); return; }
   const records = res.data || [];
   if (el.adminRecordsTbody) {
-    if (records.length === 0) { el.adminRecordsTbody.innerHTML = '<tr><td colspan="8" class="empty-cell">No clinical records.</td></tr>'; }
+    if (records.length === 0) { el.adminRecordsTbody.innerHTML = '<tr><td colspan="7" class="empty-cell">No clinical records.</td></tr>'; }
     else { el.adminRecordsTbody.innerHTML = records.map((r) => (
       '<tr>' +
       '<td>' + escapeHtml(r.record_date || '') + '</td>' +
@@ -904,7 +945,6 @@ async function renderAdminRecords() {
       '<td>' + escapeHtml(r.treatment_procedure || '') + '</td>' +
       '<td class="record-contact-cell">' + escapeHtml(r.patient_contact || '—') + '</td>' +
       '<td>' + escapeHtml(r.dentist_name || '') + '</td>' +
-      '<td class="record-notes-cell">' + escapeHtml(r.clinical_notes || '—') + '</td>' +
       '<td class="record-actions-cell">' +
         (r.status === 'Completed'
           ? '<span class="record-completed" role="status" aria-label="Completed" title="Completed"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"></path></svg></span>'
@@ -955,7 +995,6 @@ if (document.getElementById('btn-modal-record')) {
       '<div class="form-group"><label for="m-rec-dentist">Attending Doctor <span class="required-mark">*</span></label><select id="m-rec-dentist" required' + (role === 'doctor' ? ' disabled' : '') + '><option value="">-- Choose a Doctor --</option>' + dentistOptions + '</select></div>' +
       '<div class="grid-2col"><div class="form-group"><label for="m-rec-date">Date <span class="required-mark">*</span></label><input type="date" id="m-rec-date" value="' + localToday + '" required></div>' +
       '<div class="form-group"><label for="m-rec-time">Time <span class="required-mark">*</span></label><input type="time" id="m-rec-time" required></div></div>' +
-      '<div class="form-group"><label for="m-rec-notes">Clinical Notes (Optional)</label><textarea id="m-rec-notes" rows="3" placeholder="Observations or prescribed care..."></textarea></div>' +
       '</form>',
       [ { text: 'Cancel', class: 'btn-outline', value: false }, { text: 'Save Record', class: 'btn-primary', value: true } ]);
     const recordForm = document.getElementById('form-add-record');
@@ -968,7 +1007,6 @@ if (document.getElementById('btn-modal-record')) {
     }, true);
     const confirmed = await modalResult;
     if (!confirmed) return;
-    const notes = document.getElementById('m-rec-notes').value.trim();
     const patientName = document.getElementById('m-rec-patient-name').value.trim();
     const contact = document.getElementById('m-rec-contact').value.trim();
     const serviceId = document.getElementById('m-rec-service').value;
@@ -981,7 +1019,6 @@ if (document.getElementById('btn-modal-record')) {
       dentist_id: parseInt(dentistId),
       service_id: parseInt(serviceId),
       patient_contact: contact,
-      clinical_notes: notes,
       record_date: date,
       record_time: time,
     });
@@ -1119,7 +1156,7 @@ async function renderAdminPatients() {
     else { el.adminPatientsTbody.innerHTML = filtered.map((p) => (
       '<tr>' +
       '<td>' + p.id + '</td>' +
-      '<td><strong>' + escapeHtml(p.full_name) + '</strong></td>' +
+      '<td><button type="button" class="text-link-button" data-patient-profile="' + Number(p.id) + '">' + escapeHtml(p.full_name) + '</button></td>' +
       '<td>' + escapeHtml(p.email) + '</td>' +
       '<td>' + escapeHtml(p.phone_number || '') + '</td>' +
       '<td>' + p.created_at + '</td>' +
@@ -1130,6 +1167,36 @@ async function renderAdminPatients() {
 if (document.getElementById('admin-patient-search')) {
   document.getElementById('admin-patient-search').addEventListener('input', renderAdminPatients);
 }
+async function showPatientProfileModal(patientId) {
+  const response = await api.get('users/patient-profile.php?id=' + encodeURIComponent(patientId));
+  if (!response.success) { showToast(response.message || 'Could not load patient profile.', 'error'); return; }
+  const profile = response.data || {};
+  const display = (value) => value === null || value === undefined || String(value).trim() === '' ? 'Not provided' : String(value);
+  const fields = [
+    ['Patient ID', profile.id], ['Full name', profile.full_name], ['Email', profile.email], ['Phone', profile.phone_number],
+    ['Emergency contact', profile.emergency_contact], ['Address', profile.home_address],
+    ['Date of birth', profile.date_of_birth], ['Registered', profile.created_at],
+  ];
+  const next = profile.next_appointment;
+  const latest = profile.latest_record;
+  const summary = [
+    ['Completed appointments', Number(profile.completed_appointments) || 0],
+    ['Next appointment', next ? [next.appointment_date, next.time_slot, next.service_name, next.status].filter(Boolean).join(' · ') : 'No upcoming appointment'],
+    ['Most recent treatment', latest ? [latest.record_date, latest.treatment_procedure].filter(Boolean).join(' · ') : 'No dental record yet'],
+  ];
+  const list = (items) => '<dl class="patient-profile-modal-list">' + items.map(([label, value]) =>
+    '<div><dt>' + escapeHtml(label) + '</dt><dd>' + escapeHtml(display(value)) + '</dd></div>'
+  ).join('') + '</dl>';
+  const body = '<div class="patient-profile-modal-layout"><section class="patient-profile-modal-section"><h3>Profile details</h3>' + list(fields) + '</section>' +
+    '<section class="patient-profile-modal-section"><h3>Visit summary</h3>' + list(summary) + '</section></div>';
+  openModal('Patient Profile', body, [{ text: 'Close', class: 'btn-primary', value: true }]);
+}
+const profileTables = [el.adminPatientsTbody, el.adminAppointmentsTbody, el.adminTodayTbody].filter(Boolean);
+profileTables.forEach((table) => table.addEventListener('click', (event) => {
+  const trigger = event.target.closest('[data-patient-profile]');
+  if (!trigger) return;
+  showPatientProfileModal(trigger.dataset.patientProfile);
+}));
 async function renderAdminServices() { await renderServices(); }
 
 // ---------- Dentist availability -----------------------------------------
@@ -1783,6 +1850,12 @@ function bindEvents() {
   if (addServiceButton) addServiceButton.addEventListener('click', () => openServiceForm());
   if (el.adminAppointmentFilter) el.adminAppointmentFilter.addEventListener('change', renderAdminAppointments);
   if (el.adminServiceCards) el.adminServiceCards.addEventListener('click', async (event) => {
+    const pageButton = event.target.closest('[data-service-page]');
+    if (pageButton) {
+      servicePageByContainer.set(el.adminServiceCards, Number(pageButton.dataset.servicePage));
+      renderServiceCards();
+      return;
+    }
     const editButton = event.target.closest('[data-service-edit]');
     const deleteButton = event.target.closest('[data-service-delete]');
     if (editButton) {
@@ -1793,6 +1866,12 @@ function bindEvents() {
     }
   });
   if (el.patientServiceCards) el.patientServiceCards.addEventListener('click', async (event) => {
+    const pageButton = event.target.closest('[data-service-page]');
+    if (pageButton) {
+      servicePageByContainer.set(el.patientServiceCards, Number(pageButton.dataset.servicePage));
+      renderServiceCards();
+      return;
+    }
     const bookButton = event.target.closest('[data-service-book]');
     if (!bookButton) return;
     const serviceId = Number(bookButton.dataset.serviceBook);
@@ -1839,6 +1918,24 @@ function bindEvents() {
       link.remove();
       showToast('Your CSV download has started.');
     });
+  });
+  const exportPdfButton = document.getElementById('btn-export-pdf');
+  if (exportPdfButton) exportPdfButton.addEventListener('click', async () => {
+    const from = document.getElementById('report-from')?.value || '';
+    const to = document.getElementById('report-to')?.value || '';
+    const type = document.getElementById('report-type')?.value || 'appointments';
+    if (!from || !to) { showToast('Choose both a start date and an end date.', 'error'); return; }
+    if (from > to) { showToast('The start date must be on or before the end date.', 'error'); return; }
+    const confirmed = await confirmModal({ title: 'Export this report as PDF?', message: 'A PDF report for ' + from + ' to ' + to + ' will be downloaded.', confirmLabel: 'Download PDF' });
+    if (!confirmed) return;
+    const link = document.createElement('a');
+    link.href = new URL('api/reports/export-pdf.php?' + new URLSearchParams({ from, to, type }), document.baseURI).href;
+    link.download = '';
+    link.hidden = true;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    showToast('Your PDF download has started.');
   });
   // The create-account button is wired once by initUsers() below.
 
@@ -1971,13 +2068,23 @@ function bindEvents() {
     if (res.success) showToast('Clinic details saved.');
     else showToast(res.message || 'Failed to save clinic details.', 'error');
   });
+  /**
+   * Single source of truth for the mobile navigation drawer: class, backdrop,
+   * body scroll lock and ARIA state all move together so they cannot drift.
+   * (Defined at module scope below so switchView() can close it too.)
+   */
   if (sidebarToggleBtn && appSidebar) sidebarToggleBtn.addEventListener('click', () => {
-    const willOpen = !appSidebar.classList.contains('show-sidebar');
-    appSidebar.classList.toggle('show-sidebar', willOpen);
-    sidebarToggleBtn.setAttribute('aria-expanded', String(willOpen));
+    setSidebarOpen(!appSidebar.classList.contains('show-sidebar'));
+  });
+  const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
+  if (sidebarCloseBtn) sidebarCloseBtn.addEventListener('click', () => setSidebarOpen(false));
+  const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+  if (sidebarBackdrop) sidebarBackdrop.addEventListener('click', () => setSidebarOpen(false));
+  window.addEventListener('resize', () => {
+    // Resizing back to desktop must not leave a drawer state or backdrop behind.
+    if (!window.matchMedia('(max-width: 768px)').matches) setSidebarOpen(false);
     updateSidebarAccessibility();
   });
-  window.addEventListener('resize', updateSidebarAccessibility);
   document.querySelectorAll('.nav-link').forEach((link) => {
     link.addEventListener('click', (e) => { e.preventDefault(); switchView(link.getAttribute('data-view')); });
   });
@@ -2074,11 +2181,7 @@ function bindEvents() {
     const sidebarIsOpen = appSidebar && appSidebar.classList.contains('show-sidebar');
     if (!profileIsOpen && !notificationsAreOpen && !sidebarIsOpen) return;
     closeDropdowns();
-    if (sidebarIsOpen) {
-      appSidebar.classList.remove('show-sidebar');
-      sidebarToggleBtn?.setAttribute('aria-expanded', 'false');
-      updateSidebarAccessibility();
-    }
+    if (sidebarIsOpen) setSidebarOpen(false);
     (profileIsOpen ? btnProfileToggle : notificationsAreOpen ? btnNotifToggle : sidebarToggleBtn)?.focus();
   });
   if (markAllReadButton) markAllReadButton.addEventListener('click', async (event) => {
@@ -2109,7 +2212,7 @@ function bindEvents() {
     let targetView = role === 'patient' ? 'patient-home' : 'admin-dashboard';
     if (messageLower.includes('appointment')) targetView = role === 'patient' ? 'patient-appointments' : 'admin-appointments';
     else if (messageLower.includes('service')) targetView = role === 'patient' ? 'patient-services' : 'admin-services';
-    else if (messageLower.includes('record')) targetView = role === 'patient' ? 'patient-records' : 'admin-records';
+    else if (messageLower.includes('record')) targetView = role === 'patient' ? 'patient-profile' : 'admin-records';
     else if (messageLower.includes('patient') && role !== 'patient') targetView = 'admin-patients';
     else if (messageLower.includes('dentist') || messageLower.includes('doctor')) targetView = role === 'patient' ? 'patient-dentists' : 'admin-dentists';
     else if ((messageLower.includes('schedule') || messageLower.includes('clinic')) && role === 'super-admin') targetView = 'admin-settings';
@@ -2183,6 +2286,12 @@ function bindEvents() {
         showToast(newStatus === 'No-show' ? 'Appointment marked as no-show.' : 'Appointment ' + newStatus.toLowerCase() + '.');
         await renderPatientAppointments();
         await renderAdminAppointments();
+        if (newStatus === 'Completed') {
+          // The status endpoint creates the linked record in the same transaction.
+          // Refresh both record views so it appears without reopening the section.
+          await renderAdminRecords();
+          await renderPatientRecords();
+        }
         await renderDashboardIfRoleAdminOrDoctor();
         await renderNotifications();
       } else { showToast(res.message || 'Failed to update.', 'error'); }
@@ -2235,6 +2344,39 @@ function closeDropdowns() {
   document.getElementById('global-search-results')?.classList.add('hidden');
   document.getElementById('global-search-input')?.setAttribute('aria-expanded', 'false');
 }
+/**
+ * Opens or closes the mobile navigation drawer. One caller-owned state: the
+ * `.show-sidebar` class, the backdrop, the body scroll lock and ARIA all move
+ * together so they cannot drift apart.
+ */
+function setSidebarOpen(open) {
+  const sidebar = document.getElementById('app-sidebar');
+  if (!sidebar) return;
+  const isMobile = window.matchMedia('(max-width: 768px)').matches;
+  const shouldOpen = Boolean(open) && isMobile;
+  const wasOpen = sidebar.classList.contains('show-sidebar');
+  sidebar.classList.toggle('show-sidebar', shouldOpen);
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (backdrop) {
+    backdrop.hidden = !shouldOpen;
+    backdrop.setAttribute('aria-hidden', String(!shouldOpen));
+  }
+  document.body.classList.toggle('drawer-open', shouldOpen);
+  const toggle = document.getElementById('sidebar-toggle-btn');
+  if (toggle) {
+    toggle.setAttribute('aria-expanded', String(shouldOpen));
+    toggle.setAttribute('aria-label', shouldOpen ? 'Close navigation menu' : 'Open navigation menu');
+  }
+  updateSidebarAccessibility();
+  if (shouldOpen) {
+    // The drawer only becomes focusable once the open styles have been applied,
+    // so wait a frame before moving focus into it.
+    requestAnimationFrame(() => sidebar.querySelector('.nav-link')?.focus({ preventScroll: true }));
+  } else if (wasOpen && sidebar.contains(document.activeElement)) {
+    toggle?.focus({ preventScroll: true });
+  }
+}
+
 function updateSidebarAccessibility() {
   const sidebar = document.getElementById('app-sidebar');
   const toggle = document.getElementById('sidebar-toggle-btn');

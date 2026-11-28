@@ -8,6 +8,11 @@ bindPasswordToggles();
 redirectIfSignedIn();
 window.addEventListener('pageshow', (e) => { if (e.persisted) redirectIfSignedIn(); });
 
+// Keep only the supported booking intent when a guest switches between auth screens.
+const signupIntent = new URLSearchParams(window.location.search).get('intent') === 'booking' ? 'booking' : '';
+const signInLink = document.querySelector('.auth-switch-text a.btn-link');
+if (signInLink) signInLink.href = signupIntent ? './login.html?intent=booking' : './login.html';
+
 const form = document.getElementById("signup-form");
 if (form) {
   form.addEventListener("submit", async (event) => {
@@ -33,7 +38,9 @@ if (form) {
       if (res.success) {
         showToast("Account created! You can now sign in.");
         form.reset();
-        window.location.assign(new URL("./login.html", document.baseURI).href);
+        const intent = new URLSearchParams(window.location.search).get('intent');
+        const loginPath = intent === 'booking' ? './login.html?intent=booking' : './login.html';
+        window.location.assign(new URL(loginPath, document.baseURI).href);
       } else {
         setAuthAlert(res.message || "Failed to create account.", "danger");
       }

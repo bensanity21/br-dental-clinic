@@ -139,6 +139,29 @@ export function initSiteNav() {
   });
 }
 
+/** Keep booking intent through sign-in while sending an active patient straight to booking. */
+export function initBookingLinks() {
+  document.querySelectorAll('[data-booking-link]').forEach((link) => {
+    link.addEventListener('click', async (event) => {
+      event.preventDefault();
+      try {
+        const response = await fetch(new URL('./api/auth/me.php', document.baseURI).href, { credentials: 'include', cache: 'no-store' });
+        const body = response.ok ? await response.json() : null;
+        const role = body?.data?.user?.role;
+        if (role === 'patient') {
+          window.location.assign(new URL('./user.html#view-patient-services', document.baseURI).href);
+          return;
+        }
+        if (role === 'super-admin' || role === 'doctor') {
+          window.location.assign(new URL('./admin.html', document.baseURI).href);
+          return;
+        }
+      } catch { /* Continue to the sign-in flow when the session cannot be checked. */ }
+      window.location.assign(new URL('./login.html?intent=booking', document.baseURI).href);
+    });
+  });
+}
+
 /** Redirect signed-in visitors straight to their portal. */
 export async function redirectIfSignedIn() {
   try {

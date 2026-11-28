@@ -8,6 +8,11 @@ bindPasswordToggles();
 redirectIfSignedIn();
 window.addEventListener('pageshow', (e) => { if (e.persisted) redirectIfSignedIn(); });
 
+if (new URLSearchParams(window.location.search).get('intent') === 'booking') {
+  const signupLink = document.querySelector('a[href="signup.html"]');
+  if (signupLink) signupLink.href = 'signup.html?intent=booking';
+}
+
 const form = document.getElementById("signin-form");
 if (form) {
   form.addEventListener("submit", async (event) => {
@@ -33,9 +38,10 @@ if (form) {
 
       if (res && res.success) {
         showToast("Welcome back, " + res.data.name + "!");
+        const wantsBooking = new URLSearchParams(window.location.search).get('intent') === 'booking';
         const redirectUrl = (res.data.role === "super-admin" || res.data.role === "doctor")
           ? new URL("./admin.html", document.baseURI).href
-          : new URL("./user.html", document.baseURI).href;
+          : new URL(wantsBooking ? "./user.html#view-patient-services" : "./user.html", document.baseURI).href;
         window.location.replace(redirectUrl);
       } else {
         setAuthAlert(res && res.message ? res.message : "Invalid email or password.", "danger");

@@ -1,5 +1,5 @@
 <?php
-// includes/reports.php - Report definitions shared by the viewer and the CSV export
+// includes/reports.php - Report definitions shared by the viewer and file exports
 // ============================================================
 // Each report returns the same shape so the browser can render any of them
 // without a branch per type:

@@ -16,7 +16,7 @@
   <meta property="og:image" content="icon-512.png">
   <meta property="og:locale" content="en_PH">
   <meta name="twitter:card" content="summary">
-  <link rel="stylesheet" href="style.css?v=36">
+  <link rel="stylesheet" href="style.css?v=41">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to main content</a>
@@ -41,7 +41,7 @@
       </nav>
       <div class="site-nav-actions">
         <a class="btn btn-outline" href="login.html">Sign in</a>
-        <a class="btn btn-primary" href="signup.html">Book now</a>
+        <a class="btn btn-primary" href="login.html?intent=booking" data-booking-link>Book now</a>
       </div>
     </div>
   </header>
@@ -60,7 +60,7 @@
             Book online and keep track of every visit from your own account.
           </p>
           <div class="site-hero-actions">
-            <a class="btn btn-primary" href="signup.html">Book an appointment</a>
+            <a class="btn btn-primary" href="login.html?intent=booking" data-booking-link>Book an appointment</a>
             <a class="btn btn-outline" href="services.html">View services</a>
           </div>
           <p class="site-hero-note">
@@ -85,6 +85,11 @@
             </li>
           </ul>
         </aside>
+        <ul class="site-hero-highlights" aria-label="Online booking benefits">
+          <li><span class="site-highlight-mark" aria-hidden="true">✓</span><span><strong>See prices upfront</strong><small>Browse treatments and pricing online</small></span></li>
+          <li><span class="site-highlight-mark" aria-hidden="true">✓</span><span><strong>Choose an available time</strong><small>Check appointment slots before booking</small></span></li>
+          <li><span class="site-highlight-mark" aria-hidden="true">✓</span><span><strong>Keep visits together</strong><small>Review appointments and treatment history</small></span></li>
+        </ul>
       </div>
     </section>
 

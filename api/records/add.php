@@ -5,7 +5,6 @@ require_once '../../includes/auth.php';
 require_once '../../includes/response.php';
 require_once '../../includes/db.php';
 require_once '../../includes/activity.php';
-require_once '../../includes/encrypt.php';
 require_once '../../includes/phone.php';
 require_once '../../includes/notifications.php';
 
@@ -20,7 +19,6 @@ $patientName = trim((string)($data['patient_name'] ?? ''));
 $dentistId = $data['dentist_id'] ?? null;
 $serviceId = $data['service_id'] ?? null;
 $contact = trim($data['patient_contact'] ?? '');
-$notes = trim($data['clinical_notes'] ?? '');
 $date = $data['record_date'] ?? date('Y-m-d');
 $time = $data['record_time'] ?? '';
 
@@ -99,9 +97,6 @@ if ($user['role'] === 'doctor') {
     $patientId = (int)$matchedPatient['id'];
 }
 
-// Encrypt sensitive clinical notes before saving
-$encryptedNotes = $notes !== '' ? encryptData($notes) : null;
-
 // The contact captured on the record is personal data too, so it is encrypted
 // at rest and given a blind index so the record can still be matched later.
 $contactStored = phoneForStorage($contact);
@@ -110,7 +105,7 @@ $stmt = $pdo->prepare("
     INSERT INTO dental_records (patient_id, patient_name, dentist_id, treatment_procedure, clinical_notes, record_date, record_time, patient_contact, patient_contact_index, status)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'In Progress')
 ");
-$stmt->execute([$patientId, $patientName, $dentistId, $treatment, $encryptedNotes, $date, $time, $contactStored['cipher'], $contactStored['hash']]);
+$stmt->execute([$patientId, $patientName, $dentistId, $treatment, null, $date, $time, $contactStored['cipher'], $contactStored['hash']]);
 
 // Capture the new id immediately. Anything that inserts another row before
 // this point would overwrite lastInsertId(), and createInAppNotification()

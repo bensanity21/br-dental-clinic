@@ -1,10 +1,11 @@
 // scripts/site-home.js - Landing page: live clinic details and a service preview.
 import {
   esc, peso, duration, loadClinicInfo, loadServices, serviceImage,
-  initSiteNav, stampYear,
+  initSiteNav, initBookingLinks, stampYear,
 } from './site.js?v=2';
 
 initSiteNav();
+initBookingLinks();
 stampYear();
 loadClinicInfo();
 

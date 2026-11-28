@@ -61,7 +61,7 @@ $total = (int)$count->fetchColumn();
 $offset = ($page - 1) * $limit;
 
 $stmt = $pdo->prepare("
-    SELECT a.id, a.appointment_date, a.time_slot, a.notes, a.status, a.created_at,
+    SELECT a.id, a.patient_id, a.appointment_date, a.time_slot, a.notes, a.status, a.created_at,
            s.service_name, s.price,
            u.full_name AS patient_name, u.email AS patient_email, u.phone_number AS patient_phone,
            d.full_name AS dentist_name

@@ -100,6 +100,40 @@ if ($stmt->rowCount() !== 1) {
     respondError('This appointment was updated by another request. Refresh and try again.', null, 409);
 }
 
+if ($newStatus === 'Completed') {
+    // The appointment-to-record link is unique, so retries cannot create a
+    // duplicate clinical visit. Keep this insert in the same transaction as
+    // the status update and audit event.
+    $detailsStmt = $pdo->prepare("SELECT a.patient_id, a.dentist_id, a.appointment_date, a.time_slot,
+            s.service_name, p.full_name AS patient_name, p.phone_number, p.phone_number_hash
+        FROM appointments a
+        JOIN services s ON s.id = a.service_id
+        JOIN users p ON p.id = a.patient_id
+        WHERE a.id = ?");
+    $detailsStmt->execute([$appointmentId]);
+    $details = $detailsStmt->fetch();
+    if (!$details) throw new RuntimeException('Completed appointment details could not be loaded.');
+    $recordTime = null;
+    if (preg_match('/^(?:[01]?[0-9]|2[0-3]):[0-5][0-9]$/', $details['time_slot'])) {
+        $recordTime = $details['time_slot'];
+    } else {
+        foreach (['g:i A', 'g:i a', 'h:i A', 'h:i a'] as $format) {
+            $parsedTime = DateTimeImmutable::createFromFormat('!' . $format, $details['time_slot']);
+            if ($parsedTime) { $recordTime = $parsedTime->format('H:i:s'); break; }
+        }
+    }
+    $recordStmt = $pdo->prepare("INSERT INTO dental_records
+        (appointment_id, patient_id, patient_name, dentist_id, treatment_procedure, clinical_notes,
+         record_date, record_time, patient_contact, patient_contact_index, status)
+        VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, 'Completed')
+        ON DUPLICATE KEY UPDATE appointment_id = VALUES(appointment_id)");
+    $recordStmt->execute([
+        $appointmentId, $details['patient_id'], $details['patient_name'], $details['dentist_id'],
+        $details['service_name'], $details['appointment_date'], $recordTime,
+        $details['phone_number'], $details['phone_number_hash'],
+    ]);
+}
+
 logActivity(
     $pdo,
     'appointment.status',

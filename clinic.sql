@@ -147,6 +147,7 @@ DROP TABLE IF EXISTS `dental_records`;
 /*!40101 SET character_set_client = utf8mb4 */;
 CREATE TABLE `dental_records` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `appointment_id` int(10) unsigned DEFAULT NULL,
   `patient_id` int(10) unsigned DEFAULT NULL,
   `patient_name` varchar(255) DEFAULT NULL,
   `dentist_id` int(10) unsigned NOT NULL,
@@ -158,9 +159,11 @@ CREATE TABLE `dental_records` (
   `patient_contact_index` char(64) DEFAULT NULL COMMENT 'HMAC-SHA256 blind index for patient_contact; matching only',
   `status` enum('In Progress','Completed') NOT NULL DEFAULT 'In Progress',
   PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_dental_records_appointment` (`appointment_id`),
   KEY `fk_dental_records_dentist` (`dentist_id`),
   KEY `idx_records_patient_date` (`patient_id`,`record_date`),
   KEY `idx_records_contact_index` (`patient_contact_index`),
+  CONSTRAINT `fk_dental_records_appointment` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_dental_records_dentist` FOREIGN KEY (`dentist_id`) REFERENCES `dentists` (`id`),
   CONSTRAINT `fk_dental_records_patient` FOREIGN KEY (`patient_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

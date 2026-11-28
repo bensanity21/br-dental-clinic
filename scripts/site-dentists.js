@@ -1,9 +1,10 @@
 // scripts/site-dentists.js - Public list of dentists from the database.
 import {
-  esc, initials, loadClinicInfo, loadDentists, initSiteNav, stampYear,
+  esc, initials, loadClinicInfo, loadDentists, initSiteNav, initBookingLinks, stampYear,
 } from './site.js?v=2';
 
 initSiteNav();
+initBookingLinks();
 stampYear();
 loadClinicInfo();
 

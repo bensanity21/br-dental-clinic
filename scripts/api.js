@@ -84,7 +84,8 @@ export async function redirectIfSignedIn() {
   const data = await getSessionUser();
   const role = data && data.user ? data.user.role : null;
   if (!role) return;
-  const page = (role === 'super-admin' || role === 'doctor') ? './admin.html' : './user.html';
+  const wantsBooking = new URLSearchParams(window.location.search).get('intent') === 'booking';
+  const page = (role === 'super-admin' || role === 'doctor') ? './admin.html' : (wantsBooking ? './user.html#view-patient-services' : './user.html');
   window.location.replace(new URL(page, document.baseURI).href);
 }
 
